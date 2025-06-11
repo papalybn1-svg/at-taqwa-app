@@ -1,8 +1,11 @@
+import { useNavigation } from '@react-navigation/native';
 import React from "react";
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import colors from "../theme/colors";
 
 export default function HomeScreen() {
+  const navigation = useNavigation();
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -12,30 +15,30 @@ export default function HomeScreen() {
       </View>
       <Text style={styles.sectionTitle}>Catégories</Text>
       <View style={styles.categories}>
-        <TouchableOpacity style={styles.category}>
+        <TouchableOpacity style={styles.category} onPress={() => navigation.navigate('Livres' as never)}>
           <Image source={require('../../assets/priere.png')} style={styles.categoryIcon} />
           <Text style={styles.categoryText}>Livres</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.category}>
+        <TouchableOpacity style={styles.category} onPress={() => navigation.navigate('Horaires' as never)}>
           <Image source={require('../../assets/abulution.png')} style={styles.categoryIcon} />
           <Text style={styles.categoryText}>Horaires</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.category}>
+        <TouchableOpacity style={styles.category} onPress={() => navigation.navigate('Quiz' as never)}>
           <Image source={require('../../assets/femme.png')} style={styles.categoryIcon} />
           <Text style={styles.categoryText}>Quizz</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.category}>
+        <TouchableOpacity style={styles.category} onPress={() => navigation.navigate('Chapelet' as never)}>
           <Image source={require('../../assets/tasbih.png')} style={styles.categoryIcon} />
           <Text style={styles.categoryText}>Tasbih</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.banner}>
-        <View style={styles.bannerContent}>
-          <View style={styles.bannerTextContainer}>
-            <Text style={styles.bannerText}>Transformez chaque prière en un moment de paix et de connexion</Text>
-            <TouchableOpacity style={styles.bannerButton}><Text style={styles.bannerButtonText}>Commencer</Text></TouchableOpacity>
+      <View style={styles.bannerV2}>
+        <View style={styles.bannerContentV2}>
+          <View style={styles.bannerTextContainerV2}>
+            <Text style={styles.bannerTextV2Small}>Un moment de paix à chaque prière</Text>
+            <TouchableOpacity style={styles.bannerButtonV2Small}><Text style={styles.bannerButtonTextV2Small}>Commencer</Text></TouchableOpacity>
           </View>
-          <Image source={require('../../assets/femme-transformer.png')} style={styles.bannerImageWoman} />
+          <Image source={require('../../assets/femme-transformer.png')} style={styles.bannerImageWomanV2} />
         </View>
       </View>
       <Text style={styles.sectionTitle}>Aperçu des Livres</Text>
@@ -64,64 +67,68 @@ const styles = StyleSheet.create({
   category: { backgroundColor: colors.white, borderRadius: 20, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center', width: 78, elevation: 3, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, marginHorizontal: 2 },
   categoryIcon: { width: 38, height: 38, marginBottom: 8, resizeMode: 'contain' },
   categoryText: { fontSize: 13, color: colors.primary, fontWeight: 'bold', textAlign: 'center' },
-  banner: {
+  bannerV2: {
     backgroundColor: colors.primary,
-    marginHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 18,
-    borderRadius: 28,
-    height: 130,
-    width: '92%',
+    marginHorizontal: 16,
+    marginTop: 18,
+    marginBottom: 24,
+    borderRadius: 32,
+    height: 150,
+    width: '94%',
     alignSelf: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.10,
-    shadowRadius: 12,
-    elevation: 6,
-    overflow: 'hidden',
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    overflow: 'visible',
   },
-  bannerContent: {
+  bannerContentV2: {
     flexDirection: 'row',
     alignItems: 'center',
     height: '100%',
     width: '100%',
-    paddingHorizontal: 22,
+    paddingLeft: 28,
+    paddingRight: 0,
     justifyContent: 'space-between',
   },
-  bannerTextContainer: {
+  bannerTextContainerV2: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'flex-start',
     height: '100%',
+    paddingRight: 8,
   },
-  bannerText: {
+  bannerTextV2Small: {
     color: colors.white,
-    fontSize: 16,
-    marginBottom: 12,
+    fontSize: 14,
+    marginBottom: 10,
     textAlign: 'left',
     fontWeight: 'bold',
-    width: 180,
+    width: 120,
+    lineHeight: 18,
   },
-  bannerButton: {
+  bannerButtonV2Small: {
     backgroundColor: colors.white,
-    borderRadius: 24,
-    paddingVertical: 10,
-    paddingHorizontal: 32,
+    borderRadius: 18,
+    paddingVertical: 6,
+    paddingHorizontal: 18,
     alignSelf: 'flex-start',
     marginTop: 2,
     shadowColor: '#000',
     shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  bannerButtonText: { color: colors.primary, fontWeight: 'bold', fontSize: 15 },
-  bannerImageWoman: {
-    width: 130,
-    height: 120,
+  bannerButtonTextV2Small: { color: colors.primary, fontWeight: 'bold', fontSize: 13 },
+  bannerImageWomanV2: {
+    width: 170,
+    height: 140,
     resizeMode: 'contain',
-    alignSelf: 'center',
-    marginLeft: 10,
-    marginRight: 0,
+    alignSelf: 'flex-end',
+    marginLeft: 0,
+    marginRight: -30,
+    marginTop: -10,
   },
   booksPreview: { flexDirection: "row", justifyContent: "space-around", margin: 20 },
   bookCard: { backgroundColor: colors.white, borderRadius: 18, padding: 12, alignItems: "center", width: 150, elevation: 3, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, marginHorizontal: 6 },
