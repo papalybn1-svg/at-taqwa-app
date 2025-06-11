@@ -36,7 +36,9 @@ npm start
 expo start
 ```
 
-Scanne le QR code avec l'application Expo Go sur ton téléphone pour tester !
+5. **Tester sur votre téléphone**
+- Téléchargez l'application **Expo Go** sur votre téléphone (disponible sur [Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent) et [App Store](https://apps.apple.com/app/expo-go/id982107779)).
+- Scannez le QR code affiché dans le terminal ou sur la page web Expo pour lancer l'application sur votre mobile.
 
 ## 🗂️ Structure du projet
 - `App.tsx` : point d'entrée, gestion des splashs et navigation
