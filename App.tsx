@@ -1,8 +1,22 @@
 import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import TabNavigator from './src/navigation/TabNavigator';
+import ChapterScreen from './src/screens/ChapterScreen';
 
+type RootStackParamList = {
+  Main: undefined;
+  Chapter: {
+    chapter: {
+      title: string;
+      desc: string;
+      image: string;
+    };
+  };
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
 const { height } = Dimensions.get('window');
 
 function SplashLogo() {
@@ -46,7 +60,10 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <TabNavigator />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Main" component={TabNavigator} />
+        <Stack.Screen name="Chapter" component={ChapterScreen} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }

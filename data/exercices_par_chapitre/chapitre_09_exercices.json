@@ -1,0 +1,32 @@
+[
+  {
+    "numero": 1,
+    "question": "Quand je prie derrière l’imam, à qui incombent mes oublis ?",
+    "reponse": "Les oublis sur les sunnas sont couverts par l’imam ; les oublis sur les obligations divines incombent au fidèle."
+  },
+  {
+    "numero": 2,
+    "question": "Un fidèle fait le takbiratul ihrâm puis rejoint l’imam au rukû de la 3ème raka de la prière du Maghreb. Comment termine –t-il sa prière ?",
+    "reponse": "Après le salut final de l’imam, le fidèle se lève et accomplit les 2 rakas qu’il a manquées, en récitant à haute voix la Fatiha plus une autre sourate. A sa 2ème raka, il aura à s’asseoir pour réciter la tahiyya (formule courte)."
+  },
+  {
+    "numero": 3,
+    "question": "Que se serait-il passé s’il avait rejoint l’imam au moment où celui-ci se relevait du rukû de la dernière raka ?",
+    "reponse": "Si le fidèle était arrivé au moment où l’imam se relevait du rukù de la dernière raka, il n’aurait pas fait partie de la dite raka, ni de la prière. Après le salut final de l’imam, le fidèle se lève et accomplit les 3 rakas normalement, puisqu’il s’agit du Maghreb."
+  },
+  {
+    "numero": 4,
+    "question": "Ce faisant, il oublie de réciter la Fatiha et passe directement à la surate ; il s’en rend compte après la tahiyya et avant le salut final. Que doit-il faire ?",
+    "reponse": "Le fidèle se relève immédiatement pour effectuer à nouveau et correctement la raka qu’il vient d’achever, en prenant soin de réciter la Fatiha qu’il avait oubliée. Il n’est plus concerné par la bahda salam de l’imam car la réparation de l’obligation divine (fatiha) est suffisante. Lors de la raka que le fidèle a effectuée, il est ramené à la situation de celui qui prie seul. Ayant allongé la prière d’une raka, après le salut final, il fait sujûd bahda salam."
+  },
+  {
+    "numero": 5,
+    "question": "Vous n’avez pas pu faire le rukû de la 1ère raka de la prière du Subh, en priant derrière l’imam. Comment terminez- vous votre prière ?",
+    "reponse": "Après le salut final de l’imam, vous refaites la première raka considérée comme nulle faute de rukû (obligation divine). Vous ne faites pas de sujûd de réparation."
+  },
+  {
+    "numero": 6,
+    "question": "Je suis devancé par l’Imam. Je dois une sunna de la prière en commun et une obligation divine (farata) dans la partie individuelle. Comment corriger ma prière ?",
+    "reponse": "Je me suffis de la correction de l’obligation divine que je dois de mon côté."
+  }
+]

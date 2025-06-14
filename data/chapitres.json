@@ -1,0 +1,89 @@
+{
+    "premiere_partie": {
+      "titre": "La prescription de la prière",
+      "chapitres": [
+        {
+          "image": "1",
+          "title": "Chapitre I. ",
+          "desc": "Signification, Sources et vertus de la prière.",
+          "author": "Aly Sow"
+        },
+        {
+          "image": "2",
+          "title": "Chapitre II. ",
+          "desc": "La purification, condition préalable de validité.",
+          "author": "Aly Sow"
+        },
+        {
+          "image": "3",
+          "title": "Chapitre III. ",
+          "desc": "Les conditions complémentaires de validité.",
+          "author": "Aly Sow"
+        }
+      ]
+    },
+    "deuxieme_partie": {
+      "titre": "Réparation des erreurs dans la prière individuelle",
+      "chapitres": [
+        {
+          "image": "4",
+          "title": "Chapitre I. ",
+          "desc": "Comment prier ?",
+          "author": "Aly Sow"
+        },
+        {
+          "image": "5",
+          "title": "Chapitre II. ",
+          "desc": "Les Sunnas et leurs réparations.",
+          "author": "Aly Sow"
+        },
+        {
+          "image": "6",
+          "title": "Chapitre III. ",
+          "desc": "Les obligations divines et leurs réparations.",
+          "author": "Aly Sow"
+        },
+        {
+          "image": "7",
+          "title": "Chapitre IV. ",
+          "desc": "La prière surérogatoire et ses réparations.",
+          "author": "Aly Sow"
+        }
+      ]
+    },
+    "troisieme_partie": {
+      "titre": "Réparation des erreurs dans la prière derrière l’Imam",
+      "chapitres": [
+        {
+          "image": "8",
+          "title": "Chapitre I. ",
+          "desc": "La prière en commun.",
+          "author": "Aly Sow"
+        },
+        {
+          "image": "9",
+          "title": "Chapitre II. ",
+          "desc": "Erreurs commises par le fidèle.",
+          "author": "Aly Sow"
+        },
+        {
+          "image": "10",
+          "title": "Chapitre III. ",
+          "desc": "Erreurs commises par l’Islam.",
+          "author": "Aly Sow"
+        },
+        {
+          "image": "11",
+          "title": "Chapitre IV. ",
+          "desc": "La prière du vendredi.",
+          "author": "Aly Sow"
+        },
+        {
+          "image": "12",
+          "title": "Chapitre V. ",
+          "desc": "La prière du voyage (çalât as-safar).",
+          "author": "Aly Sow"
+        }
+      ]
+    }
+  }

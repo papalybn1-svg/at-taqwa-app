@@ -1,0 +1,152 @@
+{
+  "chapitre": "CHAPITRE III :",
+  "contenu": [
+    {
+      "type": "texte",
+      "contenu": "LES CONDITIONS COMPLEMENTAIRES DE VALIDITE"
+    },
+    {
+      "type": "texte",
+      "contenu": "La Qibla"
+    },
+    {
+      "type": "texte",
+      "contenu": "Que dit le Coran ?"
+    },
+    {
+      "type": "texte",
+      "contenu": "« ...Tourne donc ton visage vers la Mosquée sacrée. Où que vous soyez, tournez-y vos visages… » s.2, v. 150."
+    },
+    {
+      "type": "texte",
+      "contenu": "A Médine, l’Envoyé de Dieu fit la prière en se tournant du côté de Jérusalem pendant 17 mois. Il désirait vivement recevoir l’ordre de tourner le visage du côté de la Kaaba, aussi Allah révéla-t-il ce verset."
+    },
+    {
+      "type": "texte",
+      "contenu": "Lorsqu’on prie, on doit se tourner du côté de la qibla quel que soit l’endroit où l’on se trouve. Attention : ne pas confondre qibla et Est. La qibla, c’est la direction vers la Sainte Kaaba, où que l’on se trouve sur le globe terrestre."
+    },
+    {
+      "type": "texte",
+      "contenu": "Moment des prières"
+    },
+    {
+      "type": "texte",
+      "contenu": "Que dit le Coran ?"
+    },
+    {
+      "type": "texte",
+      "contenu": "«La prière est pour les croyants, une obligation à des heures précises, correspondant à des périodes déterminées » (si, v.103)."
+    },
+    {
+      "type": "texte",
+      "contenu": "Il est préférable de faire chaque prière dès que commence le temps légal."
+    },
+    {
+      "type": "texte",
+      "contenu": "Les périodes légales des cinq prières canoniques sont :"
+    },
+    {
+      "type": "texte",
+      "contenu": "Prière de Subh (matin) : son temps légal commence quand la lumière s’élève et que le jour commence à poindre à l’horizon. La fin du temps légal de la prière du Subh est marquée par la forte clarté qui précède l’apparition du soleil."
+    },
+    {
+      "type": "texte",
+      "contenu": "La prière du Subh comprend 2 rakas avec pour chacune Fatiha + sourate à haute voix. Cette prière doit être précédée par celle de fadjr comprenant 2 rakas (Fatiha seulement, à voix basse ou Fatiha + surate)."
+    },
+    {
+      "type": "texte",
+      "contenu": "Le temps légal de la prière de Zohr (début d’après-midi) est marqué par le moment où le soleil décline du milieu du ciel et où l’ombre commence à augmenter. Ce temps légal se termine lorsque l’ombre d’un objet a atteint la longueur de cet objet. Son délai limite va jusqu’au coucher du soleil. Elle comprend 4 rakas :"
+    },
+    {
+      "type": "texte",
+      "contenu": "Les 2 premières avec Fatiha+ surate, à voix basse ;"
+    },
+    {
+      "type": "texte",
+      "contenu": "Les 2 dernières avec Fatiha seulement, à voix basse,"
+    },
+    {
+      "type": "texte",
+      "contenu": "Le temps légal de la prière d’Asr (milieu d’après-midi) s’étend de la fin du Zohr au moment où l’ombre a atteint le double de la longueur de l’objet. Son délai limite va jusqu’au coucher du soleil (crépuscule)."
+    },
+    {
+      "type": "texte",
+      "contenu": "Elle comprend également 4 rakas comme la prière du Zohr et se fait de la même façon. Son délai limite va jusqu’au coucher du soleil."
+    },
+    {
+      "type": "texte",
+      "contenu": "« Observer assidûment les prières et surtout la prière médiane » s.2, v.238. L’Envoyé d’Allah (SPL) a dit :"
+    },
+    {
+      "type": "texte",
+      "contenu": "« Celui qui laisse passer l’heure de la prière de l’Asr, sans la faire, c’est comme s’il avait perdu sa famille et ses biens ». En d’autres termes, celui qui manque volontairement la prière de l’après-midi perdra le fruit de ses œuvres"
+    },
+    {
+      "type": "texte",
+      "contenu": "Quant à la prière du Maghreb (coucher du soleil), son délai légal commence quand le soleil se couche et que la nuit s’annonce ; ce délai légal est très court, il se termine peu après. Quant au délai limite, il va jusqu’à l’aube. La prière de Maghreb comprend 3 rakas :"
+    },
+    {
+      "type": "texte",
+      "contenu": "2 premières avec Fatiha+ surate, à voix haute"
+    },
+    {
+      "type": "texte",
+      "contenu": "La 3ème et la dernière avec Fatiha à voix basse."
+    },
+    {
+      "type": "texte",
+      "contenu": "Le temps légal de la prière de la nuit Ichâ (nuit) est celui où disparaît complètement la lueur crépusculaire du soir jusqu’à la fin du premier tiers de la nuit. Son délai limite va jusqu’à l’aube. La prière d’Ichâ comprend 4 rakas :"
+    },
+    {
+      "type": "texte",
+      "contenu": "2 rakas avec Fatiha + surate à haute voix ;"
+    },
+    {
+      "type": "texte",
+      "contenu": "2 rakas avec Fatiha seulement, à voix basse."
+    },
+    {
+      "type": "texte",
+      "contenu": "Après Ichâa, on doit faire Chafa (2 rakas) avec Fatiha+ surate ; ensuite witr (1 raka) avec Fatiha + surate à haute voix. Ce sont, avec la prière de fadjr, des surérogatoires (prières facultatives) fortement recommandées."
+    },
+    {
+      "type": "texte",
+      "contenu": "Tableau des salats"
+    },
+    {
+      "type": "tableau",
+      "contenu": [
+        [
+          "Prières",
+          "Nbre de Rakas",
+          "Surates à réciter"
+        ],
+        [
+          "Subh : matin, quand la lueur commence à s’élever jusqu’à ce qu’elle gagne tout l’horizon. Délai de limite va jusqu’à la lumière vive.",
+          "2",
+          "R1 : Fatiha +surate   \nR2 : Fatiha + surate + éventuellement qunute"
+        ],
+        [
+          "Zohr : début de l’après-midi, dès que l’ombre commence à décliner. Le délai va jusqu’au coucher du soleil.",
+          "4",
+          "R1 : Fatiha + surate\nR2 : Fatiha + surate\nR3 : Fatiha\nR4 : Fatiha"
+        ],
+        [
+          "Asr : milieu de l’après-midi. Le délai va jusqu’au coucher du soleil.",
+          "4",
+          "R1 : Fatiha + surate\nR2 : Fatiha + surate \nR3 : Fatiha\nR4 : Fatiha"
+        ],
+        [
+          "Maghreb : coucher du soleil. Le délai limite va jusqu’à l’aube.",
+          "3",
+          "R1 : Fatiha + surate\nR2 : Fatiha + surate\nR3 : Fatiha"
+        ],
+        [
+          "Ichâ : nuit. Environ 1 heure après Maghreb. Le délai va jusqu’à l’aube.",
+          "4",
+          "R1 : Fatiha + surate\nR2 : Fatiha + surate\nR3 : Fatiha\nR4 : Fatiha"
+        ]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+[
+  {
+    "numero": 1,
+    "question": "Un fidèle accomplit la prière de fadjr. Il oublie de réciter la Fatiha et s’en souvient après le rukû. Comment corrige-t-il sa prière ?",
+    "reponse": "a’) Il continue sa prière ; sujûd habla salam."
+  },
+  {
+    "numero": 2,
+    "question": "Un autre fidèle accomplit la prière de witr. Pendant la tahiyya, il se souvient avoir oublié la Fatiha. Comment répare-t-il sa prière ?",
+    "reponse": "b’) Sujûd habla salam."
+  },
+  {
+    "numero": 3,
+    "question": "Une fidèle accomplit la prière de Chafa. Elle se lève pour une 3ème rakâ par erreur et, ne s’en souvient qu’après le redressement du rukû. Comment achève-t-elle- sa prière ? Comment aurait-elle fait s’il s’agissait d’une prière obligatoire ?",
+    "reponse": "c’) Elle continue la prière et accomplit une 4ème raka. Elle se serait assise immédiatement, en cas de prière d’obligation divine et aurait mis à sa prière. Dans chacun des deux cas, bahda salam."
+  },
+  {
+    "numero": 4,
+    "question": "Vous vous êtes réveillé tard, après le lever du soleil. Comment devez-vous faire vos prières de fadjr et du Subh ?",
+    "reponse": "d’) Vous devez prier successivement fadjr et subh si le soleil ne s’est pas encore levé ; si vous vous réveillez au moment où le soleil est entrain de se lever, vous ferez obligatoirement la prière du subh seule ; plus tard, lorsque le soleil se sera entièrement levé, vous ferez la prière surérogatoire du fadjr à titre compensatoire."
+  },
+  {
+    "numero": 5,
+    "question": "Que fait celui qui oublie la surate ou la lecture à voix haute ou à voix basse dans la prière facultative et s’en souvient après rukû ?",
+    "reponse": "e’) Il continue sa prière et ne doit pas de sujûd de réparation."
+  }
+]
