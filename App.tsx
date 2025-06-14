@@ -1,7 +1,11 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import * as SystemUI from 'expo-system-ui';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
+import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import TabNavigator from './src/navigation/TabNavigator';
 import ChapterScreen from './src/screens/ChapterScreen';
 
@@ -55,16 +59,33 @@ export default function App() {
     }
   }, [splashStep]);
 
+  // Masquer la barre de navigation système Android après les splashs
+  useEffect(() => {
+    if (splashStep === 2) {
+      SystemUI.setBackgroundColorAsync('#F3F5F7');
+    }
+  }, [splashStep]);
+
   if (splashStep === 0) return <SplashLogo />;
   if (splashStep === 1) return <SplashFamille />;
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Main" component={TabNavigator} />
-        <Stack.Screen name="Chapter" component={ChapterScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
+        <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
+        <NavigationContainer>
+          <Stack.Navigator 
+            screenOptions={{ 
+              headerShown: false,
+              cardStyle: { backgroundColor: '#F3F5F7' }
+            }}
+          >
+            <Stack.Screen name="Main" component={TabNavigator} />
+            <Stack.Screen name="Chapter" component={ChapterScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 

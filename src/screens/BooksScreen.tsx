@@ -1,11 +1,11 @@
+import { NavigationProp, useNavigation } from '@react-navigation/native'; // Assurez-vous d'avoir installé React Navigation
 import React from "react";
-import { Image, ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
-import { useNavigation, NavigationProp } from '@react-navigation/native'; // Assurez-vous d'avoir installé React Navigation
-import colors from "../theme/colors";
+import { Image, ImageSourcePropType, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import chaptersData from '../../data/chapitres.json'; // Assurez-vous que le chemin est correct
-import { ChaptersData, Chapter } from '../types/chapters'; // Importez le type
+import colors from "../theme/colors";
+import { Chapter, ChaptersData } from '../types/chapters'; // Importez le type
 
-const imageMap = {
+const imageMap: { [key: string]: ImageSourcePropType } = {
   "1": require('../../assets/1.png'),
   "2": require('../../assets/2.png'),
   "3": require('../../assets/3.png'),
@@ -39,8 +39,15 @@ export default function BooksScreen() {
           <Text style={styles.sectionTitle}>{data[partie as keyof ChaptersData].titre}</Text>
           <View style={styles.chapterList}>
             {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => (
-              <TouchableOpacity key={idx} style={styles.chapterCard} onPress={() => handleChapterPress(ch)}>
-                <Image source={imageMap[ch.image as keyof typeof imageMap]} style={styles.chapterImage} />
+              <TouchableOpacity 
+                key={idx} 
+                style={styles.chapterCard} 
+                onPress={() => handleChapterPress(ch)}
+              >
+                <Image 
+                  source={imageMap[ch.image] || require('../../assets/1.png')} 
+                  style={styles.chapterImage} 
+                />
                 <View style={styles.chapterContent}>
                   <Text style={styles.chapterTitle}>{ch.title}</Text>
                   <Text style={styles.chapterDesc}>{ch.desc}</Text>
