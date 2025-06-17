@@ -1,13 +1,19 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as SystemUI from 'expo-system-ui';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TabNavigator from './src/navigation/TabNavigator';
+import BooksScreen from './src/screens/BooksScreen';
 import ChapterScreen from './src/screens/ChapterScreen';
+import { app as firebaseApp } from './src/screens/firebaseConfig';
+import LoginScreen, { AuthContext } from './src/screens/LoginScreen';
+import QuizScreen from './src/screens/QuizScreen';
+import TasbihScreen from './src/screens/TasbihScreen';
 
 type RootStackParamList = {
   Main: undefined;
@@ -18,6 +24,10 @@ type RootStackParamList = {
       image: string;
     };
   };
+  Books: undefined;
+  Quiz: undefined;
+  Tasbih: undefined;
+  Login: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -48,6 +58,15 @@ function SplashFamille() {
 
 export default function App() {
   const [splashStep, setSplashStep] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
+  const auth = getAuth(firebaseApp);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (splashStep === 0) {
@@ -70,22 +89,31 @@ export default function App() {
   if (splashStep === 1) return <SplashFamille />;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
-        <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
-        <NavigationContainer>
-          <Stack.Navigator 
-            screenOptions={{ 
-              headerShown: false,
-              cardStyle: { backgroundColor: '#F3F5F7' }
-            }}
-          >
-            <Stack.Screen name="Main" component={TabNavigator} />
-            <Stack.Screen name="Chapter" component={ChapterScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SafeAreaView>
-    </GestureHandlerRootView>
+    <AuthContext.Provider value={{ user, setUser }}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
+          <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
+          <NavigationContainer>
+            <Stack.Navigator 
+              screenOptions={{ 
+                headerShown: false,
+                cardStyle: { backgroundColor: '#F3F5F7' }
+              }}
+            >
+              {!user ? (
+                <Stack.Screen name="Login" component={LoginScreen} />
+              ) : (
+                <Stack.Screen name="Main" component={TabNavigator} />
+              )}
+              <Stack.Screen name="Chapter" component={ChapterScreen} />
+              <Stack.Screen name="Books" component={BooksScreen} />
+              <Stack.Screen name="Quiz" component={QuizScreen} />
+              <Stack.Screen name="Tasbih" component={TasbihScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </SafeAreaView>
+      </GestureHandlerRootView>
+    </AuthContext.Provider>
   );
 }
 

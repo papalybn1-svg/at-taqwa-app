@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "jsEngine": "hermes",
     "newArchEnabled": true,
     "splash": {
       "backgroundColor": "#174C3C",
@@ -26,6 +25,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c0367c88-9331-4f3c-b747-fa3750f9072e"
+      }
     }
   }
 }

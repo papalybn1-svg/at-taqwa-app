@@ -1,12 +1,10 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
-import BooksScreen from "../screens/BooksScreen";
+import FavoritesScreen from '../screens/FavoritesScreen';
 import HomeScreen from "../screens/HomeScreen";
 import HorairesScreen from '../screens/HorairesScreen';
 import ParametresScreen from '../screens/ParametresScreen';
-import QuizScreen from "../screens/QuizScreen";
-import TasbihScreen from "../screens/TasbihScreen";
 import colors from "../theme/colors";
 
 const Tab = createBottomTabNavigator();
@@ -46,20 +44,20 @@ export default function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Livres"
-        component={BooksScreen}
+        name="Horaires"
+        component={HorairesScreen}
         options={{
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="book-open-page-variant" color={color} size={size} />
+            <MaterialCommunityIcons name="clock-outline" color={color} size={size} />
           ),
         }}
       />
       <Tab.Screen
-        name="Quiz"
-        component={QuizScreen}
+        name="Favoris"
+        component={FavoritesScreen}
         options={{
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="head-question" color={color} size={size} />
+            <MaterialCommunityIcons name="heart" color={color} size={size} />
           ),
         }}
       />
@@ -69,24 +67,6 @@ export default function TabNavigator() {
         options={{
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <MaterialCommunityIcons name="cog" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Chapelet"
-        component={TasbihScreen}
-        options={{
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="circle-multiple" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Horaires"
-        component={HorairesScreen}
-        options={{
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="clock-outline" color={color} size={size} />
           ),
         }}
       />
