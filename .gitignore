@@ -35,3 +35,8 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Firebase - Exclure les fichiers sensibles sauf GoogleService-Info.plist
+google-services.json
+GoogleService-Info-*.plist
+!GoogleService-Info.plist
