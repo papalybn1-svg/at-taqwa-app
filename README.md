@@ -181,18 +181,10 @@ eas build:list
 
 ## 👤 **Accès administrateur**
 
-### **Créer un compte admin**
-```bash
-# Via le script Node.js
-node updateUserRole.js <email> admin
-
-# Ou directement dans Firebase Console
-# Collection 'users' → Document utilisateur → Champ 'role' = 'admin'
-```
 
 ### **Comptes de test**
-- **Admin** : papalybn@gmail.com (rôle admin)
-- **Utilisateur** : ndiaye@gmail.com (rôle user)
+- **Admin** : papalybn@gmail.com mdp: brahim (rôle admin) 
+- **Utilisateur** : ndiaye@gmail.com mdp brahim (rôle user)
 
 ---
 
