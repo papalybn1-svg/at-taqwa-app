@@ -12,7 +12,15 @@
       "resizeMode": "cover"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.attaqwa.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "CFBundleDisplayName": "At-Taqwa",
+        "CFBundleName": "At-Taqwa",
+        "NSCameraUsageDescription": "Cette application nécessite l'accès à la caméra pour certaines fonctionnalités.",
+        "NSPhotoLibraryUsageDescription": "Cette application nécessite l'accès à la galerie pour certaines fonctionnalités."
+      }
     },
     "android": {
       "adaptiveIcon": {
