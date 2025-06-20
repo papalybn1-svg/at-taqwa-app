@@ -294,13 +294,6 @@ at-taqwa-app/
 
 ---
 
-## 🧑‍💻 **Auteurs**
-
-- **Ibrahima Ly** - Développeur principal
-- [Contributeurs bienvenus !](https://github.com/ibrahima98/at-taqwa/graphs/contributors)
-
----
-
 ## 📄 **Licence**
 
 MIT
