@@ -40,6 +40,64 @@ npm install
 
 ---
 
+## 👥 **Guide Collaborateur - Configuration Rapide**
+
+### **🎯 Installation rapide (5 minutes)**
+
+#### **Étape 1 : Cloner le projet**
+```bash
+git clone https://github.com/ibrahima98/at-taqwa.git
+cd at-taqwa-app
+npm install
+```
+
+#### **Étape 2 : Configuration automatique**
+✅ **Le fichier `GoogleService-Info.plist` est déjà inclus dans le repo !**
+✅ **Aucune configuration Firebase supplémentaire nécessaire !**
+
+#### **Étape 3 : Build iOS**
+```bash
+# Installer EAS CLI
+npm install -g @expo/eas-cli
+
+# Se connecter avec tes identifiants Expo
+eas login
+
+# Build iOS
+eas build --platform ios --profile preview
+```
+
+#### **Étape 4 : Installer sur iPhone**
+1. Télécharger l'IPA depuis EAS Dashboard
+2. Installer avec AltStore/Sideloadly
+3. Tester l'application
+
+---
+
+### **🍎 Configuration iOS détaillée**
+
+#### **1. Compte Apple Developer**
+- **Option A : Compte Apple Developer payant (99$/an)**
+  - ✅ Accès complet à toutes les fonctionnalités
+  - ✅ TestFlight illimité
+  - ✅ Distribution App Store
+
+- **Option B : Compte Apple Developer gratuit**
+  - ⚠️ Limitations : Builds valides 7 jours seulement
+
+#### **2. Activer le mode développeur sur iPhone**
+1. Aller dans **Réglages** → **Général** → **À propos**
+2. Appuyer 7 fois sur **Numéro de version** (devient "Mode développeur")
+3. Aller dans **Réglages** → **Confidentialité et sécurité** → **Mode développeur**
+4. Activer le **Mode développeur**
+5. Redémarrer l'iPhone
+
+#### **3. Installation d'AltStore (Recommandé)**
+- **Avec Mac** : https://altstore.io/
+- **Sans Mac** : https://sideloadly.io/
+
+---
+
 ## 📱 **Options de test et déploiement**
 
 ### **Option 1 : Test rapide avec Expo Go (Limité)**
@@ -219,6 +277,12 @@ eas credentials --platform ios --clear
 # Voir le guide iOS complet : IOS_SETUP_GUIDE.md
 ```
 
+#### **App ne s'installe pas sur iPhone**
+- ✅ Vérifier que le mode développeur est activé
+- ✅ Utiliser AltStore ou Sideloadly
+- ✅ Vérifier que l'iPhone est connecté à internet
+- ✅ Redémarrer l'iPhone après activation du mode développeur
+
 #### **Mise à jour OTA ne fonctionne pas**
 - Vérifier la connexion internet
 - Redémarrer l'application
@@ -231,6 +295,19 @@ L'application affiche des logs détaillés :
 ✅ Connexion Firestore réussie - X notifications trouvées
 🔄 Mode hors ligne - utilisation des données de fallback
 ```
+
+---
+
+## 📊 **Comparaison des comptes Apple Developer**
+
+| Fonctionnalité | Compte Gratuit | Compte Payant |
+|----------------|----------------|---------------|
+| **Durée des builds** | 7 jours | Illimitée |
+| **TestFlight** | ❌ Non | ✅ Oui |
+| **App Store** | ❌ Non | ✅ Oui |
+| **Certificats** | Développement | Développement + Distribution |
+| **Appareils** | Limité | Illimité |
+| **Support** | Communauté | Apple |
 
 ---
 
@@ -341,7 +418,6 @@ Pour toute question ou suggestion : papalybn@gmail.com
 ## 📚 **Guides supplémentaires**
 
 - **[Guide iOS complet](IOS_SETUP_GUIDE.md)** - Configuration détaillée iOS
-- **[Guide Collaborateur](COLLABORATOR_SETUP_GUIDE.md)** - Configuration rapide pour les collaborateurs
 - **[Guide de dépannage](TROUBLESHOOTING.md)** - Solutions aux problèmes courants
 - **[Guide de déploiement](DEPLOYMENT_GUIDE.md)** - Stratégies de déploiement
 
