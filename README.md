@@ -341,6 +341,7 @@ Pour toute question ou suggestion : papalybn@gmail.com
 ## 📚 **Guides supplémentaires**
 
 - **[Guide iOS complet](IOS_SETUP_GUIDE.md)** - Configuration détaillée iOS
+- **[Guide Collaborateur](COLLABORATOR_SETUP_GUIDE.md)** - Configuration rapide pour les collaborateurs
 - **[Guide de dépannage](TROUBLESHOOTING.md)** - Solutions aux problèmes courants
 - **[Guide de déploiement](DEPLOYMENT_GUIDE.md)** - Stratégies de déploiement
 
