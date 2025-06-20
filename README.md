@@ -18,7 +18,7 @@ Gestion des utilisateurs, rôles, notifications, hadiths, zikrs, quiz, livres, e
 
 ---
 
-## 🛠️ Installation & Lancement
+## 🛠️ Installation & Configuration
 
 ### **Prérequis**
 - Node.js (version 16 ou supérieure)
@@ -33,68 +33,13 @@ cd at-taqwa-app
 
 # Installer les dépendances
 npm install
-
-# Configuration Firebase (optionnel pour les tests locaux)
-# Renseigner les clés dans src/screens/firebaseConfig.tsx si nécessaire
 ```
 
----
-
-## 👥 **Guide Collaborateur - Configuration Rapide**
-
-### **🎯 Installation rapide (5 minutes)**
-
-#### **Étape 1 : Cloner le projet**
-```bash
-git clone https://github.com/ibrahima98/at-taqwa.git
-cd at-taqwa-app
-npm install
-```
-
-#### **Étape 2 : Configuration automatique**
+### **Configuration Firebase**
 ✅ **Le fichier `GoogleService-Info.plist` est déjà inclus dans le repo !**
 ✅ **Aucune configuration Firebase supplémentaire nécessaire !**
 
-#### **Étape 3 : Build iOS**
-```bash
-# Installer EAS CLI
-npm install -g @expo/eas-cli
-
-# Se connecter avec tes identifiants Expo
-eas login
-
-# Build iOS
-eas build --platform ios --profile preview
-```
-
-#### **Étape 4 : Installer sur iPhone**
-1. Télécharger l'IPA depuis EAS Dashboard
-2. Installer avec AltStore/Sideloadly
-3. Tester l'application
-
----
-
-### **🍎 Configuration iOS détaillée**
-
-#### **1. Compte Apple Developer**
-- **Option A : Compte Apple Developer payant (99$/an)**
-  - ✅ Accès complet à toutes les fonctionnalités
-  - ✅ TestFlight illimité
-  - ✅ Distribution App Store
-
-- **Option B : Compte Apple Developer gratuit**
-  - ⚠️ Limitations : Builds valides 7 jours seulement
-
-#### **2. Activer le mode développeur sur iPhone**
-1. Aller dans **Réglages** → **Général** → **À propos**
-2. Appuyer 7 fois sur **Numéro de version** (devient "Mode développeur")
-3. Aller dans **Réglages** → **Confidentialité et sécurité** → **Mode développeur**
-4. Activer le **Mode développeur**
-5. Redémarrer l'iPhone
-
-#### **3. Installation d'AltStore (Recommandé)**
-- **Avec Mac** : https://altstore.io/
-- **Sans Mac** : https://sideloadly.io/
+L'application fonctionne en mode hors ligne avec des données de fallback si Firebase n'est pas configuré.
 
 ---
 
@@ -115,10 +60,7 @@ npx expo start -c
 npm install -g @expo/eas-cli
 
 # Se connecter à Expo
-eas login (tes identifiants expo go )
-
-# Configurer le projet pour EAS Build
-eas build:configure
+eas login
 
 # Créer un build Android
 eas build --platform android --profile preview
@@ -128,19 +70,41 @@ eas build --platform android --profile preview
 ```
 
 ### **Option 3 : Build natif iOS avec EAS (🍎)**
+
+#### **Prérequis iOS**
+- **Compte Apple Developer** (gratuit ou payant)
+- **iPhone/iPad** pour les tests
+- **AltStore** ou **Sideloadly** pour l'installation
+
+#### **Configuration iOS**
+1. **Compte Apple Developer** :
+   - **Gratuit** : Builds valides 7 jours, pas TestFlight
+   - **Payant (99$/an)** : Accès complet, TestFlight, App Store
+
+2. **Activer le mode développeur sur iPhone** :
+   - Réglages → Général → À propos → Appuyer 7 fois sur "Numéro de version"
+   - Réglages → Confidentialité et sécurité → Mode développeur → Activer
+   - Redémarrer l'iPhone
+
+3. **Installation d'AltStore** :
+   - **Avec Mac** : https://altstore.io/
+   - **Sans Mac** : https://sideloadly.io/
+
+#### **Build iOS**
 ```bash
-# Prérequis : Compte Apple Developer (99$/an) ou gratuit (limité)
+# Installer EAS CLI
+npm install -g @expo/eas-cli
 
-# 1. Configurer Firebase pour iOS
-# Aller sur Firebase Console → Ajouter app iOS → Bundle ID: com.attaqwa.app
-# Télécharger GoogleService-Info.plist (ne pas commiter)
+# Se connecter à Expo
+eas login
 
-# 2. Build iOS
+# Build iOS
 eas build --platform ios --profile preview
 
-# 3. Installer sur iPhone
-# Télécharger l'IPA et utiliser AltStore/Sideloadly
-# Ou soumettre à TestFlight : eas submit --platform ios
+# Installer sur iPhone
+# 1. Télécharger l'IPA depuis EAS Dashboard
+# 2. Installer avec AltStore/Sideloadly
+# 3. Tester l'application
 ```
 
 ### **Option 4 : Build de développement (Pour le développement actif)**
@@ -171,36 +135,14 @@ vercel
 
 ---
 
-## 🔧 **Configuration Firebase**
-
-### **Pour un test complet (optionnel)**
-1. Créer un projet Firebase : https://console.firebase.google.com
-2. Activer Authentication et Firestore
-3. Copier les clés dans `src/screens/firebaseConfig.tsx`
-4. Configurer les règles Firestore (voir `firestore-rules-example.rules`)
-
-### **Configuration iOS spécifique**
-1. Dans Firebase Console, ajouter une app iOS
-2. Bundle ID : `com.attaqwa.app`
-3. Télécharger `GoogleService-Info.plist`
-4. EAS Build s'occupe automatiquement de la configuration
-
-### **Pour un test sans Firebase**
-L'application fonctionne en mode hors ligne avec des données de fallback :
-- Notifications de démonstration
-- Hadith du jour de fallback
-- Interface complètement fonctionnelle
-
----
-
-## 🚀 **Mises à jour après modifications**
+## 🚀 **Mises à jour et développement**
 
 ### **Script automatique**
 ```bash
 # Utiliser le script de mise à jour
 ./update-app.sh
 
-# Choisir l'option appropriée :
+# Options disponibles :
 # 1) Mise à jour OTA (modifications de code)
 # 2) Build complet Android (nouvelles dépendances)
 # 3) Build complet iOS (nouvelles dépendances)
@@ -224,6 +166,15 @@ eas build --platform ios --profile preview
 
 # Voir les builds récents
 eas build:list
+```
+
+### **Workflow de développement recommandé**
+```bash
+# 1. Faire tes modifications
+# 2. Tester avec npx expo start -c
+# 3. Commit et push
+# 4. Mise à jour OTA : ./update-app.sh → Option 1
+# 5. Tester sur l'app installée
 ```
 
 ---
@@ -253,8 +204,6 @@ node updateUserRole.js <email> admin
 ```bash
 # Tester la connexion
 node test-firestore.js
-
-# Voir le guide complet : TROUBLESHOOTING.md
 ```
 
 #### **Build EAS échoue**
@@ -273,8 +222,6 @@ eas credentials --platform ios
 
 # Réinitialiser les certificats
 eas credentials --platform ios --clear
-
-# Voir le guide iOS complet : IOS_SETUP_GUIDE.md
 ```
 
 #### **App ne s'installe pas sur iPhone**
@@ -298,36 +245,15 @@ L'application affiche des logs détaillés :
 
 ---
 
-## 📊 **Comparaison des comptes Apple Developer**
+## 📊 **Comparaison des options de test**
 
-| Fonctionnalité | Compte Gratuit | Compte Payant |
-|----------------|----------------|---------------|
-| **Durée des builds** | 7 jours | Illimitée |
-| **TestFlight** | ❌ Non | ✅ Oui |
-| **App Store** | ❌ Non | ✅ Oui |
-| **Certificats** | Développement | Développement + Distribution |
-| **Appareils** | Limité | Illimité |
-| **Support** | Communauté | Apple |
-
----
-
-## 📝 **Nouveautés & Changements récents**
-
-- ✨ **Support iOS complet** avec EAS Build
-- 🍎 **Configuration Firebase iOS** automatique
-- 🔧 **Script de mise à jour amélioré** avec options iOS
-- 📱 **Builds cross-platform** Android + iOS
-- 🛡️ **Gestion d'erreur robuste** avec mode hors ligne
-- 📚 **Guide iOS complet** avec dépannage
-- 🚀 **Amélioration de l'expérience utilisateur**
-- 🔄 **Reconnexion automatique** Firestore
-- ⚡ **Timeout et gestion des états** de connexion
-
----
-
-## 📸 **Captures d'écran**
-
-*(À insérer : accueil, notifications, admin, quiz, etc.)*
+| Option | Facilité | Fonctionnalités | Recommandé pour |
+|--------|----------|-----------------|-----------------|
+| **Expo Go** | ⭐⭐⭐⭐⭐ | ⭐⭐ | Tests rapides |
+| **EAS Android** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Production Android |
+| **EAS iOS** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Production iOS |
+| **Build Dev** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Développement |
+| **Web** | ⭐⭐⭐⭐ | ⭐⭐⭐ | Tests PC |
 
 ---
 
@@ -360,14 +286,19 @@ at-taqwa-app/
 4. Push (`git push origin feature/ma-feature`)
 5. Ouvre une Pull Request
 
-### **Workflow de développement recommandé**
-```bash
-# 1. Faire tes modifications
-# 2. Tester avec npx expo start -c
-# 3. Commit et push
-# 4. Mise à jour OTA : ./update-app.sh → Option 1
-# 5. Tester sur l'app installée
-```
+---
+
+## 📝 **Nouveautés & Changements récents**
+
+- ✨ **Support iOS complet** avec EAS Build
+- 🍎 **Configuration Firebase iOS** automatique
+- 🔧 **Script de mise à jour amélioré** avec options iOS
+- 📱 **Builds cross-platform** Android + iOS
+- 🛡️ **Gestion d'erreur robuste** avec mode hors ligne
+- 📚 **Guide iOS complet** avec dépannage
+- 🚀 **Amélioration de l'expérience utilisateur**
+- 🔄 **Reconnexion automatique** Firestore
+- ⚡ **Timeout et gestion des états** de connexion
 
 ---
 
@@ -398,20 +329,6 @@ MIT
 
 ## 📧 **Contact**
 Pour toute question ou suggestion : papalybn@gmail.com
-
----
-
-## 🎯 **Résumé des options de test**
-
-| Option | Facilité | Fonctionnalités | Recommandé pour |
-|--------|----------|-----------------|-----------------|
-| **Expo Go** | ⭐⭐⭐⭐⭐ | ⭐⭐ | Tests rapides |
-| **EAS Android** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Production Android |
-| **EAS iOS** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Production iOS |
-| **Build Dev** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Développement |
-| **Web** | ⭐⭐⭐⭐ | ⭐⭐⭐ | Tests PC |
-
-**🚀 L'app se met à jour automatiquement dans la plupart des cas !**
 
 ---
 
