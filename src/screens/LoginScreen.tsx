@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Image as RNImage, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AuthUser } from '../hooks/useAuth';
@@ -25,6 +25,8 @@ function Toast({ visible, message, type, onHide }: { visible: boolean, message: 
   );
 }
 
+const db = getFirestore();
+
 export default function LoginScreen({ navigation }: any) {
   const [screen, setScreen] = useState<'intro' | 'login' | 'register'>('intro');
   const [email, setEmail] = useState('');
@@ -35,8 +37,6 @@ export default function LoginScreen({ navigation }: any) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const { user, setUser } = useContext(AuthContext);
   const [toast, setToast] = useState<{ visible: boolean, message: string, type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
-
-  const db = getFirestore();
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ visible: true, message, type });
@@ -86,6 +86,29 @@ export default function LoginScreen({ navigation }: any) {
         // Sauvegarder le rôle localement pour le mode hors ligne
         await AsyncStorage.setItem('userRole', role);
         await AsyncStorage.setItem('userEmail', userCred.user.email || '');
+
+        // Vérifier si c'est un nouvel utilisateur
+        const isNewUser = userCred.user.metadata.creationTime === userCred.user.metadata.lastSignInTime;
+        
+        if (isNewUser) {
+          // Créer une notification de bienvenue
+          try {
+            const welcomeNotification = {
+              title: "Bienvenue !",
+              message: `Bienvenue dans At-Taqwa App ! Nous sommes ravis de vous compter parmi nous. Découvrez nos fonctionnalités et commencez votre voyage spirituel.`,
+              type: "welcome",
+              authorName: "Système",
+              targetUsers: "all",
+              isActive: true,
+              createdAt: serverTimestamp()
+            };
+            
+            await addDoc(collection(db, 'notifications'), welcomeNotification);
+            console.log("✅ Notification de bienvenue créée");
+          } catch (notifError) {
+            console.log("⚠️ Erreur création notification de bienvenue:", notifError);
+          }
+        }
 
         setUser({ ...userCred.user, role });
 

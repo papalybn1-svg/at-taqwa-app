@@ -56,7 +56,7 @@ export default function NotificationsScreen() {
           category: data.type || 'Général',
           text: data.message || 'Notification',
           title: data.title || '',
-          source: data.source || 'Système',
+          source: data.authorName || data.author || data.createdBy || 'Admin',
           createdAt: data.createdAt || new Date()
         };
       });
@@ -134,29 +134,29 @@ export default function NotificationsScreen() {
         <View style={styles.notificationIcon}>
           <MaterialCommunityIcons 
             name={getCategoryIcon(item.category)} 
-            size={20} 
+            size={18} 
             color={colors.primary} 
           />
         </View>
         <View style={styles.notificationContent}>
-          <Text style={[typography.overline, { color: colors.primary }]}>
+          <Text style={[typography.caption, { color: colors.primary, fontSize: 12 }]}>
             {item.category || 'Notification'}
           </Text>
-          <Text style={[typography.caption, { color: colors.gray }]}>
+          <Text style={[typography.caption, { color: colors.gray, fontSize: 11 }]}>
             {formatDate(item.createdAt?.toDate?.() || new Date(item.createdAt))}
           </Text>
         </View>
       </View>
       {item.title ? (
-        <Text style={[typography.h3, { color: colors.text, marginBottom: 4 }]}>
+        <Text style={[typography.body1, { color: colors.text, marginBottom: 6, fontSize: 16, fontWeight: '600' }]}>
           {item.title}
         </Text>
       ) : null}
-      <Text style={[typography.body1, styles.notificationText]}>
+      <Text style={[typography.body2, styles.notificationText, { fontSize: 14, lineHeight: 20 }]}>
         {item.text || 'Aucun contenu'}
       </Text>
-      <Text style={[typography.body2, styles.notificationSource]}>
-        — {item.source || 'Source inconnue'}
+      <Text style={[typography.caption, styles.notificationSource, { fontSize: 11 }]}>
+        — {item.source || 'Admin'}
       </Text>
     </Card>
   );
@@ -263,29 +263,29 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   notificationCard: {
-    padding: 20,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 12,
   },
   notificationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   notificationIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   notificationContent: {
     flex: 1,
   },
   notificationText: {
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 6,
     fontStyle: 'italic',
   },
   notificationSource: {

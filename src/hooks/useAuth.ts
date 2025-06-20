@@ -28,6 +28,10 @@ export function useAuth() {
           console.log('useAuth - role:', role);
           console.log('useAuth - user.uid:', user.uid);
           
+          // Sauvegarder le rôle en local pour les cas hors ligne
+          await AsyncStorage.setItem('userRole', role);
+          await AsyncStorage.setItem('userEmail', user.email || '');
+          
           setUser({ ...user, role });
         } else {
           setUser(null);

@@ -13,6 +13,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
 
 interface Notification {
@@ -22,6 +23,8 @@ interface Notification {
   target: 'all' | 'users' | 'admins';
   createdAt: any;
   isActive: boolean;
+  authorName?: string;
+  targetUsers?: 'all' | 'users' | 'admins';
 }
 
 type NewNotification = Omit<Notification, 'id' | 'createdAt'>;
@@ -30,10 +33,18 @@ export default function AdminNotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingNotification, setEditingNotification] = useState<Notification | null>(null);
-  const [newNotification, setNewNotification] = useState<NewNotification>({ title: '', message: '', target: 'all', isActive: true });
+  const [newNotification, setNewNotification] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    authorName: '',
+    targetUsers: 'all',
+    isActive: true
+  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const db = getFirestore();
+  const { user } = useAuth();
 
   const loadNotifications = async () => {
     try {
@@ -65,13 +76,23 @@ export default function AdminNotificationsScreen() {
     }
 
     try {
+      // Récupérer automatiquement le nom de l'admin connecté
+      const adminName = user?.displayName || user?.email?.split('@')[0] || 'Admin';
+      
+      const notificationData = {
+        ...newNotification,
+        authorName: adminName, // Nom automatique de l'admin
+        targetUsers: newNotification.targetUsers,
+        createdAt: serverTimestamp()
+      };
+
       if (editingNotification) {
         // Update
         const notifRef = doc(db, 'notifications', editingNotification.id);
-        await updateDoc(notifRef, { ...newNotification });
+        await updateDoc(notifRef, notificationData);
       } else {
         // Create
-        await addDoc(collection(db, 'notifications'), { ...newNotification, createdAt: serverTimestamp() });
+        await addDoc(collection(db, 'notifications'), notificationData);
       }
       setModalVisible(false);
       setEditingNotification(null);
@@ -109,10 +130,24 @@ export default function AdminNotificationsScreen() {
   const openModal = (notif: Notification | null = null) => {
     if (notif) {
       setEditingNotification(notif);
-      setNewNotification({ title: notif.title, message: notif.message, target: notif.target, isActive: notif.isActive });
+      setNewNotification({
+        title: notif.title,
+        message: notif.message,
+        type: 'info',
+        authorName: notif.authorName || '',
+        targetUsers: notif.targetUsers || 'all',
+        isActive: notif.isActive
+      });
     } else {
       setEditingNotification(null);
-      setNewNotification({ title: '', message: '', target: 'all', isActive: true });
+      setNewNotification({
+        title: '',
+        message: '',
+        type: 'info',
+        authorName: '',
+        targetUsers: 'all',
+        isActive: true
+      });
     }
     setModalVisible(true);
   };
@@ -143,7 +178,7 @@ export default function AdminNotificationsScreen() {
             </View>
             <Text style={styles.cardMessage}>{notif.message}</Text>
             <View style={styles.cardFooter}>
-              <Text style={styles.cardMeta}>Cible: {notif.target}</Text>
+              <Text style={styles.cardMeta}>Cible: {notif.targetUsers || notif.target}</Text>
               <Text style={styles.cardMeta}>
                 Statut: {notif.isActive ? 'Active' : 'Inactive'}
               </Text>
@@ -181,22 +216,22 @@ export default function AdminNotificationsScreen() {
             {/* Simple target selector for now */}
             <View style={styles.buttonGroup}>
               <TouchableOpacity
-                style={[styles.button, newNotification.target === 'all' && styles.buttonActive]}
-                onPress={() => setNewNotification(prev => ({ ...prev, target: 'all' }))}
+                style={[styles.button, newNotification.targetUsers === 'all' && styles.buttonActive]}
+                onPress={() => setNewNotification(prev => ({ ...prev, targetUsers: 'all' }))}
               >
-                <Text style={[styles.buttonText, newNotification.target === 'all' && styles.buttonTextActive]}>Tous</Text>
+                <Text style={[styles.buttonText, newNotification.targetUsers === 'all' && styles.buttonTextActive]}>Tous</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, newNotification.target === 'users' && styles.buttonActive]}
-                onPress={() => setNewNotification(prev => ({ ...prev, target: 'users' }))}
+                style={[styles.button, newNotification.targetUsers === 'users' && styles.buttonActive]}
+                onPress={() => setNewNotification(prev => ({ ...prev, targetUsers: 'users' }))}
               >
-                <Text style={[styles.buttonText, newNotification.target === 'users' && styles.buttonTextActive]}>Utilisateurs</Text>
+                <Text style={[styles.buttonText, newNotification.targetUsers === 'users' && styles.buttonTextActive]}>Utilisateurs</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, newNotification.target === 'admins' && styles.buttonActive]}
-                onPress={() => setNewNotification(prev => ({ ...prev, target: 'admins' }))}
+                style={[styles.button, newNotification.targetUsers === 'admins' && styles.buttonActive]}
+                onPress={() => setNewNotification(prev => ({ ...prev, targetUsers: 'admins' }))}
               >
-                <Text style={[styles.buttonText, newNotification.target === 'admins' && styles.buttonTextActive]}>Admins</Text>
+                <Text style={[styles.buttonText, newNotification.targetUsers === 'admins' && styles.buttonTextActive]}>Admins</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.modalActions}>
