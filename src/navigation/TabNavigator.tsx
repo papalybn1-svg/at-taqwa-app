@@ -15,22 +15,27 @@ export default function TabNavigator() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: "#888",
+        tabBarInactiveTintColor: "#9CA3AF",
         tabBarStyle: { 
           backgroundColor: colors.white,
-          height: 64,
-          paddingBottom: 22,
-          paddingTop: 14,
-          borderTopLeftRadius: 18,
-          borderTopRightRadius: 18,
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 12,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
           shadowColor: '#000',
-          shadowOpacity: 0.08,
-          shadowRadius: 8,
-          elevation: 8,
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          elevation: 12,
+          borderTopWidth: 0,
         },
-        tabBarSafeAreaInsets: { bottom: 12, top: 0 },
         tabBarLabelStyle: {
-          fontSize: 12
+          fontSize: 11,
+          fontWeight: '600',
+          marginTop: 4,
+        },
+        tabBarIconStyle: {
+          marginBottom: 2,
         }
       }}
     >
@@ -38,8 +43,12 @@ export default function TabNavigator() {
         name="Accueil"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="home" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
+            <MaterialCommunityIcons 
+              name={focused ? "home" : "home-outline"} 
+              color={color} 
+              size={focused ? 26 : 24} 
+            />
           ),
         }}
       />
@@ -47,8 +56,12 @@ export default function TabNavigator() {
         name="Horaires"
         component={HorairesScreen}
         options={{
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="clock-outline" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
+            <MaterialCommunityIcons 
+              name={focused ? "clock" : "clock-outline"} 
+              color={color} 
+              size={focused ? 26 : 24} 
+            />
           ),
         }}
       />
@@ -56,8 +69,12 @@ export default function TabNavigator() {
         name="Favoris"
         component={FavoritesScreen}
         options={{
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="heart" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
+            <MaterialCommunityIcons 
+              name={focused ? "heart" : "heart-outline"} 
+              color={color} 
+              size={focused ? 26 : 24} 
+            />
           ),
         }}
       />
@@ -65,8 +82,12 @@ export default function TabNavigator() {
         name="Paramètres"
         component={ParametresScreen}
         options={{
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="cog" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
+            <MaterialCommunityIcons 
+              name={focused ? "cog" : "cog-outline"} 
+              color={color} 
+              size={focused ? 26 : 24} 
+            />
           ),
         }}
       />

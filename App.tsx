@@ -1,17 +1,18 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as SystemUI from 'expo-system-ui';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from './src/hooks/useAuth';
+import AdminTabNavigator from './src/navigation/AdminTabNavigator';
 import TabNavigator from './src/navigation/TabNavigator';
 import BooksScreen from './src/screens/BooksScreen';
 import ChapterScreen from './src/screens/ChapterScreen';
-import { app as firebaseApp } from './src/screens/firebaseConfig';
 import LoginScreen, { AuthContext } from './src/screens/LoginScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 import QuizScreen from './src/screens/QuizScreen';
 import TasbihScreen from './src/screens/TasbihScreen';
 
@@ -27,7 +28,9 @@ type RootStackParamList = {
   Books: undefined;
   Quiz: undefined;
   Tasbih: undefined;
+  Notifications: undefined;
   Login: undefined;
+  Admin: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -58,15 +61,7 @@ function SplashFamille() {
 
 export default function App() {
   const [splashStep, setSplashStep] = useState(0);
-  const [user, setUser] = useState<User | null>(null);
-  const auth = getAuth(firebaseApp);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
-    return () => unsubscribe();
-  }, []);
+  const { user, loading, setUser } = useAuth();
 
   useEffect(() => {
     if (splashStep === 0) {
@@ -87,6 +82,17 @@ export default function App() {
 
   if (splashStep === 0) return <SplashLogo />;
   if (splashStep === 1) return <SplashFamille />;
+  if (loading) return (
+    <View style={{ flex: 1, backgroundColor: '#F3F5F7', justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ fontSize: 18, color: '#174C3C' }}>Chargement...</Text>
+    </View>
+  );
+
+  // Logs de débogage
+  console.log('App.tsx - user:', user);
+  console.log('App.tsx - user.role:', user?.role);
+  console.log('App.tsx - !user:', !user);
+  console.log('App.tsx - user.role === admin:', user?.role === 'admin');
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>
@@ -102,6 +108,8 @@ export default function App() {
             >
               {!user ? (
                 <Stack.Screen name="Login" component={LoginScreen} />
+              ) : user.role === 'admin' ? (
+                <Stack.Screen name="Admin" component={AdminTabNavigator} options={{ headerShown: false }} />
               ) : (
                 <Stack.Screen name="Main" component={TabNavigator} />
               )}
@@ -109,6 +117,7 @@ export default function App() {
               <Stack.Screen name="Books" component={BooksScreen} />
               <Stack.Screen name="Quiz" component={QuizScreen} />
               <Stack.Screen name="Tasbih" component={TasbihScreen} />
+              <Stack.Screen name="Notifications" component={NotificationsScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </SafeAreaView>

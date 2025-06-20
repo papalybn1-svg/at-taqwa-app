@@ -1,142 +1,191 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from "react";
-import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import colors from "../theme/colors";
 
-const STORAGE_KEY = 'USER_ZIKRS';
+const ZIKR_PROGRESS_KEY = '@zikr_progress';
 
 export type Zikr = {
   id: string;
-  name: string;
+  category: string;
+  text: string;
+  description: string;
   max: number;
-  count: number;
 };
+
+type ActiveZikr = Zikr & { count: number };
 
 export default function TasbihScreen() {
   const [zikrs, setZikrs] = useState<Zikr[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newZikrName, setNewZikrName] = useState("");
-  const [newZikrCount, setNewZikrCount] = useState<number>(100);
-  const [activeZikr, setActiveZikr] = useState<Zikr|null>(null);
+  const [zikrProgress, setZikrProgress] = useState<{ [key: string]: number }>({});
+  const [loading, setLoading] = useState(true);
+  const [activeZikr, setActiveZikr] = useState<ActiveZikr | null>(null);
+  const db = getFirestore();
+
+  const loadZikrData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Load progress first
+      const savedProgress = await AsyncStorage.getItem(ZIKR_PROGRESS_KEY);
+      const progress = savedProgress ? JSON.parse(savedProgress) : {};
+      
+      // Fetch zikrs from Firestore
+      const zikrsRef = collection(db, 'zikrs');
+      const q = query(zikrsRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const fetchedZikrs: Zikr[] = [];
+      
+      console.log('Nombre de zikrs trouvés:', querySnapshot.size);
+      
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log('Zikr data:', { 
+          id: doc.id, 
+          category: data.category, 
+          text: data.text, 
+          description: data.description,
+          count: data.count 
+        });
+        fetchedZikrs.push({ 
+          id: doc.id, 
+          category: data.category || 'Général',
+          text: data.text || 'Zikr',
+          description: data.description || 'Louange à Allah',
+          max: data.count || 33 
+        });
+      });
+      
+      setZikrs(fetchedZikrs);
+
+      // Set progress for fetched zikrs
+      const initialProgress = { ...progress };
+      fetchedZikrs.forEach(zikr => {
+        if (initialProgress[zikr.id] === undefined) {
+          initialProgress[zikr.id] = 0;
+        }
+      });
+      setZikrProgress(initialProgress);
+
+    } catch (error) {
+      console.error("Erreur de chargement des Zikrs:", error);
+      // Fallback to default zikr if no data
+      setZikrs([{ 
+        id: 'default', 
+        category: 'Général',
+        text: 'Tasbih de la prière',
+        description: 'Louange à Allah',
+        max: 33 
+      }]);
+      setZikrProgress({ default: 0 });
+    } finally {
+      setLoading(false);
+    }
+  }, [db]);
 
   useEffect(() => {
-    loadZikrs();
-  }, []);
+    loadZikrData();
+  }, [loadZikrData]);
 
   useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(zikrs));
-  }, [zikrs]);
+    AsyncStorage.setItem(ZIKR_PROGRESS_KEY, JSON.stringify(zikrProgress));
+  }, [zikrProgress]);
 
-  const loadZikrs = async () => {
-    const data = await AsyncStorage.getItem(STORAGE_KEY);
-    if (data) {
-      const parsed = JSON.parse(data);
-      if (parsed.length === 0) {
-        setZikrs([{ id: 'default', name: 'Tasbih de la prière', max: 33, count: 0 }]);
-      } else {
-        setZikrs(parsed);
+  const increment = (id: string) => {
+    const zikr = zikrs.find(z => z.id === id);
+    if (!zikr) return;
+    
+    const currentCount = zikrProgress[id] || 0;
+    if (currentCount < zikr.max) {
+      const newProgress = { ...zikrProgress, [id]: currentCount + 1 };
+      setZikrProgress(newProgress);
+      if(activeZikr && activeZikr.id === id) {
+        setActiveZikr({...activeZikr, count: newProgress[id] })
       }
-    } else {
-      setZikrs([{ id: 'default', name: 'Tasbih de la prière', max: 33, count: 0 }]);
+    }
+  };
+  
+  const reset = (id: string) => {
+    setZikrProgress({ ...zikrProgress, [id]: 0 });
+    if(activeZikr && activeZikr.id === id) {
+      setActiveZikr({...activeZikr, count: 0 })
     }
   };
 
-  const addZikr = () => {
-    if (!newZikrName.trim()) return;
-    setZikrs([...zikrs, { name: newZikrName, max: newZikrCount, count: 0, id: Date.now().toString() }]);
-    setNewZikrName("");
-    setNewZikrCount(100);
-    setModalVisible(false);
+  const handleOpenTasbih = (zikr: Zikr) => {
+    setActiveZikr({
+      ...zikr,
+      count: zikrProgress[zikr.id] || 0,
+    });
   };
 
-  const increment = (id: string) => {
-    setZikrs(zikrs.map(z => z.id === id && z.count < z.max ? { ...z, count: z.count + 1 } : z));
-  };
-
-  const reset = (id: string) => {
-    setZikrs(zikrs.map(z => z.id === id ? { ...z, count: 0 } : z));
-  };
-
-  const remove = (id: string) => {
-    setZikrs(zikrs.filter(z => z.id !== id));
-  };
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tes Zikrs</Text>
+      <Text style={styles.title}>Tasbih</Text>
       <FlatList
         data={zikrs}
         keyExtractor={item => item.id}
         contentContainerStyle={{ padding: 16 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => setActiveZikr(item)}>
-            <View style={styles.card}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.zikrName}>{item.name}</Text>
-                <Text style={styles.zikrCount}>{item.count} / {item.max}</Text>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBar, { width: `${(item.count / item.max) * 100}%` }]} />
+        renderItem={({ item }) => {
+          const count = zikrProgress[item.id] || 0;
+          return (
+            <TouchableOpacity onPress={() => handleOpenTasbih(item)}>
+              <View style={styles.card}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.zikrCategory}>{item.category}</Text>
+                  <Text style={styles.zikrText}>{item.text}</Text>
+                  <Text style={styles.zikrDescription}>{item.description}</Text>
+                  <Text style={styles.zikrCount}>{count} / {item.max}</Text>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBar, { width: `${(count / item.max) * 100}%` }]} />
+                  </View>
+                </View>
+                <View style={styles.actions}>
+                  <TouchableOpacity onPress={() => increment(item.id)} style={styles.actionBtn}>
+                    <Text style={styles.actionText}>+</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => reset(item.id)} style={styles.actionBtn}>
+                    <Text style={styles.actionText}>⟳</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-              <View style={styles.actions}>
-                <TouchableOpacity onPress={() => increment(item.id)} style={styles.actionBtn}><Text style={styles.actionText}>+</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => reset(item.id)} style={styles.actionBtn}><Text style={styles.actionText}>⟳</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => remove(item.id)} style={styles.actionBtn}><Text style={styles.actionText}>🗑️</Text></TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={<Text style={{ textAlign: 'center', color: '#888', marginTop: 40 }}>Aucun Zikr. Ajoute-en un !</Text>}
-      />
-      <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-        <Text style={styles.addBtnText}>+ Nouveau Zikr</Text>
-      </TouchableOpacity>
-      <Modal visible={modalVisible} transparent animationType="fade">
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Créer un Zikr</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nom du Zikr"
-              value={newZikrName}
-              onChangeText={setNewZikrName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Nombre de Zikr"
-              value={String(newZikrCount)}
-              onChangeText={v => setNewZikrCount(Number(v.replace(/[^0-9]/g, '')))}
-              keyboardType="numeric"
-              maxLength={4}
-            />
-            <TouchableOpacity style={styles.saveBtn} onPress={addZikr}>
-              <Text style={styles.saveBtnText}>Enregistrer</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setModalVisible(false)} style={{ marginTop: 8 }}>
-              <Text style={{ color: colors.primary }}>Annuler</Text>
-            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Aucun Zikr trouvé. Ajoutez-en depuis le panneau admin.</Text>
           </View>
-        </View>
-      </Modal>
+        }
+        onRefresh={loadZikrData}
+        refreshing={loading}
+      />
+      
       <Modal visible={!!activeZikr} transparent animationType="slide">
         <View style={styles.modalBg}>
           <View style={[styles.modalCard, { width: 320, alignItems: 'center' }]}> 
-            <Text style={[styles.modalTitle, { fontSize: 22 }]}>{activeZikr?.name}</Text>
-            <Text style={{ fontSize: 48, fontWeight: 'bold', color: colors.primary, marginVertical: 18 }}>{activeZikr?.count} / {activeZikr?.max}</Text>
-            <TouchableOpacity style={[styles.saveBtn, { marginBottom: 12, width: 120, alignItems: 'center' }]} onPress={() => {
-              if (activeZikr && activeZikr.count < activeZikr.max) {
-                setZikrs(zikrs.map(z => z.id === activeZikr.id ? { ...z, count: z.count + 1 } : z));
-                setActiveZikr(activeZikr && activeZikr.count + 1 < activeZikr.max ? { ...activeZikr, count: activeZikr.count + 1 } : activeZikr);
-              }
-            }}>
+            <Text style={[styles.modalCategory, { fontSize: 14, color: colors.primary, marginBottom: 8 }]}>
+              {activeZikr?.category}
+            </Text>
+            <Text style={[styles.modalTitle, { fontSize: 22 }]}>{activeZikr?.text}</Text>
+            <Text style={[styles.modalDescription, { fontSize: 14, color: colors.gray, marginBottom: 16, textAlign: 'center' }]}>
+              {activeZikr?.description}
+            </Text>
+            <Text style={{ fontSize: 48, fontWeight: 'bold', color: colors.primary, marginVertical: 18 }}>
+              {zikrProgress[activeZikr?.id || ''] || 0} / {activeZikr?.max}
+            </Text>
+            <TouchableOpacity style={[styles.saveBtn, { marginBottom: 12, width: 120, alignItems: 'center' }]} onPress={() => activeZikr && increment(activeZikr.id)}>
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 22 }}>+1</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: '#FFD700', marginBottom: 8, width: 120, alignItems: 'center' }]} onPress={() => {
-              if (activeZikr) {
-                setZikrs(zikrs.map(z => z.id === activeZikr.id ? { ...z, count: 0 } : z));
-                setActiveZikr({ ...activeZikr, count: 0 });
-              }
-            }}>
+            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: '#FFD700', marginBottom: 8, width: 120, alignItems: 'center' }]} onPress={() => activeZikr && reset(activeZikr.id)}>
               <Text style={{ color: colors.primary, fontWeight: 'bold', fontSize: 16 }}>Réinitialiser</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setActiveZikr(null)} style={{ marginTop: 8 }}>
@@ -152,20 +201,125 @@ export default function TasbihScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F5F7' },
   title: { fontSize: 22, fontWeight: 'bold', color: colors.primary, margin: 20, marginBottom: 10 },
-  card: { backgroundColor: colors.primary, borderRadius: 18, padding: 18, marginBottom: 18, flexDirection: 'row', alignItems: 'center', elevation: 3 },
-  zikrName: { color: colors.white, fontSize: 16, fontWeight: 'bold', marginBottom: 6 },
-  zikrCount: { color: '#fff', fontSize: 13, marginBottom: 6 },
-  progressBarBg: { backgroundColor: '#fff', height: 6, borderRadius: 3, width: '100%', marginBottom: 6 },
-  progressBar: { backgroundColor: '#FFD700', height: 6, borderRadius: 3 },
-  actions: { flexDirection: 'row', alignItems: 'center', marginLeft: 12 },
-  actionBtn: { backgroundColor: '#fff', borderRadius: 16, padding: 6, marginHorizontal: 2 },
-  actionText: { color: colors.primary, fontWeight: 'bold', fontSize: 18 },
-  addBtn: { backgroundColor: colors.primary, borderRadius: 24, paddingVertical: 14, paddingHorizontal: 32, alignSelf: 'center', margin: 18, elevation: 2 },
-  addBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.18)', justifyContent: 'center', alignItems: 'center' },
-  modalCard: { backgroundColor: '#fff', borderRadius: 18, padding: 28, width: 300, alignItems: 'center', elevation: 6 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.primary, marginBottom: 18 },
-  input: { backgroundColor: '#F3F5F7', borderRadius: 10, padding: 10, width: '100%', marginBottom: 12, fontSize: 15 },
-  saveBtn: { backgroundColor: colors.primary, borderRadius: 18, paddingVertical: 10, paddingHorizontal: 32, marginTop: 8 },
-  saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  card: { 
+    backgroundColor: colors.white, 
+    borderRadius: 18, 
+    padding: 18, 
+    marginBottom: 18, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    elevation: 3, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 1}, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 3 
+  },
+  zikrCategory: { 
+    color: colors.primary, 
+    fontSize: 12, 
+    fontWeight: '600', 
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
+  },
+  zikrText: { 
+    color: colors.text, 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    marginBottom: 4 
+  },
+  zikrDescription: { 
+    color: colors.gray, 
+    fontSize: 14, 
+    marginBottom: 8,
+    fontStyle: 'italic'
+  },
+  zikrCount: { 
+    color: colors.gray, 
+    fontSize: 13, 
+    marginBottom: 6 
+  },
+  progressBarBg: { 
+    backgroundColor: '#eee', 
+    height: 6, 
+    borderRadius: 3, 
+    width: '100%', 
+    marginBottom: 6, 
+    overflow: 'hidden' 
+  },
+  progressBar: { 
+    backgroundColor: colors.primary, 
+    height: 6, 
+    borderRadius: 3 
+  },
+  actions: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginLeft: 12 
+  },
+  actionBtn: { 
+    backgroundColor: '#f0f0f0', 
+    borderRadius: 16, 
+    padding: 6, 
+    marginHorizontal: 2, 
+    width: 32, 
+    height: 32, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  actionText: { 
+    color: colors.primary, 
+    fontWeight: 'bold', 
+    fontSize: 18 
+  },
+  modalBg: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.18)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  modalCard: { 
+    backgroundColor: '#fff', 
+    borderRadius: 18, 
+    padding: 28, 
+    width: 300, 
+    alignItems: 'center', 
+    elevation: 6 
+  },
+  modalCategory: { 
+    fontSize: 14, 
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
+  },
+  modalTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: colors.primary, 
+    marginBottom: 18 
+  },
+  modalDescription: { 
+    fontSize: 14, 
+    color: colors.gray,
+    textAlign: 'center'
+  },
+  saveBtn: { 
+    backgroundColor: colors.primary, 
+    borderRadius: 18, 
+    paddingVertical: 10, 
+    paddingHorizontal: 32, 
+    marginTop: 8 
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    textAlign: 'center', 
+    color: colors.gray, 
+    marginTop: 40,
+    fontSize: 16
+  },
 }); 

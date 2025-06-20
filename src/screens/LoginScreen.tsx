@@ -1,10 +1,13 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, User } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Image as RNImage, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AuthUser } from '../hooks/useAuth';
 import { auth } from './firebaseConfig';
 
 // Créer le contexte utilisateur
-export const AuthContext = createContext<{ user: User | null, setUser: (u: User | null) => void }>({ user: null, setUser: () => {} });
+export const AuthContext = createContext<{ user: AuthUser | null, setUser: (u: AuthUser | null) => void }>({ user: null, setUser: () => {} });
 
 // Ajouter un composant Toast moderne
 function Toast({ visible, message, type, onHide }: { visible: boolean, message: string, type: 'success' | 'error', onHide: () => void }) {
@@ -33,6 +36,8 @@ export default function LoginScreen({ navigation }: any) {
   const { user, setUser } = useContext(AuthContext);
   const [toast, setToast] = useState<{ visible: boolean, message: string, type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
 
+  const db = getFirestore();
+
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ visible: true, message, type });
   };
@@ -43,17 +48,53 @@ export default function LoginScreen({ navigation }: any) {
       if (screen === 'register') {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCred.user, { displayName: `${prenom} ${nom}` });
-        setUser(userCred.user);
+        
+        // Créer le document utilisateur avec le rôle par défaut
+        await setDoc(doc(db, 'users', userCred.user.uid), {
+          email: userCred.user.email,
+          role: 'user',
+          createdAt: new Date(),
+          displayName: `${prenom} ${nom}`,
+        });
+
+        setUser({ ...userCred.user, role: 'user' });
         showToast('Inscription réussie !', 'success');
         setTimeout(() => navigation.navigate('Main'), 800);
       } else {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
-        setUser(userCred.user);
+        const userDocRef = doc(db, 'users', userCred.user.uid);
+        let userDoc = await getDoc(userDocRef);
+        let userData = userDoc.data();
+
+        if (!userData) {
+          // Si le document n'existe pas, on le crée automatiquement
+          await setDoc(userDocRef, {
+            email: userCred.user.email,
+            role: 'user',
+            createdAt: new Date(),
+            displayName: userCred.user.displayName || '',
+          });
+          userDoc = await getDoc(userDocRef);
+          userData = userDoc.data();
+        }
+
+        const role = userData?.role || 'user';
+        // logs debug
+        console.log('userData Firestore:', userData);
+        console.log('role Firestore:', role);
+
+        // Sauvegarder le rôle localement pour le mode hors ligne
+        await AsyncStorage.setItem('userRole', role);
+        await AsyncStorage.setItem('userEmail', userCred.user.email || '');
+
+        setUser({ ...userCred.user, role });
+
         showToast('Connexion réussie !', 'success');
-        setTimeout(() => navigation.navigate('Main'), 800);
       }
     } catch (e: any) {
       let msg = 'Une erreur est survenue.';
+      // Ajout d'un log d'erreur
+      console.log('Erreur lors de la connexion ou de la lecture Firestore:', e);
       if (e.code === 'auth/wrong-password') msg = 'Mot de passe incorrect.';
       else if (e.code === 'auth/user-not-found') msg = "Aucun compte trouvé pour cet email.";
       else if (e.code === 'auth/email-already-in-use') msg = "Cet email est déjà utilisé.";

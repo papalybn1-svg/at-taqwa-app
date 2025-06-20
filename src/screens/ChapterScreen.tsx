@@ -2,10 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState } from "react";
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Animated, Appearance, Dimensions, Easing, Image, Modal, Pressable, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import chaptersData from '../../data/chapitres.json';
 import colors from "../theme/colors";
+import { AuthContext } from './LoginScreen';
+import { db } from './firebaseConfig';
 const burgerMenu = require('../../assets/burger-menu.png');
 const lockClosed = require('../../assets/lock-closed.png');
 const lockOpen = require('../../assets/lock-open.png');
@@ -94,6 +97,7 @@ function BurgerButton({ onPress, size = 38, style = {} }: { onPress: () => void;
 export default function ChapterScreen({ route }: { route: RouteProp<ChapterScreenParams, 'Chapter'> }) {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { chapter } = route.params;
+  const { user } = useContext(AuthContext); 
   const [chapterContent, setChapterContent] = useState<any>(null);
   const data = chaptersData as any;
   const [progress, setProgress] = useState<number>(0);
@@ -111,6 +115,27 @@ export default function ChapterScreen({ route }: { route: RouteProp<ChapterScree
   const flatListRef = useRef<any>(null);
   // Animation de transition fade
   const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const logActivity = async () => {
+      if (!user || !chapter) return;
+
+      try {
+        await addDoc(collection(db, 'readingActivity'), {
+          userId: user.uid,
+          userEmail: user.email,
+          chapterId: chapter.image, // 'image' is used as an ID here
+          chapterTitle: chapter.title,
+          readAt: serverTimestamp(),
+        });
+        console.log(`Activity logged for user ${user.uid} reading chapter ${chapter.title}`);
+      } catch (error) {
+        console.error("Error logging reading activity: ", error);
+      }
+    };
+
+    logActivity();
+  }, [chapter, user]);
 
   useEffect(() => {
     try {
