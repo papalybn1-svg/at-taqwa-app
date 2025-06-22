@@ -1,13 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationProp, useNavigation } from '@react-navigation/native'; // Assurez-vous d'avoir installé React Navigation
 import React from "react";
-import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from "react-native";
 import chaptersData from '../../data/chapitres.json'; // Assurez-vous que le chemin est correct
 import colors from "../theme/colors";
-import { Chapter, ChaptersData } from '../types/chapters'; // Importez le type
-import burgerMenu = require('../../assets/burger-menu.png');
-import lockClosed = require('../../assets/lock-closed.png');
-import lockOpen = require('../../assets/lock-open.png');
+import { Chapter, ChaptersData } from '../types/chapters';
+const burgerMenu = require('../../assets/burger-menu.png');
+const lockClosed = require('../../assets/lock-closed.png');
+const lockOpen = require('../../assets/lock-open.png');
 
 const imageMap: { [key: string]: ImageSourcePropType } = {
   "1": require('../../assets/1.png'),
@@ -24,6 +24,18 @@ const imageMap: { [key: string]: ImageSourcePropType } = {
   "12": require('../../assets/21.png'),
   // Ajoutez d'autres images ici
 };
+
+// Regrouper les blocs en pages (max 15 pages)
+function paginateBlocks(blocks: { type: string; contenu: string }[], maxPages = 15) {
+  const total = blocks.length;
+  if (total <= maxPages) return blocks.map(b => [b]);
+  const pageSize = Math.ceil(total / maxPages);
+  const pages = [];
+  for (let i = 0; i < total; i += pageSize) {
+    pages.push(blocks.slice(i, i + pageSize));
+  }
+  return pages;
+}
 
 export default function BooksScreen() {
   const navigation = useNavigation<NavigationProp<any>>(); // Utilisez le hook de navigation avec le type
@@ -43,28 +55,6 @@ export default function BooksScreen() {
   const saveProgress = (newProgress: {[key:string]:number}) => {
     setProgress(newProgress);
     AsyncStorage.setItem('chapterProgress', JSON.stringify(newProgress));
-  };
-
-  // Calcul de la progression d'une partie
-  const getPartProgress = (partieKey: string) => {
-    const chaps = data[partieKey as keyof ChaptersData].chapitres;
-    const total = chaps.length;
-    const done = chaps.filter((_, idx) => progress[`chapter${partieKey}_${idx+1}`] === 100).length;
-    return Math.round((done / total) * 100);
-  };
-
-  // Logique de blocage des parties et chapitres
-  const isPartUnlocked = (partIdx: number) => {
-    if (partIdx === 0) return true;
-    // La partie précédente doit être à 100%
-    const prevKey = Object.keys(data)[partIdx-1];
-    return getPartProgress(prevKey) === 100;
-  };
-  const isChapterUnlocked = (partIdx: number, chapIdx: number) => {
-    if (!isPartUnlocked(partIdx)) return false;
-    if (chapIdx === 0) return true;
-    const partKey = Object.keys(data)[partIdx];
-    return progress[`chapter${partKey}_${chapIdx}`] === 100;
   };
 
   // Ouvrir le drawer latéral
@@ -95,16 +85,11 @@ export default function BooksScreen() {
               <Text style={{ color:'#fff', fontWeight:'bold', fontSize:20, marginBottom:18, textAlign:'center' }}>Chapitres</Text>
               {Object.keys(data).map((partie, pidx) => (
                 <View key={pidx}>
-                  {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => {
-                    const chapIdx = idx + 1;
-                    const unlocked = isChapterUnlocked(pidx, idx);
-                    return (
-                      <View key={idx} style={{ flexDirection:'row', alignItems:'center', marginBottom:10, backgroundColor: unlocked ? (selectedChapter?.title === ch.title ? '#BB9B4E' : 'transparent') : 'transparent', borderRadius:12, padding:unlocked?6:0 }}>
-                        <Text style={{ color:'#fff', fontWeight:'bold', fontSize:16, flex:1 }}>{ch.title}</Text>
-                        <Image source={unlocked ? lockOpen : lockClosed} style={{ width:22, height:22, tintColor: unlocked ? '#FFD700' : '#fff' }} />
-                      </View>
-                    );
-                  })}
+                  {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => (
+                    <View key={idx} style={{ flexDirection:'row', alignItems:'center', marginBottom:10, borderRadius:12, padding:6 }}>
+                      <Text style={{ color:'#fff', fontWeight:'bold', fontSize:16, flex:1 }}>{ch.title}</Text>
+                    </View>
+                  ))}
                 </View>
               ))}
               <Pressable style={{ marginTop:18, backgroundColor:'#fff', borderRadius:12, paddingVertical:8, paddingHorizontal:24, alignSelf:'center' }} onPress={closeDrawer}>
@@ -114,51 +99,39 @@ export default function BooksScreen() {
             <Pressable style={{ flex:1 }} onPress={closeDrawer} />
           </View>
         </Modal>
-        {Object.keys(data).map((partie, pidx) => {
-          const partUnlocked = isPartUnlocked(pidx);
-          return (
-            <View key={pidx} style={{ opacity: partUnlocked ? 1 : 0.5 }}>
-              <Text style={styles.sectionTitle}>{data[partie as keyof ChaptersData].titre}</Text>
-              {/* Barre de progression de la partie */}
-              <View style={{ height:8, backgroundColor:'#eee', borderRadius:4, marginHorizontal:16, marginBottom:8 }}>
-                <View style={{ height:8, backgroundColor:'#BB9B4E', borderRadius:4, width:`${getPartProgress(partie)}%` }} />
-              </View>
-              <View style={styles.chapterList}>
-                {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => {
-                  const chapUnlocked = isChapterUnlocked(pidx, idx);
-                  return (
-                    <TouchableOpacity 
-                      key={idx} 
-                      style={[styles.chapterCard, { opacity: chapUnlocked ? 1 : 0.5 }]} 
-                      onPress={() => chapUnlocked && handleChapterPress(ch)}
-                      disabled={!chapUnlocked}
-                    >
-                      <Image 
-                        source={imageMap[ch.image] || require('../../assets/1.png')} 
-                        style={styles.chapterImage} 
-                      />
-                      <View style={styles.chapterContent}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Text style={styles.chapterTitle}>{ch.title}</Text>
-                          <View style={{ backgroundColor: '#FFD700', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 }}>
-                            <Text style={{ color: colors.primary, fontWeight: 'bold', fontSize: 13 }}>{Math.round(progress[`chapter${Object.keys(data)[pidx]}_${idx+1}`]||0)}%</Text>
-                          </View>
-                        </View>
-                        <Text style={styles.chapterDesc}>{ch.desc}</Text>
-                        <Text style={styles.chapterAuthor}>{ch.author}</Text>
-                        {/* Barre de progression du chapitre */}
-                        <View style={{ height:6, backgroundColor:'#eee', borderRadius:3, marginTop:6, width:'100%' }}>
-                          <View style={{ height:6, backgroundColor:'#BB9B4E', borderRadius:3, width:`${progress[`chapter${Object.keys(data)[pidx]}_${idx+1}`]||0}%` }} />
-                        </View>
+        {Object.keys(data).map((partie, pidx) => (
+          <View key={pidx}>
+            <Text style={styles.sectionTitle}>{data[partie as keyof ChaptersData].titre}</Text>
+            <View style={styles.chapterList}>
+              {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={styles.chapterCard}
+                  onPress={() => handleChapterPress(ch)}
+                >
+                  <Image 
+                    source={imageMap[ch.image] || require('../../assets/1.png')} 
+                    style={styles.chapterImage} 
+                  />
+                  <View style={styles.chapterContent}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={styles.chapterTitle}>{ch.title}</Text>
+                      <View style={{ backgroundColor: '#FFD700', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 }}>
+                        <Text style={{ color: colors.primary, fontWeight: 'bold', fontSize: 13 }}>{Math.round(progress[`chapter${Object.keys(data)[pidx]}_${idx+1}`]||0)}%</Text>
                       </View>
-                      <Image source={chapUnlocked ? lockOpen : lockClosed} style={{ width:28, height:28, marginLeft:8, tintColor: chapUnlocked ? '#BB9B4E' : '#BB9B4E' }} />
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                    </View>
+                    <Text style={styles.chapterDesc}>{ch.desc}</Text>
+                    <Text style={styles.chapterAuthor}>{ch.author}</Text>
+                    {/* Barre de progression du chapitre */}
+                    <View style={{ height:6, backgroundColor:'#eee', borderRadius:3, marginTop:6, width:'100%' }}>
+                      <View style={{ height:6, backgroundColor:'#BB9B4E', borderRadius:3, width:`${progress[`chapter${Object.keys(data)[pidx]}_${idx+1}`]||0}%` }} />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
-          );
-        })}
+          </View>
+        ))}
       </ScrollView>
     </View>
   );
