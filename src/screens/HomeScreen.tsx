@@ -10,6 +10,7 @@ import chaptersData from '../../data/chapitres.json';
 import colors from "../theme/colors";
 import { AuthContext } from './LoginScreen';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
+import imageMap from '../../assets/chapterImages';
 
 type RootStackParamList = {
   Main: undefined;
@@ -40,21 +41,6 @@ type Chapter = {
   image: string;
   partie: string;
   content?: string;
-};
-
-const imageMap: { [key: string]: any } = {
-  "1": require('../../assets/1.png'),
-  "2": require('../../assets/2.png'),
-  "3": require('../../assets/3.png'),
-  "4": require('../../assets/4.png'),
-  "5": require('../../assets/5.png'),
-  "6": require('../../assets/6.png'),
-  "7": require('../../assets/12.png'),
-  "8": require('../../assets/15.png'),
-  "9": require('../../assets/16.png'),
-  "10": require('../../assets/17.png'),
-  "11": require('../../assets/20.png'),
-  "12": require('../../assets/21.png'),
 };
 
 // Contenu d'aperçu pour chaque chapitre
@@ -439,7 +425,7 @@ export default function HomeScreen() {
                   <TouchableOpacity style={styles.bookCard} onPress={() => handleChapterPress(item)}>
                     <View style={styles.bookImageContainer}>
                       <Image 
-                        source={imageMap[item.image] || require('../../assets/1.png')} 
+                        source={imageMap[item.image] || imageMap['1']} 
                         style={styles.bookImage}
                         defaultSource={require('../../assets/1.png')}
                         onError={() => console.log('Erreur de chargement image:', item.image)}
@@ -475,7 +461,7 @@ export default function HomeScreen() {
               <View style={styles.previewModalHeader}>
                 <View style={styles.previewModalImageContainer}>
                   <Image 
-                    source={imageMap[selectedChapter.image] || require('../../assets/1.png')} 
+                    source={imageMap[selectedChapter.image] || imageMap['1']} 
                     style={styles.previewModalImage}
                   />
                 </View>

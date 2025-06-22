@@ -5,25 +5,10 @@ import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, T
 import chaptersData from '../../data/chapitres.json'; // Assurez-vous que le chemin est correct
 import colors from "../theme/colors";
 import { Chapter, ChaptersData } from '../types/chapters';
+import imageMap from '../../assets/chapterImages';
 const burgerMenu = require('../../assets/burger-menu.png');
 const lockClosed = require('../../assets/lock-closed.png');
 const lockOpen = require('../../assets/lock-open.png');
-
-const imageMap: { [key: string]: ImageSourcePropType } = {
-  "1": require('../../assets/1.png'),
-  "2": require('../../assets/2.png'),
-  "3": require('../../assets/3.png'),
-  "4": require('../../assets/4.png'),
-  "5": require('../../assets/5.png'),
-  "6": require('../../assets/6.png'),
-  "7": require('../../assets/12.png'),
-  "8": require('../../assets/15.png'),
-  "9": require('../../assets/16.png'),
-  "10": require('../../assets/17.png'),
-  "11": require('../../assets/20.png'),
-  "12": require('../../assets/21.png'),
-  // Ajoutez d'autres images ici
-};
 
 // Regrouper les blocs en pages (max 15 pages)
 function paginateBlocks(blocks: { type: string; contenu: string }[], maxPages = 15) {
