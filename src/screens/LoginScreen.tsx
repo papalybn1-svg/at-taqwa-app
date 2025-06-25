@@ -57,9 +57,11 @@ export default function LoginScreen({ navigation }: any) {
           displayName: `${prenom} ${nom}`,
         });
 
-        setUser({ ...userCred.user, role: 'user' });
-        showToast('Inscription réussie !', 'success');
-        setTimeout(() => navigation.navigate('Main'), 800);
+        showToast('Inscription réussie ! Vous êtes maintenant connecté.', 'success');
+        console.log('✅ Inscription réussie pour:', userCred.user.email);
+        
+        // Laisser useAuth gérer la navigation automatiquement
+        // Pas besoin de navigation manuelle ici
       } else {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         const userDocRef = doc(db, 'users', userCred.user.uid);
@@ -77,15 +79,6 @@ export default function LoginScreen({ navigation }: any) {
           userDoc = await getDoc(userDocRef);
           userData = userDoc.data();
         }
-
-        const role = userData?.role || 'user';
-        // logs debug
-        console.log('userData Firestore:', userData);
-        console.log('role Firestore:', role);
-
-        // Sauvegarder le rôle localement pour le mode hors ligne
-        await AsyncStorage.setItem('userRole', role);
-        await AsyncStorage.setItem('userEmail', userCred.user.email || '');
 
         // Vérifier si c'est un nouvel utilisateur
         const isNewUser = userCred.user.metadata.creationTime === userCred.user.metadata.lastSignInTime;
@@ -110,19 +103,24 @@ export default function LoginScreen({ navigation }: any) {
           }
         }
 
-        setUser({ ...userCred.user, role });
-
-        showToast('Connexion réussie !', 'success');
+        showToast('Connexion réussie ! Redirection en cours...', 'success');
+        console.log('✅ Connexion réussie pour:', userCred.user.email);
+        
+        // Laisser useAuth gérer la navigation automatiquement
+        // useAuth détectera le changement d'état et App.tsx affichera la bonne interface
       }
     } catch (e: any) {
       let msg = 'Une erreur est survenue.';
-      // Ajout d'un log d'erreur
-      console.log('Erreur lors de la connexion ou de la lecture Firestore:', e);
+      console.error('❌ Erreur auth:', e);
+      
       if (e.code === 'auth/wrong-password') msg = 'Mot de passe incorrect.';
       else if (e.code === 'auth/user-not-found') msg = "Aucun compte trouvé pour cet email.";
       else if (e.code === 'auth/email-already-in-use') msg = "Cet email est déjà utilisé.";
       else if (e.code === 'auth/invalid-email') msg = "Email invalide.";
       else if (e.code === 'auth/weak-password') msg = "Le mot de passe est trop faible.";
+      else if (e.code === 'auth/network-request-failed') msg = "Erreur de connexion réseau.";
+      else if (e.code === 'auth/too-many-requests') msg = "Trop de tentatives. Réessayez plus tard.";
+      
       showToast(msg, 'error');
     }
     setLoading(false);
@@ -163,7 +161,7 @@ export default function LoginScreen({ navigation }: any) {
           <RNImage source={require('../../assets/etoile.png')} style={styles.etoile} />
         </View>
         <Text style={styles.title}>Créez un compte</Text>
-        <Text style={styles.subtitle}>Lorem Ipsum,</Text>
+        <Text style={styles.subtitle}>Rejoignez notre communauté spirituelle</Text>
         <TextInput style={styles.input} placeholder="Prénom" value={prenom} onChangeText={setPrenom} />
         <TextInput style={styles.input} placeholder="Nom" value={nom} onChangeText={setNom} />
         <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
@@ -182,7 +180,9 @@ export default function LoginScreen({ navigation }: any) {
         <TouchableOpacity style={styles.buttonGold} onPress={handleAuth} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>S'inscrire</Text>}
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setScreen('login')}><Text style={styles.link}>Déjà un membre ? Se connecter.</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen('login')} disabled={loading}>
+          <Text style={styles.link}>Déjà un membre ? Se connecter.</Text>
+        </TouchableOpacity>
         <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
       </View>
     );

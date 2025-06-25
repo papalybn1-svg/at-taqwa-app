@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React from "react";
-import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Animated, Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
@@ -99,7 +99,7 @@ const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; on
     <View style={styles.categoryIconCircle}>
       <MaterialCommunityIcons name={icon} size={24} color={colors.primary} />
     </View>
-    <Text style={styles.categoryButtonText}>{title}</Text>
+    <Text style={styles.categoryButtonText} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
   </TouchableOpacity>
 );
 
@@ -360,8 +360,8 @@ export default function HomeScreen() {
       <Text style={styles.sectionTitle}>Catégories</Text>
           <View style={styles.categoriesGrid}>
             <CategoryButton icon="book-open-variant" title="Livres" onPress={() => navigation.navigate('Books' as never)} />
-            <CategoryButton icon="clock-time-four-outline" title="Prière" onPress={() => navigation.navigate('Horaires' as never)} />
-            <CategoryButton icon="head-question-outline" title="Quiz" onPress={() => navigation.navigate('Quiz' as never)} />
+            <CategoryButton icon="clock-time-four-outline" title="Heure de prière" onPress={() => navigation.navigate('Horaires' as never)} />
+            <CategoryButton icon="puzzle" title="Quiz" onPress={() => navigation.navigate('Quiz' as never)} />
             <CategoryButton icon="hand-heart" title="Tasbih" onPress={() => navigation.navigate('Tasbih' as never)} />
           </View>
       </View>
@@ -372,7 +372,7 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.bannerButton} onPress={() => navigation.navigate('Books' as never)}>
               <Text style={styles.bannerButtonText}>Commencer</Text>
             </TouchableOpacity>
-      </View>
+          </View>
           <Image 
             source={require('../../assets/femme-transformer.png')} 
             style={styles.bannerImage}
@@ -403,7 +403,7 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => item.id || index.toString()}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
-            contentContainerStyle={{paddingHorizontal: 16}}
+            contentContainerStyle={{paddingHorizontal: 20}}
             removeClippedSubviews={true}
             maxToRenderPerBatch={5}
             windowSize={5}
@@ -421,12 +421,26 @@ export default function HomeScreen() {
                 extrapolate: 'clamp',
               });
               return (
-                <Animated.View style={{ transform: [{ scale }], opacity, marginHorizontal: 6 }}>
+                <Animated.View style={{ transform: [{ scale }], opacity, marginHorizontal: 8 }}>
                   <TouchableOpacity style={styles.bookCard} onPress={() => handleChapterPress(item)}>
                     <View style={styles.bookImageContainer}>
                       <Image 
                         source={imageMap[item.image] || imageMap['1']} 
-                        style={styles.bookImage}
+                        style={
+                          // Images qui ont besoin de zoom (chapitres avec espaces blancs)
+                          ['1', '2', '3', '5'].includes(item.image) ? {
+                            width: '220%',
+                            height: '220%',
+                            position: 'absolute',
+                            top: '-60%',
+                            left: '-60%'
+                          } : {
+                            // Images qui remplissent déjà bien (pas de zoom)
+                            width: '100%',
+                            height: '100%'
+                          }
+                        }
+                        resizeMode="cover"
                         defaultSource={require('../../assets/1.png')}
                         onError={() => console.log('Erreur de chargement image:', item.image)}
                       />
@@ -517,7 +531,7 @@ const styles = StyleSheet.create({
   bismillah: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.primary,
     textAlign: 'left',
   },
   welcomeMessage: {
@@ -529,10 +543,11 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#FFF',
-    elevation: 2,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
     position: 'relative',
   },
   notificationBadge: {
@@ -564,10 +579,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 16,
     height: 52,
-    elevation: 2,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
   searchInput: {
     flex: 1,
@@ -580,7 +596,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.text,
+    color: colors.primary,
     marginBottom: 14,
     paddingHorizontal: 24,
   },
@@ -592,7 +608,7 @@ const styles = StyleSheet.create({
   },
   categoryButton: {
     alignItems: 'center',
-    width: '24%',
+    width: '25%',
   },
   categoryIconCircle: {
     width: 60,
@@ -602,13 +618,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
-    elevation: 2,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
   categoryButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.text,
     textAlign: 'center',
   },
@@ -625,6 +642,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     marginBottom: 20,
+    position: 'relative',
   },
   bannerTextContainer: {
     flex: 1,
@@ -649,62 +667,67 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   bannerImage: {
-    width: 80,
-    height: 100,
+    width: 240,
+    height: 300,
     resizeMode: 'contain',
+    position: 'absolute',
+    right: -70,
+    bottom: -80,
   },
   bookCard: {
     width: 160,
-    height: 220,
+    height: 240,
     backgroundColor: colors.white,
     borderRadius: 16,
-    elevation: 3,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
     overflow: 'hidden',
   },
   bookImageContainer: {
     width: '100%',
-    height: 140,
-    backgroundColor: '#f8f9fa',
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: 160,
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    position: 'relative',
   },
-  bookImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
+
   bookCardContent: {
-    padding: 12,
+    padding: 16,
     flex: 1,
     justifyContent: 'space-between',
   },
   bookCardTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 4,
-    lineHeight: 16,
+    marginBottom: 6,
+    lineHeight: 18,
     textAlign: 'center',
   },
   bookCardSubtitle: {
-    fontSize: 11,
-    color: colors.gray,
-    fontStyle: 'italic',
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '600',
     textAlign: 'center',
   },
   hadithCard: {
     backgroundColor: colors.white,
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     marginHorizontal: 24,
-    elevation: 2,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
   hadithText: {
     fontSize: 14,
@@ -730,14 +753,14 @@ const styles = StyleSheet.create({
   previewModalContent: {
     backgroundColor: colors.white,
     borderRadius: 20,
-    padding: 20,
+    padding: 24,
     width: '100%',
     maxHeight: '85%',
-    elevation: 10,
+    elevation: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
   },
   previewModalHeader: {
     flexDirection: 'row',
@@ -751,6 +774,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#f8f9fa',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   previewModalImage: {
     width: '100%',
@@ -790,8 +817,12 @@ const styles = StyleSheet.create({
   previewContentContainer: {
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
-    padding: 15,
+    padding: 18,
     marginBottom: 15,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   previewContentTitle: {
     fontSize: 16,

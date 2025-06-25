@@ -1,7 +1,8 @@
 // src/firebaseConfig.ts
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { collection, disableNetwork, enableNetwork, getDocs, initializeFirestore } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD_wGrGiN81UbBiLpeezXU8oHvXbXCVuk8",
@@ -15,17 +16,19 @@ const firebaseConfig = {
 // Initialisation unique pour Expo
 export const app = initializeApp(firebaseConfig);
 
+// Configuration Firebase Auth avec persistance automatique
+export const auth = getAuth(app);
+
 // Configuration Firestore optimisée pour Expo
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true, // Force le polling long pour Expo
 });
 
-export const auth = getAuth(app);
-
-// Configuration Firestore pour un meilleur débogage
-console.log('🔥 Firebase config initialisée');
+// Configuration pour un meilleur débogage
+console.log('🔥 Firebase config initialisée avec persistance Auth automatique');
 console.log('📱 Project ID:', firebaseConfig.projectId);
 console.log('🔧 Configuration Firestore optimisée pour Expo');
+console.log('💾 Persistance Auth native Firebase activée');
 
 // Test de connexion Firestore
 export const testFirestoreConnection = async () => {
@@ -82,4 +85,17 @@ export const checkFirestoreStatus = async () => {
       error: error instanceof Error ? error.message : 'Erreur inconnue'
     };
   }
+};
+
+// Fonction pour vérifier l'état d'authentification
+export const checkAuthStatus = () => {
+  const currentUser = auth.currentUser;
+  console.log('🔐 Auth Status:', {
+    isSignedIn: !!currentUser,
+    email: currentUser?.email,
+    uid: currentUser?.uid,
+    lastSignInTime: currentUser?.metadata?.lastSignInTime,
+    creationTime: currentUser?.metadata?.creationTime
+  });
+  return !!currentUser;
 };
