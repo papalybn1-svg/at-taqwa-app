@@ -6,11 +6,11 @@ import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React from "react";
 import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import colors from "../theme/colors";
 import { AuthContext } from './LoginScreen';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
-import imageMap from '../../assets/chapterImages';
 
 type RootStackParamList = {
   Main: undefined;
@@ -328,7 +328,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
+      <View style={styles.header}>
           <View>
             <Text style={styles.bismillah}>بسم الله الرحمن الرحيم</Text>
             <Text style={styles.welcomeMessage}>Bienvenue dans ton espace</Text>
@@ -354,17 +354,17 @@ export default function HomeScreen() {
               style={styles.searchInput}
             />
           </View>
-        </View>
+      </View>
         
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Catégories</Text>
+      <Text style={styles.sectionTitle}>Catégories</Text>
           <View style={styles.categoriesGrid}>
             <CategoryButton icon="book-open-variant" title="Livres" onPress={() => navigation.navigate('Books' as never)} />
             <CategoryButton icon="clock-time-four-outline" title="Prière" onPress={() => navigation.navigate('Horaires' as never)} />
             <CategoryButton icon="head-question-outline" title="Quiz" onPress={() => navigation.navigate('Quiz' as never)} />
             <CategoryButton icon="hand-heart" title="Tasbih" onPress={() => navigation.navigate('Tasbih' as never)} />
           </View>
-        </View>
+      </View>
 
         <View style={styles.bannerContainer}>
           <View style={styles.bannerTextContainer}>
@@ -372,7 +372,7 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.bannerButton} onPress={() => navigation.navigate('Books' as never)}>
               <Text style={styles.bannerButtonText}>Commencer</Text>
             </TouchableOpacity>
-          </View>
+      </View>
           <Image 
             source={require('../../assets/femme-transformer.png')} 
             style={styles.bannerImage}
@@ -481,8 +481,8 @@ export default function HomeScreen() {
                     {chapterPreviews[selectedChapter.id] || 
                       "Ce chapitre explore les aspects fondamentaux de la prière en Islam, offrant des enseignements précieux pour enrichir votre pratique spirituelle et renforcer votre connexion avec Allah."}
                   </Text>
-                </View>
-              </ScrollView>
+      </View>
+    </ScrollView>
               
               <View style={styles.previewModalActions}>
                 <TouchableOpacity style={styles.previewModalButton} onPress={openFullChapter}>

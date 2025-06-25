@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Image, ActivityIndicator, Animated } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { ChaptersData } from '../types/chapters';
-import imageMap from '../../assets/chapterImages';
 
 const chaptersData = chaptersDataRaw as ChaptersData;
 
@@ -263,7 +263,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           {currentSectionIndex === 0
             ? renderContent(intro)
             : renderContent(sections[currentSectionIndex - 1]?.items || [])}
-        </ScrollView>
+    </ScrollView>
       </Animated.View>
 
       {/* Navigation bas */}
