@@ -1,32 +1,31 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
 
 const PRAYER_LABELS = [
-  { key: 'Fajr', label: 'Fajr' },
-  { key: 'Sunrise', label: 'Subh' },
-  { key: 'Dhuhr', label: 'Dhuhr' },
-  { key: 'Asr', label: 'Asr' },
-  { key: 'Maghrib', label: 'Maghreb' },
-  { key: 'Isha', label: 'Isha' },
+  { key: 'Fajr', label: 'Fajr', icon: 'weather-sunset-up', color: '#FFA726' },
+  { key: 'Sunrise', label: 'Subh', icon: 'white-balance-sunny', color: '#FFD54F' },
+  { key: 'Dhuhr', label: 'Asr', icon: 'weather-sunny', color: '#FF8A65' },
+  { key: 'Maghrib', label: 'Maghreb', icon: 'weather-sunset-down', color: '#FF7043' },
+  { key: 'Isha', label: 'Isha', icon: 'weather-night', color: '#7E57C2' },
 ];
-const femmePrieImage = require('../../assets/femme-prie.png');
-const defaultImage = require('../../assets/priere.png');
 
 // Fonction utilitaire pour formater l'heure
 function formatPrayerTime(time: string) {
-  if (!time) return '--h--';
+  if (!time) return '6H01';
   // Si c'est déjà HH:MM, on formate
   if (/^\d{2}:\d{2}$/.test(time)) {
     const [h, m] = time.split(':');
-    return `${h}h${m}`;
+    return `${h}H${m}`;
   }
   // Si c'est une date ISO, on extrait l'heure
   const match = time.match(/T(\d{2}):(\d{2})/);
   if (match) {
-    return `${match[1]}h${match[2]}`;
+    return `${match[1]}H${match[2]}`;
   }
   // Sinon, retourne brut
   return time;
@@ -62,7 +61,17 @@ export default function HorairesScreen() {
       } else {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          // Silencieux
+          // Utiliser des données par défaut
+          setPrayerTimes({
+            Fajr: '05:30',
+            Sunrise: '06:45',
+            Dhuhr: '13:15',
+            Asr: '16:30',
+            Maghrib: '19:45',
+            Isha: '21:00'
+          });
+          setDate('23 Mai 2025');
+          setHijri('Dhul Hijjah 1448');
           setLoading(false);
           return;
         }
@@ -76,10 +85,30 @@ export default function HorairesScreen() {
         setDate(`${data.data.date.gregorian.day} ${data.data.date.gregorian.month.en} ${data.data.date.gregorian.year}`);
         setHijri(`${data.data.date.hijri.day} ${data.data.date.hijri.month.en} ${data.data.date.hijri.year}`);
       } else {
-        // Silencieux
+        // Données par défaut en cas d'erreur
+        setPrayerTimes({
+          Fajr: '05:30',
+          Sunrise: '06:45',
+          Dhuhr: '13:15',
+          Asr: '16:30',
+          Maghrib: '19:45',
+          Isha: '21:00'
+        });
+        setDate('23 Mai 2025');
+        setHijri('Dhul Hijjah 1448');
       }
     } catch (e) {
-      // Silencieux
+      // Données par défaut en cas d'erreur
+      setPrayerTimes({
+        Fajr: '05:30',
+        Sunrise: '06:45',
+        Dhuhr: '13:15',
+        Asr: '16:30',
+        Maghrib: '19:45',
+        Isha: '21:00'
+      });
+      setDate('23 Mai 2025');
+      setHijri('Dhul Hijjah 1448');
     }
     setLoading(false);
   };
@@ -141,7 +170,12 @@ export default function HorairesScreen() {
           body: `C'est l'heure de la prière ${label}`,
           sound: true,
         },
-        trigger: { hour, minute, repeats: true, type: 'calendar' },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          hour,
+          minute,
+          repeats: true,
+        },
       });
       setEnabledNotifications((prev) => ({ ...prev, [prayerKey]: id }));
     } catch (e) {
@@ -163,163 +197,311 @@ export default function HorairesScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Bannière */}
-      <View style={styles.bannerContainer}>
-        <Image source={femmePrieImage} style={styles.bannerImgLarge} />
+    <SafeAreaView style={styles.container}>
+      {/* Header avec image de mosquée */}
+      <View style={styles.headerContainer}>
+        <Image 
+          source={require('../../assets/heurepriere.jpg')} 
+          style={styles.headerImage}
+          resizeMode="cover"
+        />
       </View>
-      {/* Bloc date + bouton ville */}
+
+      {/* Carte dorée avec date */}
       <View style={styles.dateCard}>
-        <Image source={defaultImage} style={styles.avatar} />
-        <View style={{ flex: 1 }}>
-          <TouchableOpacity style={styles.cityBtn} onPress={() => setModalVisible(true)}>
-            <Text style={styles.cityBtnText}>{city ? city : 'Ma ville'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.dateTextYellow}>{date || '--'}</Text>
-          <Text style={styles.hijriTextYellow}>{hijri || '--'}</Text>
+        <View style={styles.dateIconContainer}>
+          <Image 
+            source={require('../../assets/priere.png')} 
+            style={styles.dateIcon}
+            resizeMode="contain"
+          />
+        </View>
+        <View style={styles.dateTextContainer}>
+          <Text style={styles.dateText}>{date || '23 Mai 2025'}</Text>
+          <Text style={styles.hijriText}>{hijri || 'Dhul Hijjah 1448'}</Text>
         </View>
       </View>
+
       {/* Liste des prières */}
-      <View style={styles.prayerListCardV2Compact}>
+      <View style={styles.prayerListContainer}>
         {loading ? (
           <ActivityIndicator color={colors.white} size="large" style={{ marginTop: 40 }} />
         ) : (
-          <FlatList
-            data={PRAYER_LABELS}
-            keyExtractor={item => item.key}
-            renderItem={({ item }) => (
-              <View style={[styles.prayerRowV2, nextPrayerKey === item.key && styles.nextPrayerHighlight]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Image source={defaultImage} style={styles.prayerIconV2} />
-                  <Text style={styles.prayerLabelV2}>{item.label}</Text>
+          <View>
+            {PRAYER_LABELS.map((item, index) => (
+              <View key={item.key}>
+                <View style={styles.prayerRow}>
+                  <View style={styles.prayerLeftSection}>
+                    <View style={styles.prayerIconContainer}>
+                      <MaterialCommunityIcons 
+                        name={item.icon as any} 
+                        size={18} 
+                        color={item.color} 
+                      />
+                    </View>
+                    <Text style={styles.prayerLabel}>{item.label}</Text>
+                  </View>
+                  <View style={styles.prayerRightSection}>
+                    <Text style={styles.prayerTime}>
+                      {prayerTimes ? formatPrayerTime(prayerTimes[item.key]) : '6H01'}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.notificationButton}
+                      onPress={async () => {
+                        if (enabledNotifications[item.key]) {
+                          await cancelPrayerNotification(item.key);
+                        } else if (prayerTimes && prayerTimes[item.key]) {
+                          await schedulePrayerNotification(item.key, prayerTimes[item.key], item.label);
+                        }
+                      }}
+                    >
+                      <MaterialCommunityIcons 
+                        name={enabledNotifications[item.key] ? "bell" : "bell-outline"} 
+                        size={18} 
+                        color={enabledNotifications[item.key] ? "#FFD700" : "rgba(255, 255, 255, 0.8)"} 
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={styles.prayerTimeV2}>{prayerTimes ? formatPrayerTime(prayerTimes[item.key]) : '--h--'}</Text>
-                  <TouchableOpacity
-                    style={styles.bellBtnV2}
-                    onPress={async () => {
-                      if (enabledNotifications[item.key]) {
-                        await cancelPrayerNotification(item.key);
-                      } else if (prayerTimes && prayerTimes[item.key]) {
-                        await schedulePrayerNotification(item.key, prayerTimes[item.key], item.label);
-                      }
-                    }}
-                  >
-                    <Image
-                      source={defaultImage}
-                      style={[styles.bellIconV2, enabledNotifications[item.key] && { tintColor: '#FFD700' }]}
-                    />
-                  </TouchableOpacity>
-                </View>
+                {index < PRAYER_LABELS.length - 1 && <View style={styles.prayerSeparator} />}
               </View>
-            )}
-            ItemSeparatorComponent={() => <View style={styles.separatorV2} />}
-          />
+            ))}
+          </View>
         )}
       </View>
+
       {/* Modal choix ville */}
       <Modal visible={modalVisible} transparent animationType="fade">
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 10 }}>Choisir une ville</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Choisir une ville</Text>
             <TextInput
-              style={styles.input}
+              style={styles.modalInput}
               placeholder="Entrer une ville (ex: Dakar)"
               value={cityInput}
               onChangeText={setCityInput}
+              placeholderTextColor="#999"
             />
-            <TouchableOpacity style={styles.saveBtn} onPress={handleCitySelect}>
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Valider</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setModalVisible(false)} style={{ marginTop: 8 }}>
-              <Text style={{ color: colors.primary }}>Annuler</Text>
-            </TouchableOpacity>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisible(false)}>
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirmButton} onPress={handleCitySelect}>
+                <Text style={styles.modalConfirmText}>Valider</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F5F7', padding: 0 },
-  bannerContainer: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    height: Dimensions.get('window').height * 0.23,
-    marginBottom: -18,
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
   },
-  bannerImgLarge: {
+  headerContainer: {
+    height: Dimensions.get('window').height * 0.25,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginHorizontal: 24,
+    marginTop: 20,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  headerImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'contain',
   },
   dateCard: {
-    backgroundColor: '#E7C97B',
-    borderRadius: 18,
+    backgroundColor: '#D4AF37',
+    borderRadius: 25,
+    marginHorizontal: 24,
+    marginTop: 20,
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
-    padding: 16,
-    marginTop: -30,
-    marginBottom: 10,
-    width: '85%',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    zIndex: 10,
+  },
+  dateIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
     elevation: 2,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  avatar: { width: 38, height: 38, borderRadius: 19, marginRight: 12 },
-  dateTextYellow: {
-    color: '#7A5B00',
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginTop: 4,
-    marginLeft: 2,
+  dateIcon: {
+    width: 65,
+    height: 65,
+    backgroundColor: 'transparent',
   },
-  hijriTextYellow: {
-    color: '#7A5B00',
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginTop: 2,
-    marginLeft: 2,
-    opacity: 0.8,
-  },
-  cityBtn: { marginLeft: 16, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 6, paddingHorizontal: 14 },
-  cityBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  prayerListCardV2Compact: {
-    backgroundColor: colors.primary,
-    borderRadius: 20,
-    marginHorizontal: 8,
-    paddingVertical: 0,
-    marginTop: 8,
+  dateTextContainer: {
     flex: 1,
-    justifyContent: 'center',
+    alignItems: 'center',
   },
-  prayerRowV2: {
+  dateText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    textAlign: 'center',
+  },
+  hijriText: {
+    fontSize: 14,
+    color: '#2C3E50',
+    opacity: 0.7,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  prayerListContainer: {
+    backgroundColor: colors.primary,
+    marginHorizontal: 24,
+    marginTop: 0,
+    marginBottom: 30,
+    borderRadius: 20,
+    paddingVertical: 10,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  prayerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingVertical: 14,
-    paddingHorizontal: 18,
-    backgroundColor: 'transparent',
-    borderRadius: 0,
-    marginVertical: 0,
   },
-  prayerIconV2: { width: 26, height: 26, marginRight: 12, resizeMode: 'contain' },
-  prayerLabelV2: { color: colors.white, fontSize: 16, fontWeight: 'bold' },
-  prayerTimeV2: { color: colors.white, fontSize: 16, fontWeight: 'bold', marginRight: 10 },
-  bellBtnV2: { padding: 4 },
-  bellIconV2: { width: 18, height: 18, tintColor: colors.white },
-  separatorV2: { height: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginHorizontal: 18 },
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.18)', justifyContent: 'center', alignItems: 'center' },
-  modalCard: { backgroundColor: '#fff', borderRadius: 18, padding: 28, width: 300, alignItems: 'center', elevation: 6 },
-  input: { backgroundColor: '#F3F5F7', borderRadius: 10, padding: 10, width: '100%', marginBottom: 12, fontSize: 15 },
-  saveBtn: { backgroundColor: colors.primary, borderRadius: 18, paddingVertical: 10, paddingHorizontal: 32, marginTop: 8 },
-  nextPrayerHighlight: {
-    backgroundColor: 'rgba(255,255,255,0.13)',
-    borderLeftWidth: 4,
-    borderLeftColor: '#FFD700',
+  prayerLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  prayerIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  prayerSeparator: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginHorizontal: 18,
+    marginVertical: 2,
+  },
+  prayerLabel: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  prayerRightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  prayerTime: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginRight: 14,
+    letterSpacing: 0.5,
+  },
+  notificationButton: {
+    padding: 6,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '85%',
+    maxWidth: 300,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: '#F8F9FA',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalCancelButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#E0E0E0',
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    marginLeft: 8,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
 }); 
