@@ -379,9 +379,9 @@ export default function LoginScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   introContainer: { flex: 1, backgroundColor: '#174C3C' },
-  imageTopSection: { flex: 2, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-  coupleImage: { width: '200%', height: '160%', resizeMode: 'contain', marginBottom: -140, marginLeft: 20 },
-  whiteBottomCard: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 32, width: '100%', alignItems: 'center', minHeight: 280 },
+  imageTopSection: { flex: 2, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginBottom: -20 },
+  coupleImage: { width: '200%', height: '160%', resizeMode: 'contain', marginBottom: -120, marginLeft: 20 },
+  whiteBottomCard: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 32, paddingTop: 40, width: '100%', alignItems: 'center', minHeight: 330 },
   mainTitle: { fontSize: 32, fontWeight: 'bold', color: '#174C3C', marginBottom: 16, textAlign: 'center' },
   descriptionText: { fontSize: 20, fontWeight: 'bold', color: '#174C3C', textAlign: 'center', marginBottom: 32, lineHeight: 28 },
   buttonsContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 24 },
@@ -448,8 +448,8 @@ const styles = StyleSheet.create({
   },
   loginTitle: { fontSize: 28, fontWeight: 'bold', color: '#174C3C', marginBottom: 32, textAlign: 'left', alignSelf: 'flex-start', maxWidth: 340, width: '100%', marginTop: 60 },
   loginInput: { width: '100%', maxWidth: 340, backgroundColor: '#FFFFFF', color: '#174C3C', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 20, fontSize: 16, fontWeight: '500', borderWidth: 1, borderColor: '#E0E0E0', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
-  loginButton: { backgroundColor: '#D4AF37', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 40, marginTop: 16, marginBottom: 16, width: '100%', maxWidth: 340, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-  loginButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16, textAlign: 'center' },
+  loginButton: { backgroundColor: '#D4AF37', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 40, marginTop: 16, marginBottom: 16, width: '100%', maxWidth: 340 },
+  loginButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
   forgotPasswordContainer: { alignItems: 'center', marginTop: 16, marginBottom: 16 },
   forgotPassword: { color: '#174C3C', fontWeight: 'bold', fontSize: 16 },
   separatorContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 16, width: '100%', maxWidth: 340 },
