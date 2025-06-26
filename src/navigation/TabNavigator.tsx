@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import React from "react";
+import AuthorProfileScreen from '../screens/AuthorProfileScreen';
 import BooksScreen from '../screens/BooksScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import HomeScreen from "../screens/HomeScreen";
@@ -24,6 +25,7 @@ function HomeStack() {
       <Stack.Screen name="Tasbih" component={TasbihScreen} />
       <Stack.Screen name="Books" component={BooksScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="AuthorProfile" component={AuthorProfileScreen} />
     </Stack.Navigator>
   );
 }

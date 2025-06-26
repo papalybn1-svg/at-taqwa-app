@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
 
@@ -41,6 +41,9 @@ export default function HorairesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [cityInput, setCityInput] = useState('');
   const [enabledNotifications, setEnabledNotifications] = useState<{ [key: string]: string | null }>({});
+
+  // Ajout navigation pour bouton retour
+  const navigation = require('@react-navigation/native').useNavigation();
 
   useEffect(() => {
     fetchPrayerTimes();
@@ -205,7 +208,15 @@ export default function HorairesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header avec image de mosquée */}
+      {/* Header allégé avec bouton retour */}
+      <View style={styles.headerRow}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Heures de prière</Text>
+        <View style={{width:32}} />
+      </View>
+      {/* Image plus discrète */}
       <View style={styles.headerContainer}>
         <Image 
           source={require('../../assets/heurepriere.jpg')} 
@@ -324,55 +335,45 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
 
-  headerContainer: {
-    height: Dimensions.get('window').height * 0.22,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    marginHorizontal: 20,
-    marginTop: 12,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  headerImage: {
-    width: '100%',
-    height: '100%',
-  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: '#eee', zIndex: 10 },
+  backButton: { padding: 8, borderRadius: 20, backgroundColor: '#f8f9fa', marginRight: 8 },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
+  headerContainer: { height: 90, borderRadius: 18, marginHorizontal: 20, marginTop: 8, overflow: 'hidden', position: 'relative' },
+  headerImage: { width: '100%', height: '100%', opacity: 0.7 },
   dateCard: {
     backgroundColor: '#D4AF37',
     borderRadius: 22,
     marginHorizontal: 20,
-    marginTop: 15,
-    marginBottom: 15,
-    paddingVertical: 12,
+    marginTop: 10,
+    marginBottom: 10,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 5,
-    zIndex: 10,
-  },
-  dateIconContainer: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
+    zIndex: 2,
+  },
+  dateIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
   },
   dateIcon: {
-    width: 58,
-    height: 58,
+    width: 38,
+    height: 38,
     backgroundColor: 'transparent',
   },
   dateTextContainer: {
@@ -380,13 +381,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateText: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#2C3E50',
     textAlign: 'center',
   },
   hijriText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#2C3E50',
     opacity: 0.7,
     marginTop: 2,
@@ -402,13 +403,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
     paddingTop: 2,
-    paddingBottom: 40,
+    paddingBottom: 24,
     flex: 1,
-    elevation: 6,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   prayerListContent: {
     flex: 1,
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   prayerLeftSection: {
     flexDirection: 'row',
@@ -427,27 +428,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   prayerIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
-    elevation: 2,
+    marginRight: 10,
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
   },
   prayerSeparator: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
     marginHorizontal: 20,
     marginVertical: 1,
   },
   prayerLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: 0.2,
@@ -457,10 +458,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   prayerTime: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginRight: 12,
+    marginRight: 10,
     letterSpacing: 0.3,
   },
   notificationButton: {
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.03,
     shadowRadius: 1,
   },
   modalOverlay: {
@@ -485,11 +486,11 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '85%',
     maxWidth: 300,
-    elevation: 10,
+    elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   modalTitle: {
     fontSize: 18,
@@ -541,15 +542,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
-    marginBottom: 16,
-    paddingVertical: 8,
+    marginBottom: 10,
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 12,
-    elevation: 3,
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    shadowOpacity: 0.03,
+    shadowRadius: 1,
   },
   cityInfo: {
     flexDirection: 'row',
@@ -557,7 +558,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cityText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#2C3E50',
     marginLeft: 6,

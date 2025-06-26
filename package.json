@@ -18,6 +18,7 @@
     "expo": "53.0.12",
     "expo-auth-session": "~6.2.0",
     "expo-blur": "^14.1.5",
+    "expo-dev-client": "~5.2.1",
     "expo-image-picker": "^16.1.4",
     "expo-linear-gradient": "~14.1.5",
     "expo-location": "~18.1.5",
@@ -34,8 +35,7 @@
     "react-native-gesture-handler": "~2.24.0",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
-    "react-native-svg": "^15.11.2",
-    "expo-dev-client": "~5.2.1"
+    "react-native-svg": "^15.11.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

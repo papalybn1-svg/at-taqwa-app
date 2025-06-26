@@ -77,17 +77,13 @@ function SplashFamille() {
           source={require('./assets/Page acceuil dome mosquée.png')} 
           style={styles.splashFamilleLogo}
         />
-        
         {/* Texte principal */}
-      <View style={styles.splashFamilleTextContainer}>
+        <View style={styles.splashFamilleTextContainer}>
           <Text style={styles.splashMainTitle}>Assalamu Alaikum,</Text>
           <Text style={styles.splashSubtitleGreen}>Bienvenue sur AT-Taqwa</Text>
-          <Text style={styles.splashDescription}>
-            Votre guide pour la réparation de la Prière
-          </Text>
+          <Text style={styles.splashDescription}>Votre guide pour la réparation de la Prière</Text>
         </View>
       </View>
-      
       {/* Image de la famille en bas */}
       <Image 
         source={require('./assets/femme et enfant (2).png')} 
@@ -222,36 +218,39 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   splashFamilleLogo: {
-    width: 240,
-    height: 240,
+    width: 160,
+    height: 160,
     resizeMode: 'contain',
     marginBottom: 0,
+    marginTop: 8,
     alignSelf: 'center',
   },
   splashFamilleTextContainer: {
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: -80,
+    paddingHorizontal: 16,
+    marginTop: -40,
+    marginBottom: 8,
   },
   splashMainTitle: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#174C3C',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
   },
   splashSubtitleGreen: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: '600',
     color: '#174C3C',
-    marginBottom: 16,
+    marginBottom: 10,
     textAlign: 'center',
   },
   splashDescription: {
-    fontSize: 20,
+    fontSize: 13,
     color: '#174C3C',
     textAlign: 'center',
-    lineHeight: 28,
+    marginBottom: 0,
+    lineHeight: 18,
   },
   splashFamilleImageXL: {
     width: '110%',
@@ -260,6 +259,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     left: '-5%',
+    marginBottom: 0,
+    marginTop: 0,
+    alignSelf: 'center',
   },
 });
 

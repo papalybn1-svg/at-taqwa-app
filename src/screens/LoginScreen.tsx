@@ -1,5 +1,4 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -131,18 +130,16 @@ export default function LoginScreen({ navigation }: any) {
   if (screen === 'intro') {
     return (
       <View style={styles.introContainer}>
-        {/* Image du couple en haut - occupe la majeure partie de l'écran */}
+        {/* Image du couple en haut */}
         <View style={styles.imageTopSection}>
           <Image source={require('../../assets/couple-livre.png')} style={styles.coupleImage} />
         </View>
-        
         {/* Bloc blanc en bas avec le contenu */}
         <View style={styles.whiteBottomCard}>
           <Text style={styles.mainTitle}>Rattraper mes prières</Text>
           <Text style={styles.descriptionText}>
             Rien n'est perdu :{"\n"}chaque prière rattrapée{"\n"}est un pas vers Allah.
           </Text>
-          
           {/* Boutons */}
           <View style={styles.buttonsContainer}>
             <TouchableOpacity style={styles.connectButton} onPress={() => setScreen('login')}>
@@ -152,13 +149,11 @@ export default function LoginScreen({ navigation }: any) {
               <Text style={styles.registerButtonText}>S'inscrire</Text>
             </TouchableOpacity>
           </View>
-          
           {/* Barre de progression en bas */}
           <View style={styles.progressIndicator}>
             <View style={styles.progressDot} />
           </View>
         </View>
-        
         <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
       </View>
     );
@@ -381,14 +376,27 @@ const styles = StyleSheet.create({
   introContainer: { flex: 1, backgroundColor: '#174C3C' },
   imageTopSection: { flex: 2, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginBottom: -20 },
   coupleImage: { width: '200%', height: '160%', resizeMode: 'contain', marginBottom: -120, marginLeft: 20 },
-  whiteBottomCard: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 32, paddingTop: 40, width: '100%', alignItems: 'center', minHeight: 330 },
-  mainTitle: { fontSize: 32, fontWeight: 'bold', color: '#174C3C', marginBottom: 16, textAlign: 'center' },
-  descriptionText: { fontSize: 20, fontWeight: 'bold', color: '#174C3C', textAlign: 'center', marginBottom: 32, lineHeight: 28 },
-  buttonsContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 24 },
-  connectButton: { backgroundColor: '#174C3C', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 32, flex: 0.48, elevation: 3 },
-  registerButton: { backgroundColor: '#E7C97B', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 32, flex: 0.48, elevation: 3 },
-  connectButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
-  registerButtonText: { color: '#174C3C', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
+  whiteBottomCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 32,
+    paddingTop: 32,
+    paddingBottom: 16,
+    width: '100%',
+    alignItems: 'center',
+    minHeight: 320,
+    justifyContent: 'center',
+  },
+  mainTitle: { fontSize: 24, fontWeight: '800', color: '#174C3C', marginBottom: 10, textAlign: 'center' },
+  descriptionText: { fontSize: 16, color: '#4B5563', textAlign: 'center', marginBottom: 20, fontWeight: '500' },
+  buttonsContainer: { flexDirection: 'row', justifyContent: 'center', width: '100%', marginBottom: 12 },
+  connectButton: { backgroundColor: '#174C3C', borderRadius: 22, paddingVertical: 13, width: '48%', marginHorizontal: 4, elevation: 3 },
+  registerButton: { backgroundColor: '#E7C97B', borderRadius: 22, paddingVertical: 13, width: '48%', marginHorizontal: 4, elevation: 3 },
+  connectButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15, textAlign: 'center' },
+  registerButtonText: { color: '#174C3C', fontWeight: 'bold', fontSize: 15, textAlign: 'center' },
+  progressIndicator: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 6 },
+  progressDot: { width: 40, height: 3, backgroundColor: '#E7C97B', borderRadius: 2 },
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F5F7', padding: 24 },
   title: { fontSize: 24, fontWeight: 'bold', color: '#174C3C', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#174C3C', marginBottom: 18 },
@@ -400,12 +408,6 @@ const styles = StyleSheet.create({
   forgot: { color: '#174C3C', fontWeight: 'bold', marginBottom: 8, fontSize: 15 },
   or: { color: '#174C3C', fontWeight: 'bold', marginVertical: 8, fontSize: 15 },
   eyeBtn: { position: 'absolute', right: 40, top: 185, zIndex: 2 },
-  progressIndicator: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20 },
-  progressDot: { width: 40, height: 4, backgroundColor: '#E7C97B', borderRadius: 2 },
-  etoileContainer: { position: 'absolute', top: 20, right: 20 },
-  etoile: { width: 24, height: 24 },
-  inputWrapper: { position: 'relative', width: '100%', maxWidth: 340 },
-  eyeBtnInInput: { position: 'absolute', right: 10, top: 14, zIndex: 2 },
   toast: {
     position: 'absolute',
     bottom: 0,
@@ -448,8 +450,22 @@ const styles = StyleSheet.create({
   },
   loginTitle: { fontSize: 28, fontWeight: 'bold', color: '#174C3C', marginBottom: 32, textAlign: 'left', alignSelf: 'flex-start', maxWidth: 340, width: '100%', marginTop: 60 },
   loginInput: { width: '100%', maxWidth: 340, backgroundColor: '#FFFFFF', color: '#174C3C', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 20, fontSize: 16, fontWeight: '500', borderWidth: 1, borderColor: '#E0E0E0', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
-  loginButton: { backgroundColor: '#D4AF37', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 40, marginTop: 16, marginBottom: 16, width: '100%', maxWidth: 340 },
-  loginButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
+  loginButton: { 
+    backgroundColor: '#D4AF37', 
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    marginTop: 16, 
+    marginBottom: 16, 
+    width: '100%', 
+    maxWidth: 340 
+  },
+  loginButtonText: { 
+    color: '#FFFFFF', 
+    fontWeight: 'bold', 
+    fontSize: 14,
+    textAlign: 'center' 
+  },
   forgotPasswordContainer: { alignItems: 'center', marginTop: 16, marginBottom: 16 },
   forgotPassword: { color: '#174C3C', fontWeight: 'bold', fontSize: 16 },
   separatorContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 16, width: '100%', maxWidth: 340 },
@@ -511,7 +527,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   registerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: '#174C3C',
     textAlign: 'left',
@@ -521,12 +537,12 @@ const styles = StyleSheet.create({
     maxWidth: 340,
   },
   registerSubtitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '400',
     color: '#174C3C',
     textAlign: 'left',
     alignSelf: 'flex-start',
-    marginBottom: 32,
+    marginBottom: 20,
     width: '100%',
     maxWidth: 340,
   },
@@ -573,8 +589,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     backgroundColor: '#D4AF37',
-    borderRadius: 25,
-    paddingVertical: 16,
+    borderRadius: 20,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
@@ -586,7 +602,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   registerPrimaryButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -614,7 +630,7 @@ const styles = StyleSheet.create({
     tintColor: '#FFFFFF',
   },
   registerAppleButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -644,7 +660,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   registerGoogleButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#174C3C',
   },
@@ -652,7 +668,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   registerLoginText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#174C3C',
     textAlign: 'center',
@@ -675,7 +691,7 @@ const styles = StyleSheet.create({
   registerLinkText: {
     color: '#174C3C',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   // Styles pour la page de connexion avec icônes
   loginStarContainer: {

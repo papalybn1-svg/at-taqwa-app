@@ -1,12 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
+import { doc, getFirestore, updateDoc } from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import React, { useContext, useState } from 'react';
 import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
 import { auth } from './firebaseConfig';
 import { AuthContext } from './LoginScreen';
+
+const db = getFirestore();
+const storage = getStorage();
 
 export default function ParametresScreen() {
   const { user, setUser } = useContext(AuthContext);
@@ -26,12 +31,28 @@ export default function ParametresScreen() {
       quality: 0.7,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setEditPhoto(result.assets[0].uri);
-      // Mettre à jour le profil Firebase (photoURL)
-      if (user) {
-        await updateProfile(user, { photoURL: result.assets[0].uri });
-        setUser({ ...user, photoURL: result.assets[0].uri });
+      setLoading(true);
+      const uri = result.assets[0].uri;
+      try {
+        // Téléversement sur Firebase Storage
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const storageRef = ref(storage, `avatars/${user?.uid}_${Date.now()}`);
+        await uploadBytes(storageRef, blob);
+        const downloadURL = await getDownloadURL(storageRef);
+        setEditPhoto(downloadURL);
+        // Mettre à jour le profil Firebase Auth
+        if (user) {
+          await updateProfile(user, { photoURL: downloadURL });
+          setUser({ ...user, photoURL: downloadURL });
+          // Mettre à jour Firestore aussi
+          await updateDoc(doc(db, 'users', user.uid), { photoURL: downloadURL });
+        }
+      } catch (e) {
+        Alert.alert('Erreur', "Impossible de téléverser l'image. Veuillez réessayer.");
+        console.error('Erreur upload image:', e);
       }
+      setLoading(false);
     }
   };
 
@@ -148,16 +169,13 @@ export default function ParametresScreen() {
               value={editName} 
               onChangeText={setEditName} 
             />
-            <TextInput 
-              style={styles.input} 
-              placeholder="URL de la photo" 
-              value={editPhoto} 
-              onChangeText={setEditPhoto} 
-            />
-            <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
+            <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage} disabled={loading}>
               <MaterialCommunityIcons name="camera" size={20} color={colors.primary} />
-              <Text style={styles.imagePickerText}>Choisir une photo</Text>
+              <Text style={styles.imagePickerText}>{loading ? 'Téléversement...' : 'Choisir une photo'}</Text>
             </TouchableOpacity>
+            {editPhoto ? (
+              <Image source={{ uri: editPhoto }} style={styles.avatar} />
+            ) : null}
             <View style={styles.modalButtons}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelButton]} 

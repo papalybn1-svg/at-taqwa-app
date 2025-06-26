@@ -173,12 +173,12 @@ export default function NotificationsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[typography.h3, styles.headerTitle]}>Notifications</Text>
+          <Text style={styles.headerTitle}>Notifications</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.loadingContainer}>
@@ -190,12 +190,12 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[typography.h3, styles.headerTitle]}>Notifications</Text>
+        <Text style={styles.headerTitle}>Notifications</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -234,93 +234,113 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F4F7F6',
+  safeArea: { 
+    flex: 1, 
+    backgroundColor: colors.background 
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#E5E7EB'
   },
-  backButton: {
+  backButton: { 
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa',
+    marginRight: 12
   },
-  headerTitle: {
-    color: colors.text,
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: colors.text 
   },
-  placeholder: {
-    width: 40,
+  placeholder: { 
+    flex: 1 
   },
-  listContainer: {
-    padding: 16,
+  container: { 
+    flex: 1, 
+    backgroundColor: colors.background 
+  },
+  content: { 
+    padding: 24 
+  },
+  title: { 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    color: colors.primary, 
+    marginBottom: 10 
+  },
+  subtitle: { 
+    fontSize: 16, 
+    color: colors.gray, 
+    marginBottom: 30 
+  },
+  notificationsContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  comingSoon: { 
+    fontSize: 18, 
+    color: colors.gray, 
+    fontWeight: 'bold' 
   },
   notificationCard: {
-    padding: 16,
     marginBottom: 12,
   },
   notificationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
   },
   notificationIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
+    marginRight: 8,
   },
   notificationContent: {
     flex: 1,
   },
   notificationText: {
-    color: colors.text,
     marginBottom: 6,
-    fontStyle: 'italic',
   },
   notificationSource: {
-    color: colors.gray,
-    textAlign: 'right',
-    fontWeight: '500',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    fontSize: 11,
   },
   loadingFooter: {
+    padding: 12,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
+    justifyContent: 'center',
   },
   loadingText: {
     marginLeft: 8,
-    color: colors.gray,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
   },
   emptyTitle: {
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginBottom: 12,
   },
   emptySubtitle: {
+    fontSize: 16,
     color: colors.gray,
-    textAlign: 'center',
+  },
+  listContainer: {
+    padding: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 
