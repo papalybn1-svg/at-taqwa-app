@@ -130,24 +130,34 @@ export default function LoginScreen({ navigation }: any) {
   if (screen === 'intro') {
     return (
       <View style={styles.introContainer}>
-        <View style={styles.illustrationBg}>
-          <Image source={require('../../assets/couple-livre.png')} style={styles.illustrationImg} />
+        {/* Image du couple en haut - occupe la majeure partie de l'écran */}
+        <View style={styles.imageTopSection}>
+          <Image source={require('../../assets/couple-livre.png')} style={styles.coupleImage} />
         </View>
-        <View style={styles.introCard}>
-          <Text style={styles.introTitle}>Rattraper mes prières</Text>
-          <Text style={styles.introText}>Rien n'est perdu :{"\n"}chaque prière rattrapée est un pas vers Allah.</Text>
-          <View style={styles.introBtnRow}>
-            <TouchableOpacity style={styles.introBtn} onPress={() => setScreen('login')}>
-              <Text style={styles.introBtnText}>Se connecter</Text>
+        
+        {/* Bloc blanc en bas avec le contenu */}
+        <View style={styles.whiteBottomCard}>
+          <Text style={styles.mainTitle}>Rattraper mes prières</Text>
+          <Text style={styles.descriptionText}>
+            Rien n'est perdu :{"\n"}chaque prière rattrapée{"\n"}est un pas vers Allah.
+          </Text>
+          
+          {/* Boutons */}
+          <View style={styles.buttonsContainer}>
+            <TouchableOpacity style={styles.connectButton} onPress={() => setScreen('login')}>
+              <Text style={styles.connectButtonText}>Se connecter</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.introBtn, styles.introBtnGold]} onPress={() => setScreen('register')}>
-              <Text style={[styles.introBtnText, { color: '#174C3C' }]}>S'inscrire</Text>
+            <TouchableOpacity style={styles.registerButton} onPress={() => setScreen('register')}>
+              <Text style={styles.registerButtonText}>S'inscrire</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBar} />
+          
+          {/* Barre de progression en bas */}
+          <View style={styles.progressIndicator}>
+            <View style={styles.progressDot} />
           </View>
         </View>
+        
         <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
       </View>
     );
@@ -222,16 +232,17 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  introContainer: { flex: 1, backgroundColor: '#174C3C', justifyContent: 'flex-end', alignItems: 'center' },
-  illustrationBg: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  illustrationImg: { width: '100%', height: 220, resizeMode: 'contain', marginTop: 24 },
-  introCard: { backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, width: '100%', alignItems: 'center', elevation: 8 },
-  introTitle: { fontSize: 26, fontWeight: 'bold', color: '#174C3C', marginBottom: 10 },
-  introText: { fontSize: 16, color: '#174C3C', textAlign: 'center', marginBottom: 24 },
-  introBtnRow: { flexDirection: 'row', justifyContent: 'center', width: '100%' },
-  introBtn: { backgroundColor: '#174C3C', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 28, marginHorizontal: 8, marginTop: 8, elevation: 2 },
-  introBtnGold: { backgroundColor: '#E7C97B' },
-  introBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  introContainer: { flex: 1, backgroundColor: '#174C3C' },
+  imageTopSection: { flex: 2, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  coupleImage: { width: '200%', height: '160%', resizeMode: 'contain', marginBottom: -140, marginLeft: 20 },
+  whiteBottomCard: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 32, width: '100%', alignItems: 'center', minHeight: 280 },
+  mainTitle: { fontSize: 32, fontWeight: 'bold', color: '#174C3C', marginBottom: 16, textAlign: 'center' },
+  descriptionText: { fontSize: 20, fontWeight: 'bold', color: '#174C3C', textAlign: 'center', marginBottom: 32, lineHeight: 28 },
+  buttonsContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 24 },
+  connectButton: { backgroundColor: '#174C3C', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 32, flex: 0.48, elevation: 3 },
+  registerButton: { backgroundColor: '#E7C97B', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 32, flex: 0.48, elevation: 3 },
+  connectButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
+  registerButtonText: { color: '#174C3C', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F5F7', padding: 24 },
   title: { fontSize: 24, fontWeight: 'bold', color: '#174C3C', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#174C3C', marginBottom: 18 },
@@ -243,8 +254,8 @@ const styles = StyleSheet.create({
   forgot: { color: '#174C3C', fontWeight: 'bold', marginBottom: 8, fontSize: 15 },
   or: { color: '#174C3C', fontWeight: 'bold', marginVertical: 8, fontSize: 15 },
   eyeBtn: { position: 'absolute', right: 40, top: 185, zIndex: 2 },
-  progressBarContainer: { width: '100%', height: 10, backgroundColor: '#e0e0e0', borderRadius: 5, marginTop: 20 },
-  progressBar: { backgroundColor: '#E7C97B', height: '100%', borderRadius: 5 },
+  progressIndicator: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20 },
+  progressDot: { width: 40, height: 4, backgroundColor: '#E7C97B', borderRadius: 2 },
   etoileContainer: { position: 'absolute', top: 20, right: 20 },
   etoile: { width: 24, height: 24 },
   inputWrapper: { position: 'relative', width: '100%', maxWidth: 340 },
