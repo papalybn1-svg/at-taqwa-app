@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React from "react";
-import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
@@ -22,6 +22,7 @@ type RootStackParamList = {
   Quiz: undefined;
   Tasbih: undefined;
   Admin: undefined;
+  AuthorProfile: undefined;
 };
 
 type Notification = {
@@ -255,10 +256,24 @@ export default function HomeScreen() {
   }, [db, firestoreStatus]);
 
   const handleNotificationPress = React.useCallback(async () => {
-    // Mark all notifications as read
+    console.log('Notification icon pressed');
     await AsyncStorage.setItem('@last_notification_read', new Date().toISOString());
     setNewNotificationsCount(0);
-    navigation.navigate('Notifications' as never);
+    // Navigation robuste vers Notifications
+    try {
+      if (navigation.navigate) {
+        navigation.navigate('Notifications');
+      } else if (navigation.push) {
+        navigation.push('Notifications');
+      } else if (navigation.getParent) {
+        const parent = navigation.getParent();
+        if (parent && parent.navigate) {
+          parent.navigate('Notifications');
+        }
+      }
+    } catch (e) {
+      console.error('Erreur navigation Notifications:', e);
+    }
   }, [navigation]);
 
   React.useEffect(() => {
@@ -318,7 +333,8 @@ export default function HomeScreen() {
     }, [firestoreStatus, loadNotifications])
   );
 
-  const allChapters = Object.values(chaptersData).flatMap((partie: any, partieIndex: number) => 
+  // Correction : tous les chapitres doivent apparaître
+  const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie]: any, partieIndex: number) =>
     partie.chapitres.map((ch: any, chapitreIndex: number) => ({
       ...ch,
       id: `${partieIndex}-${chapitreIndex}`,
@@ -332,7 +348,9 @@ export default function HomeScreen() {
       <View style={styles.header}>
           <View>
             <Text style={styles.bismillah}>بسم الله الرحمن الرحيم</Text>
-            <Text style={styles.welcomeMessage}>Bienvenue dans ton espace</Text>
+            <Text style={styles.welcomeMessage}>
+              Bienvenue {user?.displayName || user?.email?.split('@')[0] || ''}
+            </Text>
           </View>
           <TouchableOpacity onPress={handleNotificationPress} style={styles.notificationButton}>
             <MaterialCommunityIcons name="bell-outline" size={24} color={colors.text} />
@@ -346,20 +364,20 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.searchSection}>
-          <View style={styles.searchBar}>
-            <MaterialCommunityIcons name="magnify" size={24} color={colors.primary} style={styles.searchIcon}/>
-            <TextInput
-              placeholder="Rechercher un chapitre, hadith..."
-              placeholderTextColor={colors.gray}
-              style={styles.searchInput}
-            />
-            <TouchableOpacity style={styles.searchButton}>
-              <MaterialCommunityIcons name="arrow-right" size={20} color={colors.white} />
+        <View style={styles.bannerContainer}>
+          <View style={styles.bannerTextContainer}>
+            <Text style={styles.bannerTitle}>Transformez chaque prière en un moment de paix</Text>
+            <TouchableOpacity style={styles.bannerButton} onPress={() => navigation.navigate('Books' as never)}>
+              <Text style={styles.bannerButtonText}>Commencer</Text>
             </TouchableOpacity>
           </View>
-        </View>
-        
+          <Image 
+            source={require('../../assets/femme-transformer.png')} 
+            style={styles.bannerImage}
+            defaultSource={require('../../assets/femme-transformer.png')}
+          />
+      </View>
+
         <View style={styles.section}>
       <Text style={styles.sectionTitle}>Catégories</Text>
           <View style={styles.categoriesGrid}>
@@ -368,20 +386,6 @@ export default function HomeScreen() {
             <CategoryButton icon="puzzle" title="Quiz" onPress={() => navigation.navigate('Quiz' as never)} />
             <CategoryButton icon="hand-heart" title="Tasbih" onPress={() => navigation.navigate('Tasbih' as never)} />
           </View>
-      </View>
-
-        <View style={styles.bannerContainer}>
-          <View style={styles.bannerTextContainer}>
-            <Text style={styles.bannerTitle}>Transformez chaque prière en un moment de paix et de connexion</Text>
-            <TouchableOpacity style={styles.bannerButton} onPress={() => navigation.navigate('Books' as never)}>
-              <Text style={styles.bannerButtonText}>Commencer</Text>
-            </TouchableOpacity>
-      </View>
-          <Image 
-            source={require('../../assets/femme-transformer.png')} 
-            style={styles.bannerImage}
-            defaultSource={require('../../assets/femme-transformer.png')}
-          />
         </View>
 
         {hadithOfTheDay &&
@@ -399,6 +403,30 @@ export default function HomeScreen() {
           </View>
         }
 
+        {/* Section Auteur du livre */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Auteur du livre</Text>
+          <View style={styles.authorCard}>
+            <View style={styles.authorInfo}>
+              <View style={styles.authorAvatar}>
+                <MaterialCommunityIcons name="account-circle" size={40} color={colors.primary} />
+              </View>
+              <View style={styles.authorDetails}>
+                <Text style={styles.authorName}>Aly Sow</Text>
+                <Text style={styles.authorTitle}>Imam et Érudit Islamique</Text>
+                <Text style={styles.authorBio}>
+                  Plus de 20 ans d'expérience dans l'enseignement de la prière. 
+                  Auteur de plusieurs ouvrages sur la spiritualité musulmane.
+                </Text>
+              </View>
+      </View>
+            <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile' as never)}>
+              <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
+              <Text style={styles.authorButtonText}>En savoir plus</Text>
+            </TouchableOpacity>
+      </View>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Aperçu du Livre</Text>
           <Animated.FlatList
@@ -407,58 +435,46 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => item.id || index.toString()}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
-            contentContainerStyle={{paddingHorizontal: 20}}
+            contentContainerStyle={{paddingHorizontal: 8, paddingVertical: 8}}
             removeClippedSubviews={true}
             maxToRenderPerBatch={5}
             windowSize={5}
             initialNumToRender={5}
             renderItem={({ item, index }) => {
-              const inputRange = [(index - 1) * 170, index * 170, (index + 1) * 170];
+              const inputRange = [(index - 1) * 200, index * 200, (index + 1) * 200];
               const scale = scrollX.interpolate({
                 inputRange,
-                outputRange: [0.9, 1, 0.9],
+                outputRange: [0.96, 1, 0.96],
                 extrapolate: 'clamp',
               });
               const opacity = scrollX.interpolate({
                 inputRange,
-                outputRange: [0.7, 1, 0.7],
+                outputRange: [0.8, 1, 0.8],
                 extrapolate: 'clamp',
               });
               return (
                 <Animated.View style={{ transform: [{ scale }], opacity, marginHorizontal: 8 }}>
-                  <TouchableOpacity style={styles.bookCard} onPress={() => handleChapterPress(item)}>
-                    <View style={styles.bookImageContainer}>
-                      <Image 
-                        source={imageMap[item.image] || imageMap['1']} 
-                        style={
-                          // Images qui ont besoin de zoom (chapitres avec espaces blancs)
-                          ['1', '2', '3', '5'].includes(item.image) ? {
-                            width: '220%',
-                            height: '220%',
-                            position: 'absolute',
-                            top: '-60%',
-                            left: '-60%'
-                          } : {
-                            // Images qui remplissent déjà bien (pas de zoom)
-                            width: '100%',
-                            height: '100%'
-                          }
-                        }
-                        resizeMode="cover"
-                        defaultSource={require('../../assets/1.png')}
-                        onError={() => console.log('Erreur de chargement image:', item.image)}
-                      />
-                    </View>
-                    <View style={styles.bookCardContent}>
-                      <Text style={styles.bookCardTitle} numberOfLines={2}>
-                        {item.title || 'Titre du chapitre'}
-                      </Text>
-                      <Text style={styles.bookCardSubtitle} numberOfLines={1}>
-                        {item.partie || 'Partie'}
-                      </Text>
-                      <Text style={[styles.bookCardSubtitle, { fontSize: 10, marginTop: 4 }]} numberOfLines={1}>
-                        {item.desc || 'Description'}
-                      </Text>
+                  <TouchableOpacity style={styles.bookCardModern} onPress={() => handleChapterPress(item)}>
+                    <Image 
+                      source={imageMap[item.image] || imageMap['1']} 
+                      style={styles.bookImageModern}
+                      resizeMode="cover"
+                      defaultSource={require('../../assets/1.png')}
+                      onError={() => console.log('Erreur de chargement image:', item.image)}
+                    />
+                    <View style={styles.bookCardContentModern}>
+                      <Text style={styles.bookCardTitleModern} numberOfLines={2}>{item.title || 'Titre du chapitre'}</Text>
+                      <Text style={styles.bookCardSubtitleModern} numberOfLines={1}>{item.partie || 'Partie'}</Text>
+                      <View style={styles.bookCardFooterModern}>
+                        <View style={styles.readTimeModern}>
+                          <MaterialCommunityIcons name="clock-outline" size={12} color={colors.gray} />
+                          <Text style={styles.readTimeTextModern}>~15 min</Text>
+                        </View>
+                        <View style={styles.pagesCountModern}>
+                          <MaterialCommunityIcons name="book-open-page-variant" size={12} color={colors.gray} />
+                          <Text style={styles.pagesCountTextModern}>~3 pages</Text>
+                        </View>
+                      </View>
                     </View>
                   </TouchableOpacity>
                 </Animated.View>
@@ -475,39 +491,32 @@ export default function HomeScreen() {
           onRequestClose={closePreviewModal}
         >
           <View style={styles.previewModalOverlay}>
-            <View style={styles.previewModalContent}>
-              <View style={styles.previewModalHeader}>
-                <View style={styles.previewModalImageContainer}>
-                  <Image 
-                    source={imageMap[selectedChapter.image] || imageMap['1']} 
-                    style={styles.previewModalImage}
-                  />
-                </View>
+            <View style={styles.previewModalContentModern}>
+              <View style={styles.previewModalHeaderModern}>
+                <Image 
+                  source={imageMap[selectedChapter.image] || imageMap['1']} 
+                  style={styles.previewModalImageModern}
+                />
                 <TouchableOpacity style={styles.closeButton} onPress={closePreviewModal}>
                   <MaterialCommunityIcons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
-              
-              <ScrollView style={styles.previewModalScroll} showsVerticalScrollIndicator={false}>
-                <Text style={styles.previewModalTitle}>{selectedChapter.title}</Text>
-                <Text style={styles.previewModalSubtitle}>{selectedChapter.partie}</Text>
-                <Text style={styles.previewModalDescription}>{selectedChapter.desc}</Text>
-                
-                <View style={styles.previewContentContainer}>
-                  <Text style={styles.previewContentTitle}>Aperçu du contenu :</Text>
-                  <Text style={styles.previewContentText}>
-                    {chapterPreviews[selectedChapter.id] || 
-                      "Ce chapitre explore les aspects fondamentaux de la prière en Islam, offrant des enseignements précieux pour enrichir votre pratique spirituelle et renforcer votre connexion avec Allah."}
-                  </Text>
-      </View>
-    </ScrollView>
-              
-              <View style={styles.previewModalActions}>
-                <TouchableOpacity style={styles.previewModalButton} onPress={openFullChapter}>
-                  <MaterialCommunityIcons name="book-open-variant" size={20} color={colors.white} />
-                  <Text style={styles.previewModalButtonText}>Lire le chapitre complet</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.previewModalTitleModern}>{selectedChapter.title}</Text>
+              <Text style={styles.previewModalSubtitleModern}>{selectedChapter.partie}</Text>
+              <Text style={styles.previewModalAuthorModern}>par {selectedChapter.author || 'Auteur inconnu'}</Text>
+              <ScrollView style={styles.previewModalScrollModern} showsVerticalScrollIndicator={false}>
+                <Text style={styles.previewModalDescriptionModern}>
+                  {chapterPreviews[selectedChapter.id] ? 
+                    chapterPreviews[selectedChapter.id].substring(0, 350) + '...'
+                    :
+                    selectedChapter.desc || "Ce chapitre explore les aspects fondamentaux de la prière en Islam, offrant des enseignements précieux pour enrichir votre pratique spirituelle et renforcer votre connexion avec Allah. Découvrez les secrets d'une prière authentique et transformatrice qui vous rapprochera de votre Créateur..."
+                  }
+                </Text>
+              </ScrollView>
+              <TouchableOpacity style={styles.previewModalButtonModern} onPress={openFullChapter}>
+                <MaterialCommunityIcons name="book-open-variant" size={20} color={colors.white} />
+                <Text style={styles.previewModalButtonTextModern}>Lire le chapitre complet</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -572,40 +581,51 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
-  searchSection: {
-    paddingHorizontal: 24,
-    marginTop: 5,
-    marginBottom: 25,
-  },
-  searchBar: {
+  bannerContainer: {
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    marginHorizontal: 24,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    height: 56,
-    elevation: 6,
+    justifyContent: 'space-between',
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
+    marginBottom: 20,
+    position: 'relative',
   },
-  searchIcon: {
-    marginRight: 12,
-  },
-  searchInput: {
+  bannerTextContainer: {
     flex: 1,
-    fontSize: 16,
-    color: colors.text,
-    fontWeight: '500',
+    paddingRight: 10,
   },
-  searchButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    padding: 10,
-    marginLeft: 10,
+  bannerTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: colors.white,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  bannerButton: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+  },
+  bannerButtonText: {
+    color: colors.primary,
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  bannerImage: {
+    width: 200,
+    height: 250,
+    resizeMode: 'contain',
+    position: 'absolute',
+    right: -50,
+    bottom: -60,
   },
   section: {
     marginBottom: 20,
@@ -646,94 +666,70 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
   },
-  bannerContainer: {
-    backgroundColor: colors.primary,
-    borderRadius: 24,
-    marginHorizontal: 24,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    marginBottom: 20,
-    position: 'relative',
-  },
-  bannerTextContainer: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  bannerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.white,
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  bannerButton: {
+  bookCardModern: {
+    width: 180,
+    height: 260,
     backgroundColor: colors.white,
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignSelf: 'flex-start',
-  },
-  bannerButtonText: {
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  bannerImage: {
-    width: 240,
-    height: 300,
-    resizeMode: 'contain',
-    position: 'absolute',
-    right: -70,
-    bottom: -80,
-  },
-  bookCard: {
-    width: 160,
-    height: 240,
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    elevation: 4,
+    borderRadius: 18,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
     overflow: 'hidden',
+    marginBottom: 8,
   },
-  bookImageContainer: {
+  bookImageModern: {
     width: '100%',
-    height: 160,
-    backgroundColor: 'transparent',
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    position: 'relative',
+    height: 120,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    resizeMode: 'cover',
   },
-
-  bookCardContent: {
-    padding: 16,
+  bookCardContentModern: {
     flex: 1,
+    padding: 14,
     justifyContent: 'space-between',
   },
-  bookCardTitle: {
-    fontSize: 14,
+  bookCardTitleModern: {
+    fontSize: 15,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 6,
-    lineHeight: 18,
+    marginBottom: 4,
     textAlign: 'center',
   },
-  bookCardSubtitle: {
+  bookCardSubtitleModern: {
     fontSize: 12,
     color: colors.primary,
     fontWeight: '600',
     textAlign: 'center',
+    marginBottom: 6,
+  },
+  bookCardFooterModern: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  readTimeModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  readTimeTextModern: {
+    color: colors.gray,
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  pagesCountModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pagesCountTextModern: {
+    color: colors.gray,
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
   },
   hadithCard: {
     backgroundColor: colors.white,
@@ -767,96 +763,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  previewModalContent: {
+  previewModalContentModern: {
     backgroundColor: colors.white,
     borderRadius: 20,
     padding: 24,
     width: '100%',
-    maxHeight: '85%',
+    maxWidth: 370,
+    alignSelf: 'center',
     elevation: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.18,
     shadowRadius: 10,
-  },
-  previewModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
   },
-  previewModalImageContainer: {
+  previewModalHeaderModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 10,
+  },
+  previewModalImageModern: {
     width: 60,
     height: 60,
     borderRadius: 12,
-    overflow: 'hidden',
     backgroundColor: '#f8f9fa',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginRight: 10,
   },
-  previewModalImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  closeButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f8f9fa',
-  },
-  previewModalScroll: {
-    flex: 1,
-    marginBottom: 15,
-  },
-  previewModalTitle: {
+  previewModalTitleModern: {
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 2,
     textAlign: 'center',
   },
-  previewModalSubtitle: {
+  previewModalSubtitleModern: {
     fontSize: 14,
     color: colors.primary,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 2,
     fontWeight: '600',
   },
-  previewModalDescription: {
-    fontSize: 14,
+  previewModalAuthorModern: {
+    fontSize: 13,
     color: colors.gray,
-    textAlign: 'center',
-    marginBottom: 20,
     fontStyle: 'italic',
-  },
-  previewContentContainer: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 15,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-  },
-  previewContentTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.text,
+    textAlign: 'center',
     marginBottom: 10,
   },
-  previewContentText: {
+  previewModalScrollModern: {
+    maxHeight: 120,
+    marginBottom: 10,
+  },
+  previewModalDescriptionModern: {
     fontSize: 14,
     color: colors.text,
+    textAlign: 'center',
     lineHeight: 20,
   },
-  previewModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  previewModalButton: {
+  previewModalButtonModern: {
     backgroundColor: colors.primary,
     borderRadius: 25,
     paddingVertical: 12,
@@ -868,11 +834,183 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
+    marginTop: 10,
   },
-  previewModalButtonText: {
+  previewModalButtonTextModern: {
     color: colors.white,
     fontWeight: 'bold',
     marginLeft: 8,
     fontSize: 16,
+  },
+  authorSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  authorText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginBottom: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statText: {
+    fontSize: 12,
+    color: colors.gray,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  readMoreButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignSelf: 'center',
+    marginTop: 10,
+  },
+  readMoreText: {
+    color: colors.white,
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  authorCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 24,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  authorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  authorAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  authorDetails: {
+    flex: 1,
+  },
+  authorName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  authorTitle: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  authorBio: {
+    fontSize: 12,
+    color: colors.gray,
+    lineHeight: 16,
+  },
+  authorButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+  },
+  authorButtonText: {
+    color: colors.white,
+    fontWeight: 'bold',
+    fontSize: 13,
+    marginLeft: 6,
+  },
+  authorBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  authorBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  bookOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chapterNumber: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: 4,
+  },
+  chapterNumberText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  bookCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  readTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  readTimeText: {
+    color: colors.gray,
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  pagesCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pagesCountText: {
+    color: colors.gray,
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  closeButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
   },
 }); 
