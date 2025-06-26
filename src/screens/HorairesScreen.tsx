@@ -2,15 +2,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
 
 const PRAYER_LABELS = [
   { key: 'Fajr', label: 'Fajr', icon: 'weather-sunset-up', color: '#FFA726' },
-  { key: 'Sunrise', label: 'Subh', icon: 'white-balance-sunny', color: '#FFD54F' },
-  { key: 'Dhuhr', label: 'Asr', icon: 'weather-sunny', color: '#FF8A65' },
-  { key: 'Maghrib', label: 'Maghreb', icon: 'weather-sunset-down', color: '#FF7043' },
+  { key: 'Sunrise', label: 'Lever du soleil', icon: 'white-balance-sunny', color: '#FFD54F' },
+  { key: 'Dhuhr', label: 'Dhuhr', icon: 'weather-sunny', color: '#FF8A65' },
+  { key: 'Asr', label: 'Asr', icon: 'weather-partly-cloudy', color: '#FF7043' },
+  { key: 'Maghrib', label: 'Maghrib', icon: 'weather-sunset-down', color: '#FF7043' },
   { key: 'Isha', label: 'Isha', icon: 'weather-night', color: '#7E57C2' },
 ];
 
@@ -70,8 +71,9 @@ export default function HorairesScreen() {
             Maghrib: '19:45',
             Isha: '21:00'
           });
-          setDate('23 Mai 2025');
-          setHijri('Dhul Hijjah 1448');
+          setDate('23 Janvier 2025');
+          setHijri('24 Rajab 1446');
+          setCity('Dakar');
           setLoading(false);
           return;
         }
@@ -84,6 +86,9 @@ export default function HorairesScreen() {
         setPrayerTimes(data.data.timings);
         setDate(`${data.data.date.gregorian.day} ${data.data.date.gregorian.month.en} ${data.data.date.gregorian.year}`);
         setHijri(`${data.data.date.hijri.day} ${data.data.date.hijri.month.en} ${data.data.date.hijri.year}`);
+        if (data.data.meta && data.data.meta.timezone) {
+          setCity(manualCity || city); 
+        }
       } else {
         // Données par défaut en cas d'erreur
         setPrayerTimes({
@@ -94,8 +99,9 @@ export default function HorairesScreen() {
           Maghrib: '19:45',
           Isha: '21:00'
         });
-        setDate('23 Mai 2025');
-        setHijri('Dhul Hijjah 1448');
+        setDate('23 Janvier 2025');
+        setHijri('24 Rajab 1446');
+        setCity('Dakar');
       }
     } catch (e) {
       // Données par défaut en cas d'erreur
@@ -107,8 +113,9 @@ export default function HorairesScreen() {
         Maghrib: '19:45',
         Isha: '21:00'
       });
-      setDate('23 Mai 2025');
-      setHijri('Dhul Hijjah 1448');
+      setDate('23 Janvier 2025');
+      setHijri('24 Rajab 1446');
+      setCity('Dakar');
     }
     setLoading(false);
   };
@@ -217,15 +224,27 @@ export default function HorairesScreen() {
           />
         </View>
         <View style={styles.dateTextContainer}>
-          <Text style={styles.dateText}>{date || '23 Mai 2025'}</Text>
-          <Text style={styles.hijriText}>{hijri || 'Dhul Hijjah 1448'}</Text>
+          <Text style={styles.dateText}>{date || '23 Janvier 2025'}</Text>
+          <Text style={styles.hijriText}>{hijri || '24 Rajab 1446'}</Text>
         </View>
+      </View>
+
+      {/* Section ville */}
+      <View style={styles.citySection}>
+        <View style={styles.cityInfo}>
+          <MaterialCommunityIcons name="map-marker" size={16} color={colors.primary} />
+          <Text style={styles.cityText}>{city || 'Dakar'}</Text>
+        </View>
+        <TouchableOpacity style={styles.changeCityButton} onPress={() => setModalVisible(true)}>
+          <Text style={styles.changeCityText}>Changer</Text>
+          <MaterialCommunityIcons name="chevron-right" size={14} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Liste des prières */}
       <View style={styles.prayerListContainer}>
         {loading ? (
-          <ActivityIndicator color={colors.white} size="large" style={{ marginTop: 40 }} />
+          <ActivityIndicator color={colors.white} size="large" style={{ marginTop: 20 }} />
         ) : (
           <View>
             {PRAYER_LABELS.map((item, index) => (
@@ -235,11 +254,13 @@ export default function HorairesScreen() {
                     <View style={styles.prayerIconContainer}>
                       <MaterialCommunityIcons 
                         name={item.icon as any} 
-                        size={18} 
+                        size={16} 
                         color={item.color} 
                       />
                     </View>
-                    <Text style={styles.prayerLabel}>{item.label}</Text>
+                    <Text style={styles.prayerLabel}>
+                      {item.label}
+                    </Text>
                   </View>
                   <View style={styles.prayerRightSection}>
                     <Text style={styles.prayerTime}>
@@ -257,7 +278,7 @@ export default function HorairesScreen() {
                     >
                       <MaterialCommunityIcons 
                         name={enabledNotifications[item.key] ? "bell" : "bell-outline"} 
-                        size={18} 
+                        size={16} 
                         color={enabledNotifications[item.key] ? "#FFD700" : "rgba(255, 255, 255, 0.8)"} 
                       />
                     </TouchableOpacity>
@@ -285,10 +306,10 @@ export default function HorairesScreen() {
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisible(false)}>
                 <Text style={styles.modalCancelText}>Annuler</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
               <TouchableOpacity style={styles.modalConfirmButton} onPress={handleCitySelect}>
                 <Text style={styles.modalConfirmText}>Valider</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -302,14 +323,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
+
   headerContainer: {
-    height: Dimensions.get('window').height * 0.25,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    marginHorizontal: 24,
-    marginTop: 20,
+    height: Dimensions.get('window').height * 0.22,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    marginHorizontal: 20,
+    marginTop: 12,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -319,25 +341,25 @@ const styles = StyleSheet.create({
   },
   dateCard: {
     backgroundColor: '#D4AF37',
-    borderRadius: 25,
-    marginHorizontal: 24,
-    marginTop: 20,
-    marginBottom: 20,
+    borderRadius: 22,
+    marginHorizontal: 20,
+    marginTop: 15,
+    marginBottom: 15,
     paddingVertical: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 6,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
     zIndex: 10,
   },
   dateIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -349,8 +371,8 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   dateIcon: {
-    width: 65,
-    height: 65,
+    width: 58,
+    height: 58,
     backgroundColor: 'transparent',
   },
   dateTextContainer: {
@@ -358,13 +380,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#2C3E50',
     textAlign: 'center',
   },
   hijriText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#2C3E50',
     opacity: 0.7,
     marginTop: 2,
@@ -372,23 +394,25 @@ const styles = StyleSheet.create({
   },
   prayerListContainer: {
     backgroundColor: colors.primary,
-    marginHorizontal: 24,
+    marginHorizontal: 20,
     marginTop: 0,
-    marginBottom: 30,
-    borderRadius: 20,
-    paddingVertical: 10,
-    elevation: 8,
+    marginBottom: 8,
+    borderRadius: 16,
+    paddingTop: 2,
+    paddingBottom: 6,
+    flex: 1,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
   },
   prayerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
   },
   prayerLeftSection: {
     flexDirection: 'row',
@@ -396,9 +420,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   prayerIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -412,29 +436,29 @@ const styles = StyleSheet.create({
   prayerSeparator: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    marginHorizontal: 18,
-    marginVertical: 2,
+    marginHorizontal: 20,
+    marginVertical: 1,
   },
   prayerLabel: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   prayerRightSection: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   prayerTime: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginRight: 14,
-    letterSpacing: 0.5,
+    marginRight: 12,
+    letterSpacing: 0.3,
   },
   notificationButton: {
-    padding: 6,
-    borderRadius: 18,
+    padding: 4,
+    borderRadius: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     elevation: 1,
     shadowColor: '#000',
@@ -504,4 +528,46 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
+  citySection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  cityInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cityText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginLeft: 6,
+  },
+  changeCityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
+  changeCityText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+    marginRight: 3,
+  },
+
 }); 

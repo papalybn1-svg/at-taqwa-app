@@ -101,7 +101,7 @@ export default function ParametresScreen() {
             <Image source={{ uri: user.photoURL }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <MaterialCommunityIcons name="account-circle" size={80} color={colors.primary} />
+            <MaterialCommunityIcons name="account-circle" size={80} color={colors.primary} />
             </View>
           )}
         </TouchableOpacity>

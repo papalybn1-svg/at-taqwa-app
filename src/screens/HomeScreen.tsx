@@ -372,7 +372,7 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.bannerButton} onPress={() => navigation.navigate('Books' as never)}>
               <Text style={styles.bannerButtonText}>Commencer</Text>
             </TouchableOpacity>
-          </View>
+      </View>
           <Image 
             source={require('../../assets/femme-transformer.png')} 
             style={styles.bannerImage}

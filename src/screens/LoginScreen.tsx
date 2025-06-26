@@ -105,7 +105,7 @@ export default function LoginScreen({ navigation }: any) {
 
         showToast('Connexion réussie ! Redirection en cours...', 'success');
         console.log('✅ Connexion réussie pour:', userCred.user.email);
-        
+
         // Laisser useAuth gérer la navigation automatiquement
         // useAuth détectera le changement d'état et App.tsx affichera la bonne interface
       }
