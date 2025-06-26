@@ -1,13 +1,32 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createStackNavigator } from "@react-navigation/stack";
 import React from "react";
+import BooksScreen from '../screens/BooksScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import HomeScreen from "../screens/HomeScreen";
 import HorairesScreen from '../screens/HorairesScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import ParametresScreen from '../screens/ParametresScreen';
+import QuizScreen from '../screens/QuizScreen';
+import TasbihScreen from '../screens/TasbihScreen';
 import colors from "../theme/colors";
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+// Stack Navigator pour l'onglet Accueil
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="Quiz" component={QuizScreen} />
+      <Stack.Screen name="Tasbih" component={TasbihScreen} />
+      <Stack.Screen name="Books" component={BooksScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+    </Stack.Navigator>
+  );
+}
 
 export default function TabNavigator() {
   return (
@@ -41,7 +60,7 @@ export default function TabNavigator() {
     >
       <Tab.Screen
         name="Accueil"
-        component={HomeScreen}
+        component={HomeStack}
         options={{
           tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
             <MaterialCommunityIcons 

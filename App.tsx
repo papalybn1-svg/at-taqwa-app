@@ -9,12 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from './src/hooks/useAuth';
 import AdminTabNavigator from './src/navigation/AdminTabNavigator';
 import TabNavigator from './src/navigation/TabNavigator';
-import BooksScreen from './src/screens/BooksScreen';
 import ChapterScreen from './src/screens/ChapterScreen';
 import LoginScreen, { AuthContext } from './src/screens/LoginScreen';
-import NotificationsScreen from './src/screens/NotificationsScreen';
-import QuizScreen from './src/screens/QuizScreen';
-import TasbihScreen from './src/screens/TasbihScreen';
 
 type RootStackParamList = {
   Main: undefined;
@@ -25,10 +21,6 @@ type RootStackParamList = {
       image: string;
     };
   };
-  Books: undefined;
-  Quiz: undefined;
-  Tasbih: undefined;
-  Notifications: undefined;
   Login: undefined;
   Admin: undefined;
 };
@@ -160,10 +152,6 @@ export default function App() {
                 <Stack.Screen name="Main" component={TabNavigator} />
               )}
               <Stack.Screen name="Chapter" component={ChapterScreen} />
-              <Stack.Screen name="Books" component={BooksScreen} />
-              <Stack.Screen name="Quiz" component={QuizScreen} />
-              <Stack.Screen name="Tasbih" component={TasbihScreen} />
-              <Stack.Screen name="Notifications" component={NotificationsScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </SafeAreaView>

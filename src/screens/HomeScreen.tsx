@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React from "react";
-import { Animated, Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
@@ -21,6 +21,7 @@ type RootStackParamList = {
   Horaires: undefined;
   Quiz: undefined;
   Tasbih: undefined;
+  Admin: undefined;
 };
 
 type Notification = {
