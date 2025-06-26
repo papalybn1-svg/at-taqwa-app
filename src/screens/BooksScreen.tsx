@@ -1,16 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NavigationProp, useNavigation } from '@react-navigation/native'; // Assurez-vous d'avoir installé React Navigation
-import React from "react";
-import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import chaptersData from '../../data/chapitres.json'; // Assurez-vous que le chemin est correct
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+import React from "react";
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import chaptersData from '../../data/chapitres.json';
 import colors from "../theme/colors";
 import { Chapter, ChaptersData } from '../types/chapters';
 import imageMap from '../../assets/chapterImages';
-const burgerMenu = require('../../assets/burger-menu.png');
-const lockClosed = require('../../assets/lock-closed.png');
-const lockOpen = require('../../assets/lock-open.png');
 
 // Regrouper les blocs en pages (max 15 pages)
 function paginateBlocks(blocks: { type: string; contenu: string }[], maxPages = 15) {
@@ -25,8 +22,8 @@ function paginateBlocks(blocks: { type: string; contenu: string }[], maxPages = 
 }
 
 export default function BooksScreen() {
-  const navigation = useNavigation<NavigationProp<any>>(); // Utilisez le hook de navigation avec le type
-  const data = chaptersData as ChaptersData; // Typage explicite
+  const navigation = useNavigation<NavigationProp<any>>();
+  const data = chaptersData as ChaptersData;
   const [progress, setProgress] = React.useState<{[key:string]:number}>({});
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter|null>(null);
@@ -55,7 +52,7 @@ export default function BooksScreen() {
   };
 
   const handleChapterPress = (chapter: Chapter) => {
-    navigation.navigate('Chapter', { chapter }); // Naviguez vers l'écran de lecture de chapitre
+    navigation.navigate('Chapter', { chapter });
   };
 
   return (
@@ -69,6 +66,7 @@ export default function BooksScreen() {
           <Text style={styles.headerTitle}>Livre</Text>
           <View style={styles.placeholder} />
         </View>
+        
         {/* Drawer latéral des chapitres */}
         <Modal visible={drawerVisible} transparent animationType="slide">
           <View style={{ flex:1, flexDirection:'row' }}>
@@ -90,6 +88,7 @@ export default function BooksScreen() {
             <Pressable style={{ flex:1 }} onPress={closeDrawer} />
           </View>
         </Modal>
+        
         {Object.keys(data).map((partie, pidx) => (
           <View key={pidx}>
             <Text style={styles.sectionTitle}>{data[partie as keyof ChaptersData].titre}</Text>
