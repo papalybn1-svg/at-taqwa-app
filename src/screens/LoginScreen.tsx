@@ -201,82 +201,77 @@ export default function LoginScreen({ navigation }: any) {
   // Ecran de connexion
   return (
     <View style={styles.loginContainer}>
-      {/* Étoile en haut à droite */}
+      {/* Etoile en haut à droite */}
       <View style={styles.etoileContainer}>
         <RNImage source={require('../../assets/etoile.png')} style={styles.etoile} />
       </View>
       
-      {/* Contenu principal */}
-      <View style={styles.loginContent}>
-        <Text style={styles.loginTitle}>Bismillah,</Text>
-        <Text style={styles.loginSubtitle}>Se connecter</Text>
-        
-        {/* Champs de saisie */}
-        <View style={styles.loginInputsContainer}>
-          <View style={styles.inputWrapper}>
-            <TextInput 
-              style={styles.loginInput} 
-              placeholder="E-mail" 
-              placeholderTextColor="#fff"
-              value={email} 
-              onChangeText={setEmail} 
-              autoCapitalize="none" 
-              keyboardType="email-address" 
-            />
-          </View>
-          
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.loginInput}
-              placeholder="Mot de passe"
-              placeholderTextColor="#fff"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!isPasswordVisible}
-            />
-            <TouchableOpacity style={styles.eyeBtnInInput} onPress={() => setIsPasswordVisible(v => !v)}>
-              <Text style={{ color: '#E7C97B', fontSize: 18 }}>{isPasswordVisible ? '🙈' : '👁️'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        
-        {/* Bouton de connexion */}
-        <TouchableOpacity style={styles.loginButton} onPress={handleAuth} disabled={loading}>
-          {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Se connecter</Text>}
-        </TouchableOpacity>
-        
-        {/* Mot de passe oublié */}
-        <TouchableOpacity style={styles.forgotPasswordContainer}>
-          <Text style={styles.forgotPasswordText}>Mot de Passe Oublié?</Text>
-        </TouchableOpacity>
-        
-        {/* Séparateur "Ou" */}
-        <View style={styles.separatorContainer}>
-          <View style={styles.separatorLine} />
-          <Text style={styles.separatorText}>Ou</Text>
-          <View style={styles.separatorLine} />
-        </View>
-        
-        {/* Icônes des plateformes */}
-        <View style={styles.platformIconsContainer}>
-          <TouchableOpacity style={styles.platformIcon}>
-            <Image source={require('../../assets/playstore.png')} style={styles.platformIconImage} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.platformIcon}>
-            <Image source={require('../../assets/google.png')} style={styles.platformIconImage} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.platformIcon}>
-            <Image source={require('../../assets/android.png')} style={styles.platformIconImage} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.platformIcon}>
-            <Image source={require('../../assets/iphone.png')} style={styles.platformIconImage} />
-          </TouchableOpacity>
-        </View>
+      {/* Titre */}
+      <Text style={styles.loginTitle}>Bismillah,{"\n"}Se connecter</Text>
+      
+      {/* Champs de saisie */}
+      <View style={styles.inputWrapper}>
+        <TextInput 
+          style={styles.loginInput} 
+          placeholder="E-mail" 
+          placeholderTextColor="#fff"
+          value={email} 
+          onChangeText={setEmail} 
+          autoCapitalize="none" 
+          keyboardType="email-address" 
+        />
       </View>
       
-      {/* Barre de progression en bas */}
-      <View style={styles.loginProgressContainer}>
-        <View style={styles.loginProgressBar} />
+      <View style={styles.inputWrapper}>
+        <TextInput
+          style={styles.loginInput}
+          placeholder="Mot de passe"
+          placeholderTextColor="#fff"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!isPasswordVisible}
+        />
+        <TouchableOpacity style={styles.eyeBtnInInput} onPress={() => setIsPasswordVisible(v => !v)}>
+          <Text style={{ color: '#fff', fontSize: 18 }}>{isPasswordVisible ? '🙈' : '👁️'}</Text>
+        </TouchableOpacity>
+      </View>
+      
+      {/* Bouton Se connecter */}
+      <TouchableOpacity style={styles.loginButton} onPress={handleAuth} disabled={loading}>
+        {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Se connecter</Text>}
+      </TouchableOpacity>
+      
+      {/* Mot de passe oublié */}
+      <TouchableOpacity style={styles.forgotPasswordContainer}>
+        <Text style={styles.forgotPassword}>Mot de Passe Oublié?</Text>
+      </TouchableOpacity>
+      
+      {/* Séparateur "Ou" */}
+      <View style={styles.separatorContainer}>
+        <View style={styles.separatorLine} />
+        <Text style={styles.separatorText}>Ou</Text>
+        <View style={styles.separatorLine} />
+      </View>
+      
+      {/* Icônes des plateformes */}
+      <View style={styles.platformIconsContainer}>
+        <TouchableOpacity style={styles.platformIcon}>
+          <Image source={require('../../assets/playstore.png')} style={styles.platformIconImage} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.platformIcon}>
+          <Image source={require('../../assets/google.png')} style={styles.platformIconImage} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.platformIcon}>
+          <Image source={require('../../assets/android.png')} style={styles.platformIconImage} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.platformIcon}>
+          <Image source={require('../../assets/iphone.png')} style={styles.platformIconImage} />
+        </TouchableOpacity>
+      </View>
+      
+      {/* Indicateur de progression */}
+      <View style={styles.progressIndicator}>
+        <View style={styles.progressDot} />
       </View>
       
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
@@ -334,22 +329,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#174C3C',
   },
-  loginContainer: { flex: 1, backgroundColor: '#F3F5F7', padding: 24 },
-  loginContent: { flex: 1, justifyContent: 'center', alignItems: 'flex-start', width: '100%' },
-  loginTitle: { fontSize: 28, fontWeight: 'bold', color: '#174C3C', marginBottom: 8, textAlign: 'left' },
-  loginSubtitle: { fontSize: 28, fontWeight: 'bold', color: '#174C3C', textAlign: 'left', marginBottom: 40 },
-  loginInputsContainer: { width: '100%', marginBottom: 24 },
-  loginInput: { width: '100%', backgroundColor: '#174C3C', color: '#fff', borderRadius: 25, padding: 18, marginBottom: 16, fontSize: 16 },
-  loginButton: { backgroundColor: '#E7C97B', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 40, width: '100%', alignItems: 'center', marginBottom: 24 },
-  loginButtonText: { color: '#174C3C', fontWeight: 'bold', fontSize: 16 },
-  forgotPasswordContainer: { alignSelf: 'center', marginBottom: 20 },
-  forgotPasswordText: { color: '#174C3C', fontWeight: 'bold', fontSize: 16 },
-  separatorContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20, width: '100%' },
+  loginContainer: { flex: 1, backgroundColor: '#F3F5F7', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  loginTitle: { fontSize: 28, fontWeight: 'bold', color: '#174C3C', marginBottom: 32, textAlign: 'left', alignSelf: 'flex-start', maxWidth: 340, width: '100%' },
+  loginInput: { width: '100%', maxWidth: 340, backgroundColor: '#174C3C', color: '#fff', borderRadius: 25, padding: 16, marginBottom: 16, fontSize: 16 },
+  loginButton: { backgroundColor: '#E7C97B', borderRadius: 25, paddingVertical: 16, paddingHorizontal: 40, marginTop: 16, marginBottom: 16, width: '100%', maxWidth: 340 },
+  loginButtonText: { color: '#174C3C', fontWeight: 'bold', fontSize: 16, textAlign: 'center' },
+  forgotPasswordContainer: { alignItems: 'center', marginTop: 16, marginBottom: 16 },
+  forgotPassword: { color: '#174C3C', fontWeight: 'bold', fontSize: 16 },
+  separatorContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 16, width: '100%', maxWidth: 340 },
   separatorLine: { flex: 1, height: 1, backgroundColor: '#174C3C' },
   separatorText: { color: '#174C3C', fontWeight: 'bold', marginHorizontal: 16, fontSize: 16 },
-  platformIconsContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20, paddingHorizontal: 20 },
-  platformIcon: { backgroundColor: '#fff', borderRadius: 12, padding: 12, elevation: 3, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 },
+  platformIconsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, marginBottom: 32, width: '100%', maxWidth: 280 },
+  platformIcon: { backgroundColor: '#fff', borderRadius: 12, padding: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 },
   platformIconImage: { width: 32, height: 32, resizeMode: 'contain' },
-  loginProgressContainer: { alignItems: 'center', paddingBottom: 20 },
-  loginProgressBar: { width: 120, height: 4, backgroundColor: '#174C3C', borderRadius: 2 },
 }); 
