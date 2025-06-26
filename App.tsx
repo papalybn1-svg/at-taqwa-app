@@ -87,7 +87,7 @@ function SplashFamille() {
         />
         
         {/* Texte principal */}
-        <View style={styles.splashFamilleTextContainer}>
+      <View style={styles.splashFamilleTextContainer}>
           <Text style={styles.splashMainTitle}>Assalamu Alaikum,</Text>
           <Text style={styles.splashSubtitleGreen}>Bienvenue sur AT-Taqwa</Text>
           <Text style={styles.splashDescription}>

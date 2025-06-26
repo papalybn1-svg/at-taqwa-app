@@ -347,14 +347,17 @@ export default function HomeScreen() {
 
         <View style={styles.searchSection}>
           <View style={styles.searchBar}>
-            <MaterialCommunityIcons name="magnify" size={22} color={colors.gray} style={{marginRight: 10}}/>
+            <MaterialCommunityIcons name="magnify" size={24} color={colors.primary} style={styles.searchIcon}/>
             <TextInput
-              placeholder="Rechercher"
+              placeholder="Rechercher un chapitre, hadith..."
               placeholderTextColor={colors.gray}
               style={styles.searchInput}
             />
+            <TouchableOpacity style={styles.searchButton}>
+              <MaterialCommunityIcons name="arrow-right" size={20} color={colors.white} />
+            </TouchableOpacity>
           </View>
-      </View>
+        </View>
         
         <View style={styles.section}>
       <Text style={styles.sectionTitle}>Catégories</Text>
@@ -529,10 +532,11 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   bismillah: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: colors.primary,
     textAlign: 'left',
+    letterSpacing: 0.5,
   },
   welcomeMessage: {
     fontSize: 14,
@@ -569,26 +573,38 @@ const styles = StyleSheet.create({
   },
   searchSection: {
     paddingHorizontal: 24,
-    marginTop: 10,
-    marginBottom: 20,
+    marginTop: 5,
+    marginBottom: 25,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 52,
-    elevation: 4,
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    height: 56,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  searchIcon: {
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: colors.text,
+    fontWeight: '500',
+  },
+  searchButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    padding: 10,
+    marginLeft: 10,
   },
   section: {
     marginBottom: 20,

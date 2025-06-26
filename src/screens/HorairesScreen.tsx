@@ -241,12 +241,12 @@ export default function HorairesScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Liste des prières */}
+            {/* Liste des prières */}
       <View style={styles.prayerListContainer}>
         {loading ? (
           <ActivityIndicator color={colors.white} size="large" style={{ marginTop: 20 }} />
         ) : (
-          <View>
+          <View style={styles.prayerListContent}>
             {PRAYER_LABELS.map((item, index) => (
               <View key={item.key}>
                 <View style={styles.prayerRow}>
@@ -266,22 +266,22 @@ export default function HorairesScreen() {
                     <Text style={styles.prayerTime}>
                       {prayerTimes ? formatPrayerTime(prayerTimes[item.key]) : '6H01'}
                     </Text>
-                    <TouchableOpacity
+                  <TouchableOpacity
                       style={styles.notificationButton}
-                      onPress={async () => {
-                        if (enabledNotifications[item.key]) {
-                          await cancelPrayerNotification(item.key);
-                        } else if (prayerTimes && prayerTimes[item.key]) {
-                          await schedulePrayerNotification(item.key, prayerTimes[item.key], item.label);
-                        }
-                      }}
-                    >
+                    onPress={async () => {
+                      if (enabledNotifications[item.key]) {
+                        await cancelPrayerNotification(item.key);
+                      } else if (prayerTimes && prayerTimes[item.key]) {
+                        await schedulePrayerNotification(item.key, prayerTimes[item.key], item.label);
+                      }
+                    }}
+                  >
                       <MaterialCommunityIcons 
                         name={enabledNotifications[item.key] ? "bell" : "bell-outline"} 
                         size={16} 
                         color={enabledNotifications[item.key] ? "#FFD700" : "rgba(255, 255, 255, 0.8)"} 
-                      />
-                    </TouchableOpacity>
+                    />
+                  </TouchableOpacity>
                   </View>
                 </View>
                 {index < PRAYER_LABELS.length - 1 && <View style={styles.prayerSeparator} />}
@@ -396,16 +396,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     marginHorizontal: 20,
     marginTop: 0,
-    marginBottom: 8,
-    borderRadius: 16,
+    marginBottom: 0,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     paddingTop: 2,
-    paddingBottom: 6,
+    paddingBottom: 40,
     flex: 1,
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
+  },
+  prayerListContent: {
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   prayerRow: {
     flexDirection: 'row',
