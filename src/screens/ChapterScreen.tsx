@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -226,6 +227,25 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0.0)']}
           style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 100, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}
         />
+        {/* Bouton retour */}
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={{
+            position: 'absolute',
+            top: 50,
+            left: 20,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            borderRadius: 20,
+            padding: 8,
+            elevation: 3,
+            shadowColor: '#000',
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 2 },
+          }}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#8e6c3d" />
+        </TouchableOpacity>
         <View style={{ position: 'absolute', left: 24, right: 24, bottom: -32, zIndex: 10 }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 18, paddingVertical: 16, paddingHorizontal: 22, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 10, elevation: 8, alignItems: 'center' }}>
             {/* Affichage de la partie */}

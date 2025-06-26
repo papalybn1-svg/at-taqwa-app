@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { collection, getDocs, getFirestore, limit, orderBy, query, startAfter } from 'firebase/firestore';
 import React, { useCallback, useState } from 'react';
@@ -27,6 +28,7 @@ export default function NotificationsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastDoc, setLastDoc] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [newNotificationsCount, setNewNotificationsCount] = useState(0);
   const db = getFirestore();
 
   const loadNotifications = useCallback(async (isRefresh = false) => {
@@ -170,6 +172,26 @@ export default function NotificationsScreen() {
       </View>
     );
   };
+
+  const handleNotificationPress = React.useCallback(async () => {
+    console.log('Notification icon pressed');
+    await AsyncStorage.setItem('@last_notification_read', new Date().toISOString());
+    setNewNotificationsCount(0);
+
+    try {
+      // @ts-ignore
+      const parentNav = navigation.getParent && navigation.getParent();
+      if (parentNav && parentNav.navigate) {
+        // @ts-ignore
+        parentNav.navigate('Accueil', { screen: 'Notifications' });
+      } else {
+        // @ts-ignore
+        navigation.navigate('Accueil', { screen: 'Notifications' });
+      }
+    } catch (e) {
+      console.error('Erreur navigation Notifications:', e);
+    }
+  }, [navigation]);
 
   if (loading) {
     return (

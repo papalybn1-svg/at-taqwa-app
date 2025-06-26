@@ -256,24 +256,10 @@ export default function HomeScreen() {
   }, [db, firestoreStatus]);
 
   const handleNotificationPress = React.useCallback(async () => {
-    console.log('Notification icon pressed');
+    console.log('🔔 Bouton notification cliqué !');
     await AsyncStorage.setItem('@last_notification_read', new Date().toISOString());
     setNewNotificationsCount(0);
-    // Navigation robuste vers Notifications
-    try {
-      if (navigation.navigate) {
-        navigation.navigate('Notifications');
-      } else if (navigation.push) {
-        navigation.push('Notifications');
-      } else if (navigation.getParent) {
-        const parent = navigation.getParent();
-        if (parent && parent.navigate) {
-          parent.navigate('Notifications');
-        }
-      }
-    } catch (e) {
-      console.error('Erreur navigation Notifications:', e);
-    }
+    navigation.navigate('Notifications' as never);
   }, [navigation]);
 
   React.useEffect(() => {

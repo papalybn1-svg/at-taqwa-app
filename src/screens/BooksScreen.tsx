@@ -1,14 +1,12 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationProp, useNavigation } from '@react-navigation/native'; // Assurez-vous d'avoir installé React Navigation
 import React from "react";
-import { Image, ImageSourcePropType, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import chaptersData from '../../data/chapitres.json'; // Assurez-vous que le chemin est correct
 import colors from "../theme/colors";
 import { Chapter, ChaptersData } from '../types/chapters';
-import imageMap from '../../assets/chapterImages';
-const burgerMenu = require('../../assets/burger-menu.png');
-const lockClosed = require('../../assets/lock-closed.png');
-const lockOpen = require('../../assets/lock-open.png');
 
 // Regrouper les blocs en pages (max 15 pages)
 function paginateBlocks(blocks: { type: string; contenu: string }[], maxPages = 15) {
@@ -57,81 +55,41 @@ export default function BooksScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Le contenu scrollable */}
-      <ScrollView style={styles.container} contentContainerStyle={{paddingTop: 0}}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Livre</Text>
+    <SafeAreaView style={styles.safeArea}>
+      {/* Header avec bouton retour */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Livres</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Livres disponibles</Text>
+          <Text style={styles.subtitle}>Découvrez notre collection de livres spirituels</Text>
+          
+          {/* Contenu de la page */}
+          <View style={styles.booksContainer}>
+            <Text style={styles.comingSoon}>Bientôt disponible...</Text>
+          </View>
         </View>
-        {/* Drawer latéral des chapitres */}
-        <Modal visible={drawerVisible} transparent animationType="slide">
-          <View style={{ flex:1, flexDirection:'row' }}>
-            <View style={{ width:260, backgroundColor:colors.primary, padding:18, borderTopRightRadius:24, borderBottomRightRadius:24 }}>
-              <Text style={{ color:'#fff', fontWeight:'bold', fontSize:20, marginBottom:18, textAlign:'center' }}>Chapitres</Text>
-              {Object.keys(data).map((partie, pidx) => (
-                <View key={pidx}>
-                  {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => (
-                    <View key={idx} style={{ flexDirection:'row', alignItems:'center', marginBottom:10, borderRadius:12, padding:6 }}>
-                      <Text style={{ color:'#fff', fontWeight:'bold', fontSize:16, flex:1 }}>{ch.title}</Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
-              <Pressable style={{ marginTop:18, backgroundColor:'#fff', borderRadius:12, paddingVertical:8, paddingHorizontal:24, alignSelf:'center' }} onPress={closeDrawer}>
-                <Text style={{ color:colors.primary, fontWeight:'bold' }}>Fermer</Text>
-              </Pressable>
-            </View>
-            <Pressable style={{ flex:1 }} onPress={closeDrawer} />
-          </View>
-        </Modal>
-        {Object.keys(data).map((partie, pidx) => (
-          <View key={pidx}>
-            <Text style={styles.sectionTitle}>{data[partie as keyof ChaptersData].titre}</Text>
-            <View style={styles.chapterList}>
-              {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => (
-                <TouchableOpacity 
-                  key={idx} 
-                  style={styles.chapterCard}
-                  onPress={() => handleChapterPress(ch)}
-                >
-                  <Image 
-                    source={imageMap[ch.image] || require('../../assets/1.png')} 
-                    style={styles.chapterImage} 
-                  />
-                  <View style={styles.chapterContent}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Text style={styles.chapterTitle}>{ch.title}</Text>
-                      <View style={{ backgroundColor: '#FFD700', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 }}>
-                        <Text style={{ color: colors.primary, fontWeight: 'bold', fontSize: 13 }}>{Math.round(progress[`chapter${Object.keys(data)[pidx]}_${idx+1}`]||0)}%</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.chapterDesc}>{ch.desc}</Text>
-                    <Text style={styles.chapterAuthor}>{ch.author}</Text>
-                    {/* Barre de progression du chapitre */}
-                    <View style={{ height:6, backgroundColor:'#eee', borderRadius:3, marginTop:6, width:'100%' }}>
-                      <View style={{ height:6, backgroundColor:'#BB9B4E', borderRadius:3, width:`${progress[`chapter${Object.keys(data)[pidx]}_${idx+1}`]||0}%` }} />
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ))}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  safeArea: { flex: 1, backgroundColor: colors.background },
   header: { backgroundColor: colors.primary, paddingVertical: 24, paddingHorizontal: 20, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, marginBottom: 10 },
+  backButton: { padding: 10 },
   headerTitle: { color: colors.white, fontSize: 20, fontWeight: 'bold' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.primary, marginLeft: 20, marginTop: 20, marginBottom: 10 },
-  chapterList: { paddingHorizontal: 16 },
-  chapterCard: { flexDirection: 'row', backgroundColor: colors.white, borderRadius: 16, marginBottom: 16, elevation: 2, alignItems: 'center', padding: 10 },
-  chapterImage: { width: 60, height: 60, borderRadius: 12, marginRight: 14, resizeMode: 'cover' },
-  chapterContent: { flex: 1 },
-  chapterTitle: { fontSize: 16, fontWeight: 'bold', color: colors.primary, marginBottom: 4 },
-  chapterDesc: { fontSize: 13, color: '#444', marginBottom: 4 },
-  chapterAuthor: { fontSize: 12, color: colors.primary, fontStyle: 'italic' },
+  placeholder: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', color: colors.primary, marginBottom: 10 },
+  subtitle: { fontSize: 16, color: '#444', marginBottom: 20 },
+  booksContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  comingSoon: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
 }); 
