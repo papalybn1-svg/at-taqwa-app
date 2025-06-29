@@ -10,6 +10,9 @@ import HorairesScreen from '../screens/HorairesScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ParametresScreen from '../screens/ParametresScreen';
 import QuizScreen from '../screens/QuizScreen';
+import QuizStartScreen from '../screens/QuizStartScreen';
+import QuizGameScreen from '../screens/QuizGameScreen';
+import OriginalQuizScreen from '../screens/OriginalQuizScreen';
 import TasbihScreen from '../screens/TasbihScreen';
 import colors from "../theme/colors";
 
@@ -19,13 +22,76 @@ const Stack = createStackNavigator();
 // Stack Navigator pour l'onglet Accueil
 function HomeStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeMain" component={HomeScreen} />
-      <Stack.Screen name="Quiz" component={QuizScreen} />
-      <Stack.Screen name="Tasbih" component={TasbihScreen} />
-      <Stack.Screen name="Books" component={BooksScreen} />
-      <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="AuthorProfile" component={AuthorProfileScreen} />
+    <Stack.Navigator 
+      screenOptions={{ 
+        headerShown: false,
+        gestureEnabled: true, // Active le geste de retour par défaut pour iOS
+        gestureDirection: 'horizontal', // Geste horizontal (swipe de gauche à droite)
+      }}
+    >
+      <Stack.Screen 
+        name="HomeMain" 
+        component={HomeScreen}
+        options={{
+          gestureEnabled: false, // Pas de geste sur l'écran principal (c'est la racine)
+        }}
+      />
+      <Stack.Screen 
+        name="Quiz" 
+        component={QuizScreen}
+        options={{
+          gestureEnabled: false, // Désactive le swipe natif pour utiliser notre swipe personnalisé
+        }}
+      />
+      <Stack.Screen 
+        name="QuizStart" 
+        component={QuizStartScreen}
+        options={{
+          gestureEnabled: false, // Désactive le swipe natif pour utiliser notre swipe personnalisé
+        }}
+      />
+      <Stack.Screen 
+        name="QuizGame" 
+        component={QuizGameScreen}
+        options={{
+          gestureEnabled: true, // Permet le swipe pour revenir
+        }}
+      />
+      <Stack.Screen 
+        name="OriginalQuiz" 
+        component={OriginalQuizScreen}
+        options={{
+          gestureEnabled: false, // Désactive le swipe natif pour utiliser notre swipe personnalisé
+        }}
+      />
+      <Stack.Screen 
+        name="Tasbih" 
+        component={TasbihScreen}
+        options={{
+          gestureEnabled: true, // Permet le swipe pour revenir à l'accueil
+        }}
+      />
+      <Stack.Screen 
+        name="Books" 
+        component={BooksScreen}
+        options={{
+          gestureEnabled: true, // Permet le swipe pour revenir à l'accueil
+        }}
+      />
+      <Stack.Screen 
+        name="Notifications" 
+        component={NotificationsScreen}
+        options={{
+          gestureEnabled: true, // Permet le swipe pour revenir à l'accueil
+        }}
+      />
+      <Stack.Screen 
+        name="AuthorProfile" 
+        component={AuthorProfileScreen}
+        options={{
+          gestureEnabled: true, // Permet le swipe pour revenir
+        }}
+      />
     </Stack.Navigator>
   );
 }
