@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    marginTop: 0, // Centré au milieu de la page
+    marginTop: -50, // Ajouté marginTop négatif pour faire monter vers le haut
     flex: 1, // Prend tout l'espace disponible pour centrer
   },
   decorativeCircle: {
@@ -131,10 +131,10 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   girlImage: {
-    width: screenWidth * 2.6, // Augmenté de 2.2 à 2.6
-    height: screenHeight * 1.9, // Augmenté de 1.6 à 1.9
-    maxWidth: 1300, // Augmenté de 1100 à 1300
-    maxHeight: 1800, // Augmenté de 1500 à 1800
+    width: screenWidth * 2.0, // Augmenté de 1.6 à 2.0
+    height: screenHeight * 1.3, // Augmenté de 1.0 à 1.3
+    maxWidth: 900, // Augmenté de 700 à 900
+    maxHeight: 1200, // Augmenté de 900 à 1200
     zIndex: 1,
   },
 });
