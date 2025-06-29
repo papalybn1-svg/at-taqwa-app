@@ -59,14 +59,14 @@ export default function BooksScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Le contenu scrollable */}
       <ScrollView style={styles.container} contentContainerStyle={{paddingTop: 0}}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.white} />
-          </TouchableOpacity>
+        </TouchableOpacity>
           <Text style={styles.headerTitle}>Livre</Text>
-          <View style={styles.placeholder} />
-        </View>
-        
+        <View style={styles.placeholder} />
+      </View>
+
         {/* Drawer latéral des chapitres */}
         <Modal visible={drawerVisible} transparent animationType="slide">
           <View style={{ flex:1, flexDirection:'row' }}>

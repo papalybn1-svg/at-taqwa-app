@@ -441,13 +441,15 @@ export default function HomeScreen() {
               return (
                 <Animated.View style={{ transform: [{ scale }], opacity, marginHorizontal: 8 }}>
                   <TouchableOpacity style={styles.bookCardModern} onPress={() => handleChapterPress(item)}>
-                    <Image 
-                      source={imageMap[item.image] || imageMap['1']} 
-                      style={styles.bookImageModern}
-                      resizeMode="cover"
-                      defaultSource={require('../../assets/1.png')}
-                      onError={() => console.log('Erreur de chargement image:', item.image)}
-                    />
+                    <View style={styles.bookImageContainer}>
+                      <Image 
+                        source={imageMap[item.image] || imageMap['1']} 
+                        style={styles.bookImageModern}
+                        resizeMode="cover"
+                        defaultSource={require('../../assets/1.png')}
+                        onError={() => console.log('Erreur de chargement image:', item.image)}
+                      />
+                    </View>
                     <View style={styles.bookCardContentModern}>
                       <Text style={styles.bookCardTitleModern} numberOfLines={2}>{item.title || 'Titre du chapitre'}</Text>
                       <Text style={styles.bookCardSubtitleModern} numberOfLines={1}>{item.partie || 'Partie'}</Text>
@@ -526,6 +528,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 10,
+    marginTop: 15,
+    marginBottom: 20,
   },
   bismillah: {
     fontSize: 24,
@@ -571,6 +575,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 24,
     marginHorizontal: 24,
+    marginTop: -5,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -584,7 +589,8 @@ const styles = StyleSheet.create({
   },
   bannerTextContainer: {
     flex: 1,
-    paddingRight: 10,
+    paddingRight: 40,
+    maxWidth: '60%',
   },
   bannerTitle: {
     fontSize: 14,
@@ -606,12 +612,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   bannerImage: {
-    width: 200,
-    height: 250,
+    width: 240,
+    height: 300,
     resizeMode: 'contain',
     position: 'absolute',
-    right: -50,
-    bottom: -60,
+    right: -60,
+    bottom: -80,
   },
   section: {
     marginBottom: 20,
@@ -665,12 +671,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 8,
   },
-  bookImageModern: {
+  bookImageContainer: {
     width: '100%',
     height: 120,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bookImageModern: {
+    width: '110%',
+    height: '110%',
     resizeMode: 'cover',
+    minWidth: '110%',
+    minHeight: '110%',
+    transform: [{ scale: 1.1 }],
   },
   bookCardContentModern: {
     flex: 1,
