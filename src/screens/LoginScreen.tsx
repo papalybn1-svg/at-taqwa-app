@@ -136,9 +136,9 @@ export default function LoginScreen({ navigation }: any) {
         </View>
         {/* Bloc blanc en bas avec le contenu */}
         <View style={styles.whiteBottomCard}>
-          <Text style={styles.mainTitle}>Rattraper mes prières</Text>
+          <Text style={styles.mainTitle}>Réparer mes prières</Text>
           <Text style={styles.descriptionText}>
-            Rien n'est perdu :{"\n"}chaque prière rattrapée{"\n"}est un pas vers Allah.
+            Rien n'est perdu:{"\n"}chaque prière réparée{"\n"}est un pas vers Allah.
           </Text>
           {/* Boutons */}
           <View style={styles.buttonsContainer}>
@@ -374,7 +374,7 @@ export default function LoginScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   introContainer: { flex: 1, backgroundColor: '#174C3C' },
-  imageTopSection: { flex: 2, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginBottom: -20 },
+  imageTopSection: { flex: 2, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginBottom: -40 },
   coupleImage: { width: '200%', height: '160%', resizeMode: 'contain', marginBottom: -120, marginLeft: 20 },
   whiteBottomCard: {
     backgroundColor: '#fff',
