@@ -97,7 +97,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   if (!chapterContent) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#8e6c3d" />
+        <ActivityIndicator size="large" color="#174C3C" />
         <Text style={{ marginTop: 16 }}>Chargement du chapitre...</Text>
       </View>
     );
@@ -121,9 +121,9 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       if (item.type === "tableau" && Array.isArray(item.contenu)) {
         // Affichage simple du tableau
         return (
-          <View key={idx} style={{ marginVertical: 18, borderWidth: 1, borderColor: '#8e6c3d', borderRadius: 8, overflow: 'hidden' }}>
+          <View key={idx} style={{ marginVertical: 18, borderWidth: 1, borderColor: '#174C3C', borderRadius: 8, overflow: 'hidden' }}>
             {item.contenu.map((row: string[], rIdx: number) => (
-              <View key={rIdx} style={{ flexDirection: 'row', backgroundColor: rIdx === 0 ? '#f0e6d6' : '#fff' }}>
+              <View key={rIdx} style={{ flexDirection: 'row', backgroundColor: rIdx === 0 ? '#E8F5E8' : '#fff' }}>
                 {row.map((cell, cIdx) => (
                   <Text
                     key={cIdx}
@@ -131,9 +131,9 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
                       flex: 1,
                       padding: 8,
                       borderRightWidth: cIdx < row.length - 1 ? 1 : 0,
-                      borderRightColor: '#8e6c3d',
+                      borderRightColor: '#174C3C',
                       fontWeight: rIdx === 0 ? 'bold' : 'normal',
-                      color: '#5a3921',
+                      color: '#174C3C',
                       fontSize: textSize - 1,
                       textAlign: 'center'
                     }}
@@ -210,14 +210,14 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f9f5f0' }}>
+    <View style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
       {/* Header avec image et titre */}
       <View style={{ position: 'relative', overflow: 'visible' }}>
         <Image
           source={imageMap[chapter.image] || imageMap['1']}
           style={{
             width: screenWidth,
-            height: 180,
+            height: 160,
             borderBottomLeftRadius: 28,
             borderBottomRightRadius: 28,
             resizeMode: 'cover',
@@ -244,32 +244,44 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             shadowOffset: { width: 0, height: 2 },
           }}
         >
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#8e6c3d" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
+        </TouchableOpacity>
+        {/* Bouton zoom */}
+        <TouchableOpacity 
+          onPress={nextTextSize}
+          style={{
+            position: 'absolute',
+            top: 50,
+            right: 20,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            borderRadius: 20,
+            padding: 8,
+            elevation: 3,
+            shadowColor: '#000',
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 2 },
+          }}
+        >
+          <MaterialCommunityIcons name="magnify-plus" size={24} color="#174C3C" />
         </TouchableOpacity>
         <View style={{ position: 'absolute', left: 24, right: 24, bottom: -32, zIndex: 10 }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 18, paddingVertical: 16, paddingHorizontal: 22, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 10, elevation: 8, alignItems: 'center' }}>
             {/* Affichage de la partie */}
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#8e6c3d', textAlign: 'center', letterSpacing: 0.5 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#174C3C', textAlign: 'center', letterSpacing: 0.5 }}>
               {allChapters[currentChapterIndex]?.partieTitre}
             </Text>
             {/* Titre du chapitre */}
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#8e6c3d', textAlign: 'center', marginTop: 4 }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#174C3C', textAlign: 'center', marginTop: 4 }}>
               {chapter.title}
             </Text>
           </View>
         </View>
       </View>
 
-      {/* Bouton Aa pour changer la taille du texte */}
-      <View style={{ width: '100%', maxWidth: 420, alignSelf: 'center', alignItems: 'center', marginTop: 18, marginBottom: 2 }}>
-        <TouchableOpacity onPress={nextTextSize} style={{ backgroundColor: '#8e6c3d', borderRadius: 22, paddingVertical: 6, paddingHorizontal: 16, elevation: 2 }}>
-        </TouchableOpacity>
-      </View>
-
-
-      {/* Indicateur de section et navigation */}
-      <View style={{ alignItems: 'center', marginTop: 8, marginBottom: 0 }}>
-        <Text style={{ color: '#8e6c3d', fontWeight: 'bold', fontSize: 16 }}>{sectionIndicator}</Text>
+      {/* Indicateur de section */}
+      <View style={{ alignItems: 'center', paddingHorizontal: 24, marginTop: 50, marginBottom: 10 }}>
+        <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{sectionIndicator}</Text>
       </View>
 
       {/* Contenu animé */}
@@ -291,31 +303,31 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         <TouchableOpacity
           onPress={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
           disabled={currentSectionIndex === 0}
-          style={{ opacity: currentSectionIndex === 0 ? 0.4 : 1, backgroundColor: '#8e6c3d', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+          style={{ opacity: currentSectionIndex === 0 ? 0.4 : 1, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
         >
           <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
         </TouchableOpacity>
         {/* Pagination */}
         <View style={{ minWidth: 60, alignItems: 'center' }}>
-          <Text style={{ color: '#8e6c3d', fontWeight: 'bold', fontSize: 16 }}>{currentSectionIndex + 1}/{totalSections}</Text>
+          <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{currentSectionIndex + 1}/{totalSections}</Text>
         </View>
         {currentSectionIndex === totalSections - 1 ? (
           nextChapter ? (
             <TouchableOpacity
               onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
-              style={{ backgroundColor: '#19514A', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+              style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
             >
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre suivant</Text>
             </TouchableOpacity>
           ) : (
-            <View style={{ opacity: 0.4, backgroundColor: '#8e6c3d', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
+            <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
             </View>
           )
         ) : (
           <TouchableOpacity
             onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
-            style={{ backgroundColor: '#8e6c3d', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+            style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
           >
             <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
           </TouchableOpacity>
@@ -328,14 +340,14 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
 const styles = StyleSheet.create({
   sectionTitle: {
     fontWeight: 'bold',
-    color: '#8e6c3d',
+    color: '#174C3C',
     marginTop: 24,
     marginBottom: 12,
     textAlign: 'left',
   },
   subtitle: {
     fontWeight: 'bold',
-    color: '#5a3921',
+    color: '#174C3C',
     marginTop: 20,
     marginBottom: 10,
     textAlign: 'left',
@@ -345,29 +357,29 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   arabicContainer: {
-    backgroundColor: '#f0e6d6',
+    backgroundColor: '#E8F5E8',
     borderRadius: 8,
     padding: 12,
     marginVertical: 12,
     borderRightWidth: 4,
-    borderRightColor: '#8e6c3d',
+    borderRightColor: '#174C3C',
   },
   arabicText: {
     fontFamily: 'Traditional Arabic',
     textAlign: 'right',
-    color: '#5a3921',
+    color: '#174C3C',
   },
   verseContainer: {
-    backgroundColor: '#f5efe7',
+    backgroundColor: '#FFF9E6',
     borderRadius: 8,
     padding: 12,
     marginVertical: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#8e6c3d',
+    borderLeftColor: '#D4AF37',
   },
   verseText: {
     fontStyle: 'italic',
-    color: '#5a3921',
+    color: '#174C3C',
     textAlign: 'left',
   },
 });
