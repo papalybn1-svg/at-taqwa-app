@@ -58,11 +58,17 @@ export default function OriginalQuizScreen() {
   const [isAnswerCorrect, setIsAnswerCorrect] = useState<boolean | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showQuestionPage, setShowQuestionPage] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(1));
   const navigation = useNavigation();
 
   const goToHome = () => {
-    // Utilise popToTop pour revenir à la racine de la pile
+    // Si on est sur la page des réponses, retourner à la page question
+    if (!showQuestionPage) {
+      setShowQuestionPage(true);
+      return;
+    }
+    // Sinon, utilise popToTop pour revenir à la racine de la pile
     navigation.dispatch(StackActions.popToTop());
   };
 
@@ -88,6 +94,12 @@ export default function OriginalQuizScreen() {
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
+        // Si on est sur la page des réponses, retourner à la page question
+        if (!showQuestionPage) {
+          setShowQuestionPage(true);
+          return true;
+        }
+        // Sinon, aller à l'accueil
         goToHome();
         return true;
       };
@@ -95,7 +107,7 @@ export default function OriginalQuizScreen() {
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
 
       return () => subscription.remove();
-    }, [])
+    }, [showQuestionPage]) // Ajout de showQuestionPage dans les dépendances
   );
 
   const logQuizResult = async (finalScore: number) => {
@@ -135,12 +147,17 @@ export default function OriginalQuizScreen() {
         setSelectedAnswerIndex(null);
         setIsAnswerCorrect(null);
         setShowAnswer(false);
+        setShowQuestionPage(true);
         Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
       } else {
         logQuizResult(score);
         setShowResults(true);
       }
     });
+  };
+
+  const goToAnswersPage = () => {
+    setShowQuestionPage(false);
   };
 
   const restartQuiz = () => {
@@ -150,6 +167,7 @@ export default function OriginalQuizScreen() {
     setSelectedAnswerIndex(null);
     setIsAnswerCorrect(null);
     setShowAnswer(false);
+    setShowQuestionPage(true);
     fadeAnim.setValue(1);
   };
 
@@ -158,22 +176,21 @@ export default function OriginalQuizScreen() {
     const isCorrect = index === quizData[currentQuestionIndex].correctAnswerIndex;
     const isGreen = index % 2 === 0; // A et C en vert, B et D en doré
     
-    // Style de base (plus petit quand la réponse est affichée)
-    const baseStyle = showAnswer ? styles.optionButtonSmall : styles.optionButton;
-    
     if (showAnswer) {
       if (isCorrect) {
-        return [baseStyle, styles.correctOptionButton];
+        return [styles.optionButton, styles.correctOptionButton];
       } else if (isSelected && !isCorrect) {
-        return [baseStyle, styles.incorrectOptionButton];
+        return [styles.optionButton, styles.incorrectOptionButton];
       }
+      // Options non sélectionnées et incorrectes gardent leur couleur de base
+      return [styles.optionButton, isGreen ? styles.greenOption : styles.goldOption];
     }
     
     if (isSelected) {
-      return [baseStyle, isGreen ? styles.selectedGreenOption : styles.selectedGoldOption];
+      return [styles.optionButton, isGreen ? styles.selectedGreenOption : styles.selectedGoldOption];
     }
     
-    return [baseStyle, isGreen ? styles.greenOption : styles.goldOption];
+    return [styles.optionButton, isGreen ? styles.greenOption : styles.goldOption];
   };
 
   const getOptionTextStyle = (index: number) => {
@@ -181,22 +198,19 @@ export default function OriginalQuizScreen() {
     const isCorrect = index === quizData[currentQuestionIndex].correctAnswerIndex;
     const isGreen = index % 2 === 0;
     
-    // Style de base (plus petit quand la réponse est affichée)
-    const baseTextStyle = showAnswer ? styles.whiteOptionTextSmall : styles.whiteOptionText;
-    const greenTextStyle = showAnswer ? styles.greenOptionTextSmall : styles.greenOptionText;
-    const goldTextStyle = showAnswer ? styles.goldOptionTextSmall : styles.goldOptionText;
-    
     if (showAnswer) {
       if (isCorrect || (isSelected && !isCorrect)) {
-        return baseTextStyle;
+        return styles.whiteOptionText; // Texte blanc pour les réponses correctes/incorrectes
       }
+      // Options non sélectionnées gardent leur couleur de base
+      return isGreen ? styles.greenOptionText : styles.goldOptionText;
     }
     
     if (isSelected) {
-      return baseTextStyle;
+      return styles.whiteOptionText; // Texte blanc pour les options sélectionnées
     }
     
-    return isGreen ? greenTextStyle : goldTextStyle;
+    return isGreen ? styles.greenOptionText : styles.goldOptionText;
   };
 
   if (showResults) {
@@ -218,7 +232,7 @@ export default function OriginalQuizScreen() {
           />
         </View>
         
-        <View style={styles.quizCard}>
+        <View style={styles.resultsCard}>
           <Text style={styles.resultsTitle}>Quiz Terminé !</Text>
           <Text style={styles.scoreText}>
             Votre score : {score} / {quizData.length}
@@ -252,53 +266,77 @@ export default function OriginalQuizScreen() {
         />
       </View>
 
-      {/* Carte du quiz - Sans superposition */}
+      {/* Carte du quiz - Système à 2 pages */}
       <View style={styles.quizCardContainer}>
-        {/* Carte empilée en arrière-plan */}
-        <View style={styles.stackedCard} />
+        {/* Cartes empilées exactement comme dans QuizStartScreen */}
+        {/* Carte arrière (la plus profonde) - Vert foncé */}
+        <View style={styles.backCard} />
         
-        <Animated.View style={[styles.quizCard, { opacity: fadeAnim }]}>
-          <Text style={styles.questionText}>{currentQuestion.question}</Text>
-
-          <View style={styles.optionsContainer}>
-            {currentQuestion.options.map((option, index) => (
+        {/* Carte du milieu - Dorée */}
+        <View style={styles.middleCard} />
+        
+        {/* Carte blanche principale */}
+        <Animated.View style={[styles.whiteCard, { opacity: fadeAnim }]}>
+          {showQuestionPage ? (
+            // PAGE 1: QUESTION SEULEMENT
+            <>
+              <Text style={styles.questionText}>{currentQuestion.question}</Text>
+              
+              {/* Espace réservé pour maintenir la hauteur */}
+              <View style={styles.spacer} />
+              
               <TouchableOpacity
-                key={index}
-                style={getOptionStyle(index)}
-                onPress={() => handleAnswerPress(index)}
-                disabled={showAnswer}
+                style={styles.answerButton}
+                onPress={goToAnswersPage}
+                activeOpacity={0.7}
               >
-                <View style={styles.optionContent}>
-                  <View style={showAnswer ? styles.optionLabelSmall : styles.optionLabel}>
-                    <Text style={showAnswer ? styles.optionLabelTextSmall : styles.optionLabelText}>{optionLabels[index]}</Text>
-                  </View>
-                  <Text style={getOptionTextStyle(index)}>{option}</Text>
-                </View>
+                <Text style={styles.answerButtonText}>Répondre</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-
-          {!showAnswer ? (
-            <TouchableOpacity
-              style={[styles.verifyButton, selectedAnswerIndex === null && styles.disabledButton]}
-              onPress={handleVerify}
-              disabled={selectedAnswerIndex === null}
-            >
-              <Text style={styles.verifyButtonText}>Vérifier</Text>
-            </TouchableOpacity>
+            </>
           ) : (
-            <View style={styles.answerSection}>
-              <View style={styles.correctAnswerBanner}>
-                <Text style={styles.correctAnswerText}>
-                  Réponse correcte : {optionLabels[quizData[currentQuestionIndex].correctAnswerIndex]}
-                </Text>
+            // PAGE 2: RÉPONSES MULTIPLES
+            <>
+              <View style={styles.optionsContainer}>
+                {currentQuestion.options.map((option, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={getOptionStyle(index)}
+                    onPress={() => handleAnswerPress(index)}
+                    disabled={showAnswer}
+                  >
+                    <Text style={getOptionTextStyle(index)}>
+                      {optionLabels[index]}: {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-              <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                <Text style={styles.nextButtonText}>
-                  {currentQuestionIndex < quizData.length - 1 ? 'Suivant' : 'Terminer'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+
+              {/* Section des boutons avec espace réservé */}
+              <View style={styles.buttonSection}>
+                {!showAnswer ? (
+                  <TouchableOpacity
+                    style={[styles.verifyButton, selectedAnswerIndex === null && styles.disabledButton]}
+                    onPress={handleVerify}
+                    disabled={selectedAnswerIndex === null}
+                  >
+                    <Text style={styles.verifyButtonText}>Vérifier</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.answerSection}>
+                    <View style={styles.correctAnswerBanner}>
+                      <Text style={styles.correctAnswerText}>
+                        Réponse correcte : {optionLabels[quizData[currentQuestionIndex].correctAnswerIndex]}
+                      </Text>
+                    </View>
+                    <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                      <Text style={styles.nextButtonText}>
+                        {currentQuestionIndex < quizData.length - 1 ? 'Suivant' : 'Terminer'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </>
           )}
         </Animated.View>
       </View>
@@ -311,12 +349,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#174C3C', // Vert principal de l'application
   },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    padding: 8,
+  },
   characterSection: {
     flex: 0.4, // Augmenté de 0.3 à 0.4 pour plus d'espace pour l'image
     justifyContent: 'center', // Changé de 'flex-end' à 'center' pour mieux centrer
     alignItems: 'center',
-    paddingTop: 40, // Augmenté pour pousser l'image vers le bas
+    paddingTop: 50, // Réduit de 80 à 50 pour faire monter l'image
     paddingBottom: 0, // Réduit pour laisser plus d'espace à la carte
+    zIndex: 25, // Augmenté de 5 à 25 pour passer au-dessus de tout
+    position: 'relative', // Ajouté pour que z-index fonctionne
   },
   characterImage: {
     width: screenWidth * 1.0, // Augmenté de 0.8 à 1.0 pour remplir la largeur
@@ -324,6 +373,7 @@ const styles = StyleSheet.create({
     maxWidth: 500, // Augmenté de 350 à 500
     maxHeight: 400, // Augmenté de 220 à 400
     resizeMode: 'contain', // Ajouté pour maintenir les proportions
+    zIndex: 30, // Augmenté de 6 à 30 pour être au-dessus de tout
   },
   quizCardContainer: {
     flex: 0.6, // Augmenté de 0.7 à 0.6 pour équilibrer avec characterSection
@@ -334,27 +384,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     paddingTop: 0, // Réduit de 5 à 0 pour coller à l'image
   },
-  quizCard: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    padding: 18, // Réduit de 20 à 18
-    paddingTop: 22, // Réduit de 25 à 22
-    width: '95%', // Augmenté de 90% à 95% pour une carte plus large
-    maxWidth: 450, // Augmenté de 400 à 450
-    minHeight: screenHeight * 0.45, // Ajusté dynamiquement selon la hauteur d'écran
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -4, // Augmenté de -2 à -4 pour plus d'ombre
-    },
-    shadowOpacity: 0.15, // Augmenté de 0.1 à 0.15
-    shadowRadius: 12, // Augmenté de 10 à 12
-    elevation: 15, // Augmenté de 10 à 15
-    zIndex: 3,
-  },
+
   questionText: {
     fontSize: 17,
     color: '#333',
@@ -365,13 +395,16 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   optionsContainer: {
-    marginBottom: 18,
+    marginBottom: 12,
+    marginTop: 15,
   },
   optionButton: {
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: 6,
     padding: 12,
     borderWidth: 2,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   greenOption: {
     backgroundColor: '#E8F5E8',
@@ -417,46 +450,50 @@ const styles = StyleSheet.create({
   },
   greenOptionText: {
     color: '#174C3C',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    flex: 1,
+    textAlign: 'left',
+    lineHeight: 18,
   },
   goldOptionText: {
     color: '#BB9B4E',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    flex: 1,
+    textAlign: 'left',
+    lineHeight: 18,
   },
   whiteOptionText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    flex: 1,
+    textAlign: 'left',
+    lineHeight: 18,
   },
   verifyButton: {
     backgroundColor: '#BB9B4E',
-    padding: 12,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   disabledButton: {
     backgroundColor: '#CCCCCC',
   },
   verifyButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'white',
     fontWeight: 'bold',
   },
   answerSection: {
-    marginTop: 8,
+    marginTop: 6,
   },
   correctAnswerBanner: {
     backgroundColor: '#174C3C',
-    padding: 12,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+    minHeight: 44,
   },
   correctAnswerText: {
     color: 'white',
@@ -465,12 +502,13 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     backgroundColor: '#BB9B4E',
-    padding: 12,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     alignItems: 'center',
+    minHeight: 44,
   },
   nextButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'white',
     fontWeight: 'bold',
   },
@@ -498,74 +536,112 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  stackedCard: {
-    position: 'absolute',
-    bottom: 25,
-    left: 60,
-    right: 60,
-    height: 320,
+  backCard: {
+    backgroundColor: '#0F3A2E', // Vert plus foncé que #174C3C (comme QuizStartScreen)
     borderRadius: 30,
-    backgroundColor: '#BB9B4E',
-    opacity: 0.8,
-    zIndex: 1,
-  },
-  backButton: {
+    height: screenHeight * 0.45,
+    width: '100%',
     position: 'absolute',
-    top: 20,
-    left: 20,
-    zIndex: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 20,
-    padding: 8,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    bottom: 60, // Augmenté de 30 à 60 pour faire monter
+    borderWidth: 2,
+    borderColor: '#0A2D23',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
+    zIndex: 1,
   },
-  optionButtonSmall: {
-    borderRadius: 10,
-    marginBottom: 6,
-    padding: 8,
+  middleCard: {
+    backgroundColor: '#BB9B4E', // Même couleur que le bouton (comme QuizStartScreen)
+    borderRadius: 30,
+    height: screenHeight * 0.46,
+    width: '95%',
+    position: 'absolute',
+    bottom: 70, // Augmenté de 40 à 70 pour faire monter
     borderWidth: 2,
+    borderColor: '#A08642',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 7,
+    zIndex: 2,
   },
-  greenOptionTextSmall: {
-    color: '#174C3C',
-    fontSize: 12,
-    fontWeight: '500',
-    flex: 1,
-  },
-  goldOptionTextSmall: {
-    color: '#BB9B4E',
-    fontSize: 12,
-    fontWeight: '500',
-    flex: 1,
-  },
-  whiteOptionTextSmall: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '500',
-    flex: 1,
-  },
-  optionLabelSmall: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
+  whiteCard: {
+    backgroundColor: 'white',
+    borderRadius: 30,
+    paddingHorizontal: 20,
+    paddingTop: 40, // Augmenté de 25 à 40 pour faire descendre le contenu
+    paddingBottom: 20,
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 15,
+    borderWidth: 2,
+    borderColor: '#F0F0F0',
+    width: '90%',
+    height: screenHeight * 0.47,
+    position: 'absolute',
+    bottom: 80, // Augmenté de 50 à 80 pour faire monter
+    zIndex: 15, // Augmenté de 3 à 15 pour être au-dessus de tout
   },
-  optionLabelTextSmall: {
+
+  spacer: {
+    flex: 1,
+    minHeight: 100,
+  },
+  answerButton: {
+    backgroundColor: '#BB9B4E',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+    zIndex: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  answerButtonText: {
+    fontSize: 16,
     color: 'white',
-    fontSize: 13,
     fontWeight: 'bold',
+  },
+
+  buttonSection: {
+    marginTop: 8,
+    minHeight: 45,
+  },
+  resultsCard: {
+    backgroundColor: 'white',
+    borderRadius: 30,
+    padding: 20,
+    margin: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 15,
   },
 });
