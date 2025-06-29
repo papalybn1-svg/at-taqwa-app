@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -67,14 +68,31 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const [chapterContent, setChapterContent] = useState<any>(null);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // 0 = intro
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>([]);
 
   // useEffect pour charger le contenu du chapitre
   useEffect(() => {
     if (chapter && chapter.image && chapterFiles[chapter.image]) {
       setChapterContent(chapterFiles[chapter.image]);
-      setCurrentSectionIndex(0);
+      // Démarrer à la section spécifiée si on vient des favoris
+      const initialSection = route.params.initialSection || 0;
+      setCurrentSectionIndex(initialSection);
     }
-  }, [chapter]);
+  }, [chapter, route.params.initialSection]);
+
+  // useEffect pour charger les favoris
+  useEffect(() => {
+    loadFavorites();
+  }, []);
+
+  // useEffect pour vérifier si cette page/section est en favoris
+  useEffect(() => {
+    if (chapter && favorites.length >= 0) {
+      const pageId = `${chapter.image}_${chapter.title}_section_${currentSectionIndex}`;
+      setIsFavorite(favorites.some(fav => fav.id === pageId));
+    }
+  }, [chapter, favorites, currentSectionIndex]);
 
   // useEffect pour l'animation de fondu
   useEffect(() => {
@@ -91,6 +109,74 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const textSizes = [16, 19, 22];
   const nextTextSize = () => {
     setTextSize(s => textSizes[(textSizes.indexOf(s) + 1) % textSizes.length]);
+  };
+
+  // Fonctions de gestion des favoris
+  const loadFavorites = async () => {
+    try {
+      const storedFavorites = await AsyncStorage.getItem('favorites');
+      if (storedFavorites) {
+        setFavorites(JSON.parse(storedFavorites));
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des favoris:', error);
+    }
+  };
+
+  const saveFavorites = async (newFavorites: any[]) => {
+    try {
+      console.log('Sauvegarde des favoris:', newFavorites);
+      await AsyncStorage.setItem('favorites', JSON.stringify(newFavorites));
+      setFavorites(newFavorites);
+      console.log('Favoris sauvegardés avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des favoris:', error);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (!chapter) return;
+    
+    // Créer un ID unique pour cette page/section spécifique
+    const pageId = `${chapter.image}_${chapter.title}_section_${currentSectionIndex}`;
+    console.log('Toggle favori pour la page:', pageId);
+    
+    const allChapters = getAllChapters();
+    const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+    
+    // Récupérer le titre de la section actuelle
+    const { intro, sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+    let sectionTitle = "Introduction";
+    if (currentSectionIndex > 0) {
+      sectionTitle = sections[currentSectionIndex - 1]?.title || `Section ${currentSectionIndex}`;
+    }
+    
+    const favoriteItem = {
+      id: pageId,
+      title: `${chapter.title} - ${sectionTitle}`,
+      desc: `Page ${currentSectionIndex + 1} du chapitre`,
+      author: 'At-Taqwa',
+      image: chapter.image,
+      partie: currentChapterData?.partieTitre || '',
+      chapterData: {
+        ...chapter,
+        startSection: currentSectionIndex // Sauvegarder la section pour y revenir
+      }
+    };
+
+    let newFavorites;
+    if (isFavorite) {
+      // Retirer des favoris
+      console.log('Retirer la page des favoris');
+      newFavorites = favorites.filter(fav => fav.id !== pageId);
+    } else {
+      // Ajouter aux favoris
+      console.log('Ajouter la page aux favoris:', favoriteItem);
+      newFavorites = [...favorites, favoriteItem];
+    }
+    
+    await saveFavorites(newFavorites);
+    setIsFavorite(!isFavorite);
   };
 
   // On ne retourne rien avant d'avoir appelé tous les hooks !
@@ -217,31 +303,31 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           source={imageMap[chapter.image] || imageMap['1']}
           style={{
             width: screenWidth,
-            height: 160,
-            borderBottomLeftRadius: 28,
-            borderBottomRightRadius: 28,
+            height: 200,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
             resizeMode: 'cover',
           }}
         />
         <LinearGradient
-          colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0.0)']}
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 100, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}
+          colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.0)']}
+          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 120, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}
         />
         {/* Bouton retour */}
         <TouchableOpacity 
           onPress={() => navigation.goBack()}
           style={{
             position: 'absolute',
-            top: 50,
-            left: 20,
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderRadius: 20,
-            padding: 8,
-            elevation: 3,
+            top: 45,
+            left: 16,
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderRadius: 22,
+            padding: 10,
+            elevation: 4,
             shadowColor: '#000',
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 3 },
           }}
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
@@ -251,28 +337,39 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           onPress={nextTextSize}
           style={{
             position: 'absolute',
-            top: 50,
-            right: 20,
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderRadius: 20,
-            padding: 8,
-            elevation: 3,
+            top: 45,
+            right: 16,
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderRadius: 22,
+            padding: 10,
+            elevation: 4,
             shadowColor: '#000',
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 3 },
           }}
         >
           <MaterialCommunityIcons name="magnify-plus" size={24} color="#174C3C" />
         </TouchableOpacity>
-        <View style={{ position: 'absolute', left: 24, right: 24, bottom: -32, zIndex: 10 }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 18, paddingVertical: 16, paddingHorizontal: 22, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 10, elevation: 8, alignItems: 'center' }}>
+        {/* Carte titre - descendue pour mieux montrer l'image */}
+        <View style={{ position: 'absolute', left: 20, right: 20, bottom: -40, zIndex: 10 }}>
+          <View style={{ 
+            backgroundColor: '#fff', 
+            borderRadius: 20, 
+            paddingVertical: 20, 
+            paddingHorizontal: 24, 
+            shadowColor: '#000', 
+            shadowOpacity: 0.15, 
+            shadowRadius: 12, 
+            elevation: 10, 
+            alignItems: 'center'
+          }}>
             {/* Affichage de la partie */}
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#174C3C', textAlign: 'center', letterSpacing: 0.5 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#666', textAlign: 'center', letterSpacing: 0.3, marginBottom: 6 }}>
               {allChapters[currentChapterIndex]?.partieTitre}
             </Text>
             {/* Titre du chapitre */}
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#174C3C', textAlign: 'center', marginTop: 4 }}>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#174C3C', textAlign: 'center', lineHeight: 28 }}>
               {chapter.title}
             </Text>
           </View>
@@ -280,8 +377,17 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       </View>
 
       {/* Indicateur de section */}
-      <View style={{ alignItems: 'center', paddingHorizontal: 24, marginTop: 50, marginBottom: 10 }}>
-        <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{sectionIndicator}</Text>
+      <View style={{ alignItems: 'center', paddingHorizontal: 24, marginTop: 60, marginBottom: 16 }}>
+        <View style={{
+          backgroundColor: '#E8F5E8',
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: '#174C3C20'
+        }}>
+          <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>{sectionIndicator}</Text>
+        </View>
       </View>
 
       {/* Contenu animé */}
@@ -299,39 +405,57 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       </Animated.View>
 
       {/* Navigation bas */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee', position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+      <View style={{ flexDirection: 'column', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee', position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+        {/* Bouton Favoris */}
         <TouchableOpacity
-          onPress={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
-          disabled={currentSectionIndex === 0}
-          style={{ opacity: currentSectionIndex === 0 ? 0.4 : 1, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+          onPress={toggleFavorite}
+          style={styles.favoriteButton}
         >
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
+          <MaterialCommunityIcons 
+            name={isFavorite ? "heart" : "heart-outline"} 
+            size={18} 
+            color="#174C3C"
+          />
+          <Text style={[styles.favoriteButtonText, { color: "#174C3C" }]}>
+            {isFavorite ? "Retirer" : "Favoris"}
+          </Text>
         </TouchableOpacity>
-        {/* Pagination */}
-        <View style={{ minWidth: 60, alignItems: 'center' }}>
-          <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{currentSectionIndex + 1}/{totalSections}</Text>
-        </View>
-        {currentSectionIndex === totalSections - 1 ? (
-          nextChapter ? (
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
-              style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-            >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre suivant</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
-            </View>
-          )
-        ) : (
+        
+        {/* Navigation sections */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12 }}>
           <TouchableOpacity
-            onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
-            style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+            onPress={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
+            disabled={currentSectionIndex === 0}
+            style={{ opacity: currentSectionIndex === 0 ? 0.4 : 1, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
           >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
           </TouchableOpacity>
-        )}
+          {/* Pagination */}
+          <View style={{ minWidth: 60, alignItems: 'center' }}>
+            <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{currentSectionIndex + 1}/{totalSections}</Text>
+          </View>
+          {currentSectionIndex === totalSections - 1 ? (
+            nextChapter ? (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
+                style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre suivant</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+              </View>
+            )
+          ) : (
+            <TouchableOpacity
+              onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
+              style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -381,6 +505,21 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: '#174C3C',
     textAlign: 'left',
+  },
+  favoriteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAF9',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8F5E8',
+  },
+  favoriteButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });
 
