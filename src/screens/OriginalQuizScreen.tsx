@@ -224,6 +224,7 @@ export default function OriginalQuizScreen() {
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
         </TouchableOpacity>
 
+        {/* Section du personnage - identique aux autres pages */}
         <View style={styles.characterSection}>
           <Image 
             source={require('../../assets/16.png')} 
@@ -232,14 +233,28 @@ export default function OriginalQuizScreen() {
           />
         </View>
         
-        <View style={styles.resultsCard}>
-          <Text style={styles.resultsTitle}>Quiz Terminé !</Text>
-          <Text style={styles.scoreText}>
-            Votre score : {score} / {quizData.length}
-          </Text>
-          <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
-            <Text style={styles.restartButtonText}>Recommencer</Text>
-          </TouchableOpacity>
+        {/* Cartes empilées - identiques aux autres pages */}
+        <View style={styles.quizCardContainer}>
+          {/* Carte arrière (la plus profonde) - Vert foncé */}
+          <View style={styles.backCard} />
+          
+          {/* Carte du milieu - Dorée */}
+          <View style={styles.middleCard} />
+          
+          {/* Carte blanche principale avec résultats */}
+          <View style={styles.whiteCard}>
+            <Text style={styles.resultsTitle}>Quiz Terminé !</Text>
+            <Text style={styles.scoreText}>
+              Votre score : {score} / {quizData.length}
+            </Text>
+            
+            {/* Espace pour pousser le bouton vers le bas */}
+            <View style={styles.spacer} />
+            
+            <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
+              <Text style={styles.restartButtonText}>Recommencer</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -362,16 +377,16 @@ const styles = StyleSheet.create({
     flex: 0.4, // Augmenté de 0.3 à 0.4 pour plus d'espace pour l'image
     justifyContent: 'center', // Changé de 'flex-end' à 'center' pour mieux centrer
     alignItems: 'center',
-    paddingTop: 50, // Réduit de 80 à 50 pour faire monter l'image
+    paddingTop: 30, // Réduit de 50 à 30 pour faire remonter l'image
     paddingBottom: 0, // Réduit pour laisser plus d'espace à la carte
     zIndex: 25, // Augmenté de 5 à 25 pour passer au-dessus de tout
     position: 'relative', // Ajouté pour que z-index fonctionne
   },
   characterImage: {
-    width: screenWidth * 1.0, // Augmenté de 0.8 à 1.0 pour remplir la largeur
-    height: screenHeight * 0.35, // Augmenté de 0.22 à 0.35 pour une image plus grande
-    maxWidth: 500, // Augmenté de 350 à 500
-    maxHeight: 400, // Augmenté de 220 à 400
+    width: screenWidth * 1.3, // Augmenté de 1.1 à 1.3
+    height: screenHeight * 0.4, // Augmenté de 0.35 à 0.4
+    maxWidth: 600, // Augmenté de 500 à 600
+    maxHeight: 550, // Augmenté de 450 à 550
     resizeMode: 'contain', // Ajouté pour maintenir les proportions
     zIndex: 30, // Augmenté de 6 à 30 pour être au-dessus de tout
   },
@@ -526,13 +541,22 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   restartButton: {
-    backgroundColor: '#174C3C',
-    padding: 18,
-    borderRadius: 16,
+    backgroundColor: '#BB9B4E',
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    zIndex: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   restartButtonText: {
-    fontSize: 19,
+    fontSize: 16,
     color: 'white',
     fontWeight: 'bold',
   },
@@ -629,19 +653,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     minHeight: 45,
   },
-  resultsCard: {
-    backgroundColor: 'white',
-    borderRadius: 30,
-    padding: 20,
-    margin: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 15,
-  },
+
 });

@@ -79,16 +79,18 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
     return favorites.some(fav => fav.id === id);
   };
 
-  return (
-    <FavoritesContext.Provider value={{
-      favorites,
-      addFavorite,
-      removeFavorite,
-      isFavorite,
-      loading,
-    }}>
-      {children}
-    </FavoritesContext.Provider>
+  return React.createElement(
+    FavoritesContext.Provider,
+    {
+      value: {
+        favorites,
+        addFavorite,
+        removeFavorite,
+        isFavorite,
+        loading,
+      }
+    },
+    children
   );
 };
 
