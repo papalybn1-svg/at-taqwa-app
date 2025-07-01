@@ -222,7 +222,7 @@ export default function OriginalQuizScreen() {
           onPress={goToHome}
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-        </TouchableOpacity>
+          </TouchableOpacity>
 
         {/* Section du personnage - identique aux autres pages */}
         <View style={styles.characterSection}>
@@ -270,7 +270,7 @@ export default function OriginalQuizScreen() {
         onPress={goToHome}
       >
         <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-      </TouchableOpacity>
+        </TouchableOpacity>
 
       {/* Section du personnage - Plus compacte */}
       <View style={styles.characterSection}>
@@ -295,8 +295,8 @@ export default function OriginalQuizScreen() {
           {showQuestionPage ? (
             // PAGE 1: QUESTION SEULEMENT
             <>
-              <Text style={styles.questionText}>{currentQuestion.question}</Text>
-              
+          <Text style={styles.questionText}>{currentQuestion.question}</Text>
+
               {/* Espace réservé pour maintenir la hauteur */}
               <View style={styles.spacer} />
               
@@ -311,29 +311,29 @@ export default function OriginalQuizScreen() {
           ) : (
             // PAGE 2: RÉPONSES MULTIPLES
             <>
-              <View style={styles.optionsContainer}>
-                {currentQuestion.options.map((option, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={getOptionStyle(index)}
-                    onPress={() => handleAnswerPress(index)}
+          <View style={styles.optionsContainer}>
+            {currentQuestion.options.map((option, index) => (
+              <TouchableOpacity
+                key={index}
+                style={getOptionStyle(index)}
+                onPress={() => handleAnswerPress(index)}
                     disabled={showAnswer}
-                  >
+              >
                     <Text style={getOptionTextStyle(index)}>
                       {optionLabels[index]}: {option}
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              </TouchableOpacity>
+            ))}
+          </View>
 
               {/* Section des boutons avec espace réservé */}
               <View style={styles.buttonSection}>
                 {!showAnswer ? (
-                  <TouchableOpacity
+          <TouchableOpacity
                     style={[styles.verifyButton, selectedAnswerIndex === null && styles.disabledButton]}
                     onPress={handleVerify}
-                    disabled={selectedAnswerIndex === null}
-                  >
+            disabled={selectedAnswerIndex === null}
+          >
                     <Text style={styles.verifyButtonText}>Vérifier</Text>
                   </TouchableOpacity>
                 ) : (
@@ -347,24 +347,24 @@ export default function OriginalQuizScreen() {
                       <Text style={styles.nextButtonText}>
                         {currentQuestionIndex < quizData.length - 1 ? 'Suivant' : 'Terminer'}
                       </Text>
-                    </TouchableOpacity>
+          </TouchableOpacity>
                   </View>
                 )}
               </View>
             </>
           )}
         </Animated.View>
-      </View>
+    </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 1, 
     backgroundColor: '#174C3C', // Vert principal de l'application
   },
-  backButton: {
+  backButton: { 
     position: 'absolute',
     top: 50,
     left: 20,
@@ -393,28 +393,28 @@ const styles = StyleSheet.create({
   quizCardContainer: {
     flex: 0.6, // Augmenté de 0.7 à 0.6 pour équilibrer avec characterSection
     justifyContent: 'flex-start',
-    alignItems: 'center',
+    alignItems: 'center', 
     paddingHorizontal: 16, // Réduit de 20 à 16 pour plus d'espace
     paddingBottom: 30, // Réduit de 40 à 30
     position: 'relative',
     paddingTop: 0, // Réduit de 5 à 0 pour coller à l'image
   },
 
-  questionText: {
+  questionText: { 
     fontSize: 17,
     color: '#333',
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: '600', 
+    textAlign: 'center', 
     marginBottom: 22,
     lineHeight: 24,
     marginTop: 0,
   },
-  optionsContainer: {
+  optionsContainer: { 
     marginBottom: 12,
     marginTop: 15,
   },
-  optionButton: {
-    borderRadius: 12,
+  optionButton: { 
+    borderRadius: 12, 
     marginBottom: 6,
     padding: 12,
     borderWidth: 2,
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   optionLabel: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: 12, 
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 6,
   },
-  disabledButton: {
+  disabledButton: { 
     backgroundColor: '#CCCCCC',
   },
   verifyButtonText: {
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#BB9B4E',
     padding: 10,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: 'center', 
     minHeight: 44,
   },
   nextButtonText: {
@@ -527,20 +527,20 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  resultsTitle: {
+  resultsTitle: { 
     fontSize: 26,
-    fontWeight: 'bold',
+    fontWeight: 'bold', 
     color: '#174C3C',
     textAlign: 'center',
     marginBottom: 22,
   },
-  scoreText: {
+  scoreText: { 
     fontSize: 19,
     color: '#333',
     textAlign: 'center',
     marginBottom: 32,
   },
-  restartButton: {
+  restartButton: { 
     backgroundColor: '#BB9B4E',
     padding: 16,
     borderRadius: 12,
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
-  restartButtonText: {
+  restartButtonText: { 
     fontSize: 16,
     color: 'white',
     fontWeight: 'bold',

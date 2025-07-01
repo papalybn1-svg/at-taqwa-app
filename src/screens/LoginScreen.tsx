@@ -232,14 +232,14 @@ export default function LoginScreen({ navigation }: any) {
               color="#174C3C" 
               style={styles.registerInputIcon} 
             />
-            <TextInput
+          <TextInput
               style={[styles.registerInput, styles.registerInputWithIcon]}
-              placeholder="Mot de passe"
+            placeholder="Mot de passe"
               placeholderTextColor="#174C3C"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!isPasswordVisible}
-            />
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!isPasswordVisible}
+          />
             <TouchableOpacity 
               style={styles.registerEyeButton} 
               onPress={() => setIsPasswordVisible(v => !v)}
@@ -295,7 +295,7 @@ export default function LoginScreen({ navigation }: any) {
         {/* Etoile en haut à droite */}
         <View style={styles.loginStarContainer}>
           <RNImage source={require('../../assets/etoile.png')} style={styles.loginStar} />
-        </View>
+      </View>
         
         {/* Titre */}
         <Text style={styles.loginTitle}>Bismillah,{"\n"}Se connecter</Text>
@@ -318,7 +318,7 @@ export default function LoginScreen({ navigation }: any) {
             keyboardType="email-address" 
             editable={!loading}
           />
-        </View>
+      </View>
         
         <View style={styles.loginInputWrapper}>
           <MaterialCommunityIcons 
@@ -327,15 +327,15 @@ export default function LoginScreen({ navigation }: any) {
             color="#174C3C" 
             style={styles.loginInputIcon}
           />
-          <TextInput
+        <TextInput
             style={[styles.loginInput, styles.loginInputWithIcon]}
-            placeholder="Mot de passe"
+          placeholder="Mot de passe"
             placeholderTextColor="#174C3C"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!isPasswordVisible}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!isPasswordVisible}
             editable={!loading}
-          />
+        />
           <TouchableOpacity style={styles.loginEyeButton} onPress={() => setIsPasswordVisible(v => !v)}>
             <MaterialCommunityIcons 
               name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'} 

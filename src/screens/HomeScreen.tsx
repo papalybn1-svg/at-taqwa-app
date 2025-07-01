@@ -348,7 +348,7 @@ export default function HomeScreen() {
               </View>
             )}
           </TouchableOpacity>
-        </View>
+      </View>
 
         <View style={styles.bannerContainer}>
           <View style={styles.bannerTextContainer}>
@@ -356,7 +356,7 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.bannerButton} onPress={() => navigation.navigate('Books' as never)}>
               <Text style={styles.bannerButtonText}>Commencer</Text>
             </TouchableOpacity>
-          </View>
+      </View>
           <Image 
             source={require('../../assets/femme-transformer.png')} 
             style={styles.bannerImage}
@@ -481,10 +481,10 @@ export default function HomeScreen() {
           <View style={styles.previewModalOverlay}>
             <View style={styles.previewModalContentModern}>
               <View style={styles.previewModalHeaderModern}>
-                <Image 
-                  source={imageMap[selectedChapter.image] || imageMap['1']} 
+                  <Image 
+                    source={imageMap[selectedChapter.image] || imageMap['1']} 
                   style={styles.previewModalImageModern}
-                />
+                  />
                 <TouchableOpacity style={styles.closeButton} onPress={closePreviewModal}>
                   <MaterialCommunityIcons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
@@ -499,12 +499,12 @@ export default function HomeScreen() {
                     :
                     selectedChapter.desc || "Ce chapitre explore les aspects fondamentaux de la prière en Islam, offrant des enseignements précieux pour enrichir votre pratique spirituelle et renforcer votre connexion avec Allah. Découvrez les secrets d'une prière authentique et transformatrice qui vous rapprochera de votre Créateur..."
                   }
-                </Text>
-              </ScrollView>
+                  </Text>
+    </ScrollView>
               <TouchableOpacity style={styles.previewModalButtonModern} onPress={openFullChapter}>
-                <MaterialCommunityIcons name="book-open-variant" size={20} color={colors.white} />
+                  <MaterialCommunityIcons name="book-open-variant" size={20} color={colors.white} />
                 <Text style={styles.previewModalButtonTextModern}>Lire le chapitre complet</Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
             </View>
           </View>
         </Modal>

@@ -387,7 +387,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           borderColor: '#174C3C20'
         }}>
           <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>{sectionIndicator}</Text>
-        </View>
+      </View>
       </View>
 
       {/* Contenu animé */}
@@ -423,38 +423,38 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         
         {/* Navigation sections */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12 }}>
-          <TouchableOpacity
-            onPress={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
-            disabled={currentSectionIndex === 0}
+        <TouchableOpacity
+          onPress={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
+          disabled={currentSectionIndex === 0}
             style={{ opacity: currentSectionIndex === 0 ? 0.4 : 1, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
-          </TouchableOpacity>
-          {/* Pagination */}
-          <View style={{ minWidth: 60, alignItems: 'center' }}>
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
+        </TouchableOpacity>
+        {/* Pagination */}
+        <View style={{ minWidth: 60, alignItems: 'center' }}>
             <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{currentSectionIndex + 1}/{totalSections}</Text>
-          </View>
-          {currentSectionIndex === totalSections - 1 ? (
-            nextChapter ? (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
-                style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-              >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre suivant</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
-              </View>
-            )
-          ) : (
+        </View>
+        {currentSectionIndex === totalSections - 1 ? (
+          nextChapter ? (
             <TouchableOpacity
-              onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
-              style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+              onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
+                style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
             >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre suivant</Text>
             </TouchableOpacity>
-          )}
+          ) : (
+              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+            </View>
+          )
+        ) : (
+          <TouchableOpacity
+            onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
+              style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+          </TouchableOpacity>
+        )}
         </View>
       </View>
     </View>

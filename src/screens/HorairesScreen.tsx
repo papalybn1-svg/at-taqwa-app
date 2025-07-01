@@ -252,7 +252,7 @@ export default function HorairesScreen() {
         </TouchableOpacity>
       </View>
 
-            {/* Liste des prières */}
+      {/* Liste des prières */}
       <View style={styles.prayerListContainer}>
         {loading ? (
           <ActivityIndicator color={colors.white} size="large" style={{ marginTop: 20 }} />
@@ -272,7 +272,7 @@ export default function HorairesScreen() {
                     <Text style={styles.prayerLabel}>
                       {item.label}
                     </Text>
-                  </View>
+                </View>
                   <View style={styles.prayerRightSection}>
                     <Text style={styles.prayerTime}>
                       {prayerTimes ? formatPrayerTime(prayerTimes[item.key]) : '6H01'}

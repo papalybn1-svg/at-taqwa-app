@@ -39,7 +39,7 @@ export default function QuizScreen() {
       const onBackPress = () => {
         goToHome();
         return true;
-      };
+  };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
 
@@ -70,26 +70,26 @@ export default function QuizScreen() {
         <View style={styles.imageContainer}>
           {/* Cercle décoratif derrière l'image */}
           <View style={styles.decorativeCircle} />
-          
+
           <Image 
             source={require('../../assets/16.png')} 
             style={styles.girlImage}
             resizeMode="contain"
           />
         </View>
-      </View>
+    </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { 
+    flex: 1, 
     backgroundColor: '#174C3C', // Vert principal de l'application
   },
   content: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'center', 
     justifyContent: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 60, // Augmenté de 20 à 60 pour plus de marge en haut
@@ -97,16 +97,16 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: 36,
-    fontWeight: 'bold',
+    fontWeight: 'bold', 
     color: 'white',
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: 'center', 
   },
   arabicText: {
     fontSize: 28,
     fontWeight: 'bold',
     color: 'white',
-    textAlign: 'center',
+    textAlign: 'center', 
     marginBottom: 40,
     fontFamily: 'System',
     letterSpacing: 3,
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   imageContainer: {
-    alignItems: 'center',
+    alignItems: 'center', 
     justifyContent: 'center',
     position: 'relative',
     marginTop: -50, // Ajouté marginTop négatif pour faire monter vers le haut

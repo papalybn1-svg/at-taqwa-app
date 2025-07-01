@@ -71,10 +71,10 @@ export default function FavoritesScreen() {
       }
       // Reset animation for remaining items
       Animated.timing(fadeAnim, {
-        toValue: 1,
+      toValue: 1,
         duration: 300,
-        useNativeDriver: true,
-      }).start();
+      useNativeDriver: true,
+    }).start();
     });
   };
 
