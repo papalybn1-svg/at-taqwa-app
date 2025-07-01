@@ -83,8 +83,22 @@ export function useAuth() {
   useEffect(() => {
     let isMounted = true;
 
+    // Timeout de sécurité pour forcer la fin du chargement après 10 secondes
+    const timeoutId = setTimeout(() => {
+      console.log('⏰ Timeout de sécurité - Forcer la fin du chargement');
+      if (isMounted) {
+        setLoading(false);
+        setInitializing(false);
+        // Si aucun utilisateur n'est chargé après 10s, on force null pour aller à LoginScreen
+        setUser(null);
+      }
+    }, 10000);
+
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       console.log('🔄 Auth state changed:', firebaseUser ? 'User connected' : 'User disconnected');
+      
+      // Annuler le timeout si l'auth state change
+      clearTimeout(timeoutId);
       
       if (!isMounted) return;
 
@@ -123,7 +137,7 @@ export function useAuth() {
         } else {
           // Utilisateur non connecté
           if (isMounted) {
-          setUser(null);
+            setUser(null);
             setLoading(false);
             if (initializing) setInitializing(false);
           }
@@ -143,7 +157,7 @@ export function useAuth() {
       } catch (error) {
         console.error('❌ Erreur dans onAuthStateChanged:', error);
         if (isMounted) {
-        setLoading(false);
+          setLoading(false);
           if (initializing) setInitializing(false);
         }
       }
@@ -151,6 +165,7 @@ export function useAuth() {
 
     return () => {
       isMounted = false;
+      clearTimeout(timeoutId);
       unsubscribe();
     };
   }, [initializing]);

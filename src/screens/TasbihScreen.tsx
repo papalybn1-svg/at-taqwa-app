@@ -157,7 +157,7 @@ export default function TasbihScreen() {
           category: 'Dhikr du soir',
           text: 'الْحَمْدُ لِلَّهِ',
           description: 'Alhamdulillah (Louange à Allah)',
-          max: 33 
+        max: 33 
         },
         { 
           id: 'default3', 
@@ -222,9 +222,9 @@ export default function TasbihScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Chargement des zikrs...</Text>
-        </View>
+      </View>
       </SafeAreaView>
     );
   }
@@ -263,11 +263,11 @@ export default function TasbihScreen() {
           ) : (
             <View style={styles.zikrsList}>
               {zikrs.map((item, index) => {
-                const count = zikrProgress[item.id] || 0;
+            const count = zikrProgress[item.id] || 0;
                 const progressPercentage = (count / item.max) * 100;
                 const isCompleted = count >= item.max;
                 
-                return (
+            return (
                   <TouchableOpacity 
                     key={item.id} 
                     style={[
@@ -292,7 +292,7 @@ export default function TasbihScreen() {
                     {/* Contenu principal */}
                     <View style={styles.zikrCardContent}>
                       <Text style={styles.zikrTextArabic}>{item.text}</Text>
-                      <Text style={styles.zikrDescription}>{item.description}</Text>
+                    <Text style={styles.zikrDescription}>{item.description}</Text>
                     </View>
 
                     {/* Progress et actions */}
@@ -302,7 +302,7 @@ export default function TasbihScreen() {
                           {count} / {item.max}
                         </Text>
                         <View style={styles.progressBarContainer}>
-                          <View style={styles.progressBarBg}>
+                    <View style={styles.progressBarBg}>
                             <View 
                               style={[
                                 styles.progressBarFill,
@@ -313,8 +313,8 @@ export default function TasbihScreen() {
                               ]} 
                             />
                           </View>
-                        </View>
-                      </View>
+                    </View>
+                  </View>
 
                       <View style={styles.cardActions}>
                         <TouchableOpacity 
@@ -325,7 +325,7 @@ export default function TasbihScreen() {
                           style={[styles.actionButton, styles.incrementButton]}
                         >
                           <MaterialCommunityIcons name="plus" size={18} color="#fff" />
-                        </TouchableOpacity>
+                    </TouchableOpacity>
                         <TouchableOpacity 
                           onPress={(e) => {
                             e.stopPropagation();
@@ -334,11 +334,11 @@ export default function TasbihScreen() {
                           style={[styles.actionButton, styles.resetButton]}
                         >
                           <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
               })}
             </View>
           )}
@@ -357,7 +357,7 @@ export default function TasbihScreen() {
                 <MaterialCommunityIcons name="counter" size={24} color={colors.primary} />
                 <Text style={styles.statNumber}>
                   {Object.values(zikrProgress).reduce((sum, count) => sum + count, 0)}
-                </Text>
+              </Text>
                 <Text style={styles.statLabel}>Total récité</Text>
               </View>
               
@@ -365,7 +365,7 @@ export default function TasbihScreen() {
                 <MaterialCommunityIcons name="check-circle-outline" size={24} color={colors.secondary} />
                 <Text style={styles.statNumber}>
                   {zikrs.filter(zikr => (zikrProgress[zikr.id] || 0) >= zikr.max).length}
-                </Text>
+              </Text>
                 <Text style={styles.statLabel}>Complétés</Text>
               </View>
               
@@ -373,7 +373,7 @@ export default function TasbihScreen() {
                 <MaterialCommunityIcons name="progress-clock" size={24} color="#FF6B6B" />
                 <Text style={styles.statNumber}>
                   {zikrs.filter(zikr => (zikrProgress[zikr.id] || 0) > 0 && (zikrProgress[zikr.id] || 0) < zikr.max).length}
-                </Text>
+              </Text>
                 <Text style={styles.statLabel}>En cours</Text>
               </View>
             </View>
@@ -454,7 +454,7 @@ export default function TasbihScreen() {
                     <Text style={[styles.modalButtonText, { color: colors.primary }]}>
                       Réinitialiser
                     </Text>
-                  </TouchableOpacity>
+              </TouchableOpacity>
                   
                   <TouchableOpacity 
                     style={[styles.modalActionButton, styles.soundModalButton]} 
@@ -468,13 +468,13 @@ export default function TasbihScreen() {
                     <Text style={[styles.modalButtonText, { color: soundEnabled ? colors.secondary : colors.gray }]}>
                       {soundEnabled ? "Son activé" : "Son désactivé"}
                     </Text>
-                  </TouchableOpacity>
+              </TouchableOpacity>
                 </View>
               </View>
             </View>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
     </SafeAreaView>
   );
 }
@@ -503,15 +503,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
   },
-     headerTitle: {
+  headerTitle: {
      flex: 1,
      fontSize: 20,
-     fontWeight: 'bold',
+    fontWeight: 'bold',
      color: colors.text,
      textAlign: 'center',
      marginHorizontal: 16
-   },
-   placeholder: {
+  },
+  placeholder: {
      width: 40, // Même largeur que le bouton back pour équilibrer
    },
   container: { 
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
      loadingText: {
      marginTop: 16,
      fontSize: 16,
-     color: colors.gray,
+    color: colors.gray,
    },
 
       // Sections
@@ -558,14 +558,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   zikrCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.white, 
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    elevation: 3,
-    shadowColor: '#000',
+    elevation: 3, 
+    shadowColor: '#000', 
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.1, 
     shadowRadius: 8,
     borderWidth: 1,
     borderColor: '#F1F3F4',
@@ -587,8 +587,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   categoryText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 12, 
+    fontWeight: '600', 
     color: colors.primary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   },
   zikrTextArabic: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: 'bold', 
     color: colors.text,
     textAlign: 'center',
     marginBottom: 8,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
   },
   zikrDescription: {
     fontSize: 14,
-    color: colors.gray,
+    color: colors.gray, 
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -633,20 +633,20 @@ const styles = StyleSheet.create({
   progressBarContainer: {
     flex: 1,
   },
-  progressBarBg: {
+  progressBarBg: { 
     backgroundColor: '#E5E7EB',
-    height: 6,
-    borderRadius: 3,
+    height: 6, 
+    borderRadius: 3, 
     overflow: 'hidden',
   },
   progressBarFill: {
-    height: 6,
+    height: 6, 
     borderRadius: 3,
     backgroundColor: colors.secondary,
   },
   cardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', 
+    alignItems: 'center', 
   },
   actionButton: {
     borderRadius: 20,
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     padding: 40,
     backgroundColor: colors.white,
     marginHorizontal: 20,
-    borderRadius: 16,
+    borderRadius: 16, 
   },
   emptyStateTitle: {
     fontSize: 18,
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: 'bold', 
     color: colors.text,
     marginTop: 8,
     marginBottom: 4,
@@ -717,9 +717,9 @@ const styles = StyleSheet.create({
 
   // Modal
   modalOverlay: {
-    flex: 1,
+    flex: 1, 
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
+    justifyContent: 'center', 
     alignItems: 'center',
     padding: 20,
   },
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center', 
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F3F4',
@@ -764,13 +764,13 @@ const styles = StyleSheet.create({
   },
   modalZikrText: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: 'bold', 
     color: colors.text,
     textAlign: 'center',
     marginBottom: 12,
     lineHeight: 40,
   },
-  modalDescription: {
+  modalDescription: { 
     fontSize: 16,
     color: colors.gray,
     textAlign: 'center',
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 2,
     letterSpacing: 6,
-    textAlign: 'center',
+    textAlign: 'center', 
   },
   progressIndicator: {
     alignItems: 'center',
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 20,
-    color: colors.gray,
+    color: colors.gray, 
     marginBottom: 8,
   },
   modalProgressBarContainer: {

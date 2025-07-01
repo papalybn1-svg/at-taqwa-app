@@ -114,19 +114,33 @@ export default function App() {
     }
   }, [splashStep]);
 
-  if (splashStep === 0) return <SplashLogo />;
-  if (splashStep === 1) return <SplashFamille />;
-  if (loading) return (
-    <View style={{ flex: 1, backgroundColor: '#F3F5F7', justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 18, color: '#174C3C' }}>Chargement...</Text>
-    </View>
-  );
+  if (splashStep === 0) {
+    console.log('📱 Affichage SplashLogo (step 0)');
+    return <SplashLogo />;
+  }
+  if (splashStep === 1) {
+    console.log('📱 Affichage SplashFamille (step 1)');
+    return <SplashFamille />;
+  }
+  if (loading) {
+    console.log('⏳ App en état de chargement - user:', user, 'loading:', loading);
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F3F5F7', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 18, color: '#174C3C' }}>Chargement...</Text>
+        <Text style={{ fontSize: 14, color: '#666', marginTop: 10 }}>Initialisation de l'authentification</Text>
+      </View>
+    );
+  }
 
-  // Logs de débogage
-  console.log('App.tsx - user:', user);
-  console.log('App.tsx - user.role:', user?.role);
-  console.log('App.tsx - !user:', !user);
-  console.log('App.tsx - user.role === admin:', user?.role === 'admin');
+  // Logs de débogage détaillés
+  console.log('🔍 App.tsx État final:');
+  console.log('  - splashStep:', splashStep);
+  console.log('  - loading:', loading);
+  console.log('  - user:', user);
+  console.log('  - user.role:', user?.role);
+  console.log('  - !user:', !user);
+  console.log('  - user.role === admin:', user?.role === 'admin');
+  console.log('🚀 Navigation vers:', !user ? 'LoginScreen' : user.role === 'admin' ? 'AdminTabNavigator' : 'TabNavigator');
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>
