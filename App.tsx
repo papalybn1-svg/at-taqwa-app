@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from './src/hooks/useAuth';
 import AdminTabNavigator from './src/navigation/AdminTabNavigator';
 import TabNavigator from './src/navigation/TabNavigator';
@@ -96,6 +96,9 @@ function SplashFamille() {
 export default function App() {
   const [splashStep, setSplashStep] = useState(0);
   const { user, loading, setUser } = useAuth();
+  
+  // TEMPORAIRE: Forcer l'affichage de LoginScreen après les splash screens
+  const [forceLogin, setForceLogin] = useState(false);
 
   useEffect(() => {
     if (splashStep === 0) {
@@ -103,6 +106,13 @@ export default function App() {
       return () => clearTimeout(timer);
     } else if (splashStep === 1) {
       const timer = setTimeout(() => setSplashStep(2), 2000);
+      return () => clearTimeout(timer);
+    } else if (splashStep === 2) {
+      // TEMPORAIRE: Après les splash screens, forcer LoginScreen après 2 secondes max
+      const timer = setTimeout(() => {
+        console.log('🔧 TEMPORAIRE: Forcer affichage LoginScreen');
+        setForceLogin(true);
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [splashStep]);
@@ -143,11 +153,12 @@ export default function App() {
   console.log('🚀 Navigation vers:', !user ? 'LoginScreen' : user.role === 'admin' ? 'AdminTabNavigator' : 'TabNavigator');
 
   return (
-    <AuthContext.Provider value={{ user, setUser }}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
-          <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
-          <NavigationContainer>
+    <SafeAreaProvider>
+      <AuthContext.Provider value={{ user, setUser }}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
+            <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
+            <NavigationContainer>
             <Stack.Navigator 
               screenOptions={{ 
                 headerShown: false,
@@ -167,6 +178,7 @@ export default function App() {
         </SafeAreaView>
       </GestureHandlerRootView>
     </AuthContext.Provider>
+    </SafeAreaProvider>
   );
 }
 
