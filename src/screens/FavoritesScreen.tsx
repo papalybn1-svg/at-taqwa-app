@@ -172,7 +172,7 @@ export default function FavoritesScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header épuré */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -193,7 +193,7 @@ export default function FavoritesScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={EmptyState}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

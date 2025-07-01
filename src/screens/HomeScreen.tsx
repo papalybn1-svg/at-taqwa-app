@@ -336,7 +336,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
           <View>
@@ -516,7 +516,7 @@ export default function HomeScreen() {
           </View>
         </Modal>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

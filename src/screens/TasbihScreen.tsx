@@ -220,17 +220,17 @@ export default function TasbihScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Chargement des zikrs...</Text>
+                    <Text style={styles.loadingText}>Chargement des zikrs...</Text>
+        </View>
       </View>
-      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       {/* Header moderne cohérent */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -475,7 +475,7 @@ export default function TasbihScreen() {
             </View>
           </View>
         </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
