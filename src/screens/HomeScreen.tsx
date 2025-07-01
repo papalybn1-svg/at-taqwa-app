@@ -20,6 +20,9 @@ type RootStackParamList = {
   Books: undefined;
   Horaires: undefined;
   Quiz: undefined;
+  QuizStart: undefined;
+  QuizGame: undefined;
+  OriginalQuiz: undefined;
   Tasbih: undefined;
   Admin: undefined;
   AuthorProfile: undefined;
@@ -257,9 +260,13 @@ export default function HomeScreen() {
 
   const handleNotificationPress = React.useCallback(async () => {
     console.log('🔔 Bouton notification cliqué !');
-    await AsyncStorage.setItem('@last_notification_read', new Date().toISOString());
-    setNewNotificationsCount(0);
-    navigation.navigate('Notifications' as never);
+    try {
+      await AsyncStorage.setItem('@last_notification_read', new Date().toISOString());
+      setNewNotificationsCount(0);
+      navigation.navigate('Notifications');
+    } catch (error) {
+      console.error('❌ Erreur lors de la navigation vers Notifications:', error);
+    }
   }, [navigation]);
 
   React.useEffect(() => {
@@ -353,7 +360,7 @@ export default function HomeScreen() {
         <View style={styles.bannerContainer}>
           <View style={styles.bannerTextContainer}>
             <Text style={styles.bannerTitle}>Transformez chaque prière en un moment de paix</Text>
-            <TouchableOpacity style={styles.bannerButton} onPress={() => navigation.navigate('Books' as never)}>
+            <TouchableOpacity style={styles.bannerButton} onPress={() => navigation.navigate('Books')}>
               <Text style={styles.bannerButtonText}>Commencer</Text>
             </TouchableOpacity>
       </View>
@@ -367,10 +374,10 @@ export default function HomeScreen() {
         <View style={styles.section}>
       <Text style={styles.sectionTitle}>Catégories</Text>
           <View style={styles.categoriesGrid}>
-            <CategoryButton icon="book-open-variant" title="Livres" onPress={() => navigation.navigate('Books' as never)} />
-            <CategoryButton icon="clock-time-four-outline" title="Heure de prière" onPress={() => navigation.navigate('Horaires' as never)} />
-            <CategoryButton icon="puzzle" title="Quiz" onPress={() => navigation.navigate('Quiz' as never)} />
-            <CategoryButton icon="hand-heart" title="Tasbih" onPress={() => navigation.navigate('Tasbih' as never)} />
+            <CategoryButton icon="book-open-variant" title="Livres" onPress={() => navigation.navigate('Books')} />
+            <CategoryButton icon="clock-time-four-outline" title="Heure de prière" onPress={() => navigation.navigate('Horaires')} />
+            <CategoryButton icon="puzzle" title="Quiz" onPress={() => navigation.navigate('Quiz')} />
+            <CategoryButton icon="hand-heart" title="Tasbih" onPress={() => navigation.navigate('Tasbih')} />
           </View>
         </View>
 
@@ -406,7 +413,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
       </View>
-            <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile' as never)}>
+            <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
               <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
               <Text style={styles.authorButtonText}>En savoir plus</Text>
             </TouchableOpacity>
