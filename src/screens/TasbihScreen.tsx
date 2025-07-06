@@ -475,7 +475,7 @@ export default function TasbihScreen() {
             </View>
           </View>
         </Modal>
-    </View>
+      </View>
   );
 }
 
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: 32,
   },
-  zikrDescription: {
+  zikrDescription: { 
     fontSize: 14,
     color: colors.gray, 
     textAlign: 'center',
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   progressCount: {
-    fontSize: 14,
+    fontSize: 14, 
     fontWeight: '600',
     color: colors.text,
     marginBottom: 6,

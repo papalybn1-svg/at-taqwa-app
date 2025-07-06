@@ -135,11 +135,11 @@ export default function App() {
   if (loading) {
     console.log('⏳ App en état de chargement - user:', user, 'loading:', loading);
     return (
-      <View style={{ flex: 1, backgroundColor: '#F3F5F7', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ fontSize: 18, color: '#174C3C' }}>Chargement...</Text>
+    <View style={{ flex: 1, backgroundColor: '#F3F5F7', justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ fontSize: 18, color: '#174C3C' }}>Chargement...</Text>
         <Text style={{ fontSize: 14, color: '#666', marginTop: 10 }}>Initialisation de l'authentification</Text>
-      </View>
-    );
+    </View>
+  );
   }
 
   // Logs de débogage détaillés
@@ -154,11 +154,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <AuthContext.Provider value={{ user, setUser }}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
-            <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
-            <NavigationContainer>
+    <AuthContext.Provider value={{ user, setUser }}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
+          <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
+          <NavigationContainer>
             <Stack.Navigator 
               screenOptions={{ 
                 headerShown: false,
@@ -244,11 +244,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   splashFamilleLogo: {
-    width: 160,
-    height: 160,
+    width: 200,
+    height: 200,
     resizeMode: 'contain',
     marginBottom: 0,
-    marginTop: 8,
+    marginTop: 40,
     alignSelf: 'center',
   },
   splashFamilleTextContainer: {
@@ -258,33 +258,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   splashMainTitle: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#174C3C',
     marginBottom: 8,
     textAlign: 'center',
   },
   splashSubtitleGreen: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
     color: '#174C3C',
     marginBottom: 10,
     textAlign: 'center',
   },
   splashDescription: {
-    fontSize: 13,
+    fontSize: 17,
     color: '#174C3C',
     textAlign: 'center',
     marginBottom: 0,
-    lineHeight: 18,
+    lineHeight: 22,
   },
   splashFamilleImageXL: {
     width: '110%',
-    height: '60%',
+    height: '55%',
     resizeMode: 'cover',
     position: 'absolute',
     bottom: 0,
-    left: '-5%',
+    left: '-10%',
     marginBottom: 0,
     marginTop: 0,
     alignSelf: 'center',
