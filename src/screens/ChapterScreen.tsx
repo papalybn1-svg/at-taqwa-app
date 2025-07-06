@@ -70,6 +70,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [isFavorite, setIsFavorite] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
+  const [scrollProgress, setScrollProgress] = useState(0); // Ajout pour la progression verticale
+  const [isScrollable, setIsScrollable] = useState(false); // Pour savoir si la page est scrollable
 
   // useEffect pour charger le contenu du chapitre
   useEffect(() => {
@@ -78,6 +80,9 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       // Démarrer à la section spécifiée si on vient des favoris
       const initialSection = route.params.initialSection || 0;
       setCurrentSectionIndex(initialSection);
+      
+      // Initialiser la progression si c'est la première fois qu'on lit ce chapitre
+      initializeChapterProgress();
     }
   }, [chapter, route.params.initialSection]);
 
@@ -104,6 +109,20 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     }).start();
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   }, [currentSectionIndex]);
+
+  // useEffect pour mettre à jour la progression
+  useEffect(() => {
+    if (chapter && chapterContent) {
+      updateChapterProgress();
+      
+      // Marquer comme complètement lu si on est à la dernière section
+      const { intro, sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      const totalSections = 1 + sections.length;
+      if (currentSectionIndex === totalSections - 1) {
+        markChapterAsComplete();
+      }
+    }
+  }, [currentSectionIndex, chapter, chapterContent]);
 
   // Tailles de texte disponibles
   const textSizes = [16, 19, 22];
@@ -177,6 +196,96 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     
     await saveFavorites(newFavorites);
     setIsFavorite(!isFavorite);
+  };
+
+  // Fonction pour mettre à jour la progression du chapitre
+  const updateChapterProgress = async () => {
+    if (!chapter || !chapterContent) return;
+    
+    try {
+      // Charger la progression existante
+      const storedProgress = await AsyncStorage.getItem('chapterProgress');
+      const progress = storedProgress ? JSON.parse(storedProgress) : {};
+      
+      // Trouver l'index du chapitre dans sa partie
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+      
+      if (!currentChapterData) return;
+      
+      // Calculer la progression basée sur la section actuelle
+      const { intro, sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      const totalSections = 1 + sections.length; // 1 pour l'intro
+      const currentProgress = Math.round(((currentSectionIndex + 1) / totalSections) * 100);
+      
+      // Créer la clé de progression
+      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+      
+      // Mettre à jour seulement si la progression est plus élevée
+      if (!progress[progressKey] || currentProgress > progress[progressKey]) {
+        progress[progressKey] = currentProgress;
+        await AsyncStorage.setItem('chapterProgress', JSON.stringify(progress));
+        console.log(`Progression mise à jour: ${progressKey} = ${currentProgress}%`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la progression:', error);
+    }
+  };
+
+  // Fonction pour marquer un chapitre comme complètement lu
+  const markChapterAsComplete = async () => {
+    if (!chapter) return;
+    
+    try {
+      // Charger la progression existante
+      const storedProgress = await AsyncStorage.getItem('chapterProgress');
+      const progress = storedProgress ? JSON.parse(storedProgress) : {};
+      
+      // Trouver l'index du chapitre dans sa partie
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+      
+      if (!currentChapterData) return;
+      
+      // Créer la clé de progression
+      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+      
+      // Marquer comme 100% lu
+      progress[progressKey] = 100;
+      await AsyncStorage.setItem('chapterProgress', JSON.stringify(progress));
+      console.log(`Chapitre marqué comme complètement lu: ${progressKey}`);
+    } catch (error) {
+      console.error('Erreur lors du marquage du chapitre comme lu:', error);
+    }
+  };
+
+  // Fonction pour initialiser la progression d'un chapitre
+  const initializeChapterProgress = async () => {
+    if (!chapter) return;
+    
+    try {
+      // Charger la progression existante
+      const storedProgress = await AsyncStorage.getItem('chapterProgress');
+      const progress = storedProgress ? JSON.parse(storedProgress) : {};
+      
+      // Trouver l'index du chapitre dans sa partie
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+      
+      if (!currentChapterData) return;
+      
+      // Créer la clé de progression
+      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+      
+      // Initialiser à 0% si pas encore de progression
+      if (!progress[progressKey]) {
+        progress[progressKey] = 0;
+        await AsyncStorage.setItem('chapterProgress', JSON.stringify(progress));
+        console.log(`Progression initialisée: ${progressKey} = 0%`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation de la progression:', error);
+    }
   };
 
   // On ne retourne rien avant d'avoir appelé tous les hooks !
@@ -391,18 +500,49 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       </View>
 
       {/* Contenu animé */}
-      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <ScrollView
-          ref={scrollViewRef}
-          style={{ flex: 1, width: '100%' }}
-          contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 18, paddingBottom: 90, maxWidth: 420, alignSelf: 'center' }}
-          showsVerticalScrollIndicator={false}
-        >
-          {currentSectionIndex === 0
-            ? renderContent(intro)
-            : renderContent(sections[currentSectionIndex - 1]?.items || [])}
-    </ScrollView>
-      </Animated.View>
+      <View style={{ flex: 1 }}>
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={{ flex: 1, width: '100%' }}
+            contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 18, paddingBottom: 90, maxWidth: 420, alignSelf: 'center' }}
+            showsVerticalScrollIndicator={false}
+            onScroll={e => {
+              const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+              const totalScrollable = contentSize.height - layoutMeasurement.height;
+              if (totalScrollable > 0) {
+                setIsScrollable(true);
+                setScrollProgress(Math.min(1, Math.max(0, contentOffset.y / totalScrollable)));
+              } else {
+                setIsScrollable(false);
+                setScrollProgress(0);
+              }
+            }}
+            scrollEventThrottle={16}
+          >
+            {currentSectionIndex === 0
+              ? renderContent(intro)
+              : renderContent(sections[currentSectionIndex - 1]?.items || [])}
+          </ScrollView>
+          {/* Barre de progression verticale */}
+          {isScrollable && (
+            <View style={{ position: 'absolute', right: 6, top: 0, bottom: 0, width: 8, justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
+              <View style={{ width: 4, height: '80%', backgroundColor: '#E8F5E8', borderRadius: 2, overflow: 'hidden', justifyContent: 'flex-start' }}>
+                <Animated.View style={{
+                  width: 4,
+                  backgroundColor: '#174C3C',
+                  borderRadius: 2,
+                  height: `${Math.round(scrollProgress * 100)}%`,
+                  position: 'absolute',
+                  top: 0,
+                }} />
+              </View>
+              {/* Affichage du pourcentage */}
+              <Text style={{ fontSize: 11, color: '#174C3C', marginTop: 4, fontWeight: 'bold' }}>{Math.round(scrollProgress * 100)}%</Text>
+            </View>
+          )}
+        </Animated.View>
+      </View>
 
       {/* Navigation bas */}
       <View style={{ flexDirection: 'column', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee', position: 'absolute', bottom: 0, left: 0, right: 0 }}>
