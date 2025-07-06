@@ -220,17 +220,17 @@ export default function TasbihScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Chargement des zikrs...</Text>
+                    <Text style={styles.loadingText}>Chargement des zikrs...</Text>
+        </View>
       </View>
-      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       {/* Header moderne cohérent */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -475,7 +475,7 @@ export default function TasbihScreen() {
             </View>
           </View>
         </Modal>
-    </SafeAreaView>
+      </View>
   );
 }
 
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: 32,
   },
-  zikrDescription: {
+  zikrDescription: { 
     fontSize: 14,
     color: colors.gray, 
     textAlign: 'center',
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   progressCount: {
-    fontSize: 14,
+    fontSize: 14, 
     fontWeight: '600',
     color: colors.text,
     marginBottom: 6,

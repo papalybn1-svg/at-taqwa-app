@@ -73,7 +73,7 @@ export default function BooksScreen() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAF9' }}>
+    <View style={{ flex: 1, backgroundColor: '#F8FAF9' }}>
              {/* Header simple avec boutons */}
        <View style={styles.simpleHeader}>
          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.simpleBackButton}>
@@ -194,7 +194,7 @@ export default function BooksScreen() {
               colors={['#174C3C', '#1F5F4F']}
               style={StyleSheet.absoluteFillObject}
             />
-            <SafeAreaView style={{ flex: 1 }}>
+            <View style={{ flex: 1 }}>
               <View style={styles.drawerHeader}>
                 <MaterialCommunityIcons name="book-multiple" size={28} color="white" />
                 <Text style={styles.drawerTitle}>Table des matières</Text>
@@ -233,12 +233,12 @@ export default function BooksScreen() {
         </View>
                 ))}
       </ScrollView>
-            </SafeAreaView>
+            </View>
           </Animated.View>
           <Pressable style={{ flex: 1 }} onPress={closeDrawer} />
                  </View>
        </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

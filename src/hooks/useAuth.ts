@@ -137,7 +137,7 @@ export function useAuth() {
         } else {
           // Utilisateur non connecté
           if (isMounted) {
-            setUser(null);
+          setUser(null);
             setLoading(false);
             if (initializing) setInitializing(false);
           }
@@ -157,7 +157,7 @@ export function useAuth() {
       } catch (error) {
         console.error('❌ Erreur dans onAuthStateChanged:', error);
         if (isMounted) {
-          setLoading(false);
+        setLoading(false);
           if (initializing) setInitializing(false);
         }
       }

@@ -195,7 +195,7 @@ export default function NotificationsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
@@ -207,12 +207,12 @@ export default function NotificationsScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[typography.body1, styles.loadingText]}>Chargement des notifications...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
@@ -251,7 +251,7 @@ export default function NotificationsScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

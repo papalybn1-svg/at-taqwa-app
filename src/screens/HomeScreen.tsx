@@ -5,7 +5,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React from "react";
 import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import colors from "../theme/colors";
@@ -102,7 +101,11 @@ Le raccourcissement et la combinaison des prières sont permis au voyageur pour 
 const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; onPress: () => void }) => (
   <TouchableOpacity style={styles.categoryButton} onPress={onPress}>
     <View style={styles.categoryIconCircle}>
-      <MaterialCommunityIcons name={icon} size={24} color={colors.primary} />
+      <MaterialCommunityIcons 
+        name={icon} 
+        size={icon === 'hands-pray' ? 28 : 24} 
+        color={colors.primary} 
+      />
     </View>
     <Text style={styles.categoryButtonText} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
   </TouchableOpacity>
@@ -260,12 +263,32 @@ export default function HomeScreen() {
 
   const handleNotificationPress = React.useCallback(async () => {
     console.log('🔔 Bouton notification cliqué !');
+    console.log('📍 Début de handleNotificationPress');
+    
     try {
+      console.log('📱 Tentative de sauvegarde AsyncStorage...');
       await AsyncStorage.setItem('@last_notification_read', new Date().toISOString());
+      console.log('✅ AsyncStorage sauvegardé avec succès');
+      
+      console.log('🔄 Remise à zéro du compteur...');
       setNewNotificationsCount(0);
+      console.log('✅ Compteur remis à zéro');
+      
+      console.log('🧭 Tentative de navigation vers Notifications...');
       navigation.navigate('Notifications');
+      console.log('✅ Navigation lancée avec succès');
+      
     } catch (error) {
       console.error('❌ Erreur lors de la navigation vers Notifications:', error);
+      console.error('🔍 Détails complets de l\'erreur:', JSON.stringify(error, null, 2));
+      
+      // Fallback : essayer de naviguer directement
+      try {
+        console.log('🔄 Tentative de navigation alternative...');
+        navigation.navigate('Notifications' as never);
+      } catch (fallbackError) {
+        console.error('❌ Erreur de navigation alternative:', fallbackError);
+      }
     }
   }, [navigation]);
 
@@ -336,7 +359,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
           <View>
@@ -345,7 +368,12 @@ export default function HomeScreen() {
               Bienvenue {user?.displayName || user?.email?.split('@')[0] || ''}
             </Text>
           </View>
-          <TouchableOpacity onPress={handleNotificationPress} style={styles.notificationButton}>
+          <TouchableOpacity 
+            onPress={handleNotificationPress} 
+            style={styles.notificationButton}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <MaterialCommunityIcons name="bell-outline" size={24} color={colors.text} />
             {newNotificationsCount > 0 && (
               <View style={styles.notificationBadge}>
@@ -377,7 +405,7 @@ export default function HomeScreen() {
             <CategoryButton icon="book-open-variant" title="Livres" onPress={() => navigation.navigate('Books')} />
             <CategoryButton icon="clock-time-four-outline" title="Heure de prière" onPress={() => navigation.navigate('Horaires')} />
             <CategoryButton icon="puzzle" title="Quiz" onPress={() => navigation.navigate('QuizChapterSelect' as never)} />
-            <CategoryButton icon="hand-heart" title="Tasbih" onPress={() => navigation.navigate('Tasbih')} />
+            <CategoryButton icon="hands-pray" title="Tasbih" onPress={() => navigation.navigate('Tasbih')} />
           </View>
         </View>
 
@@ -516,7 +544,7 @@ export default function HomeScreen() {
           </View>
         </Modal>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -597,7 +625,7 @@ const styles = StyleSheet.create({
   bannerTextContainer: {
     flex: 1,
     paddingRight: 40,
-    maxWidth: '60%',
+    maxWidth: '70%',
   },
   bannerTitle: {
     fontSize: 14,
@@ -619,12 +647,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   bannerImage: {
-    width: 240,
-    height: 300,
+    width: 140,
+    height: 180,
     resizeMode: 'contain',
     position: 'absolute',
-    right: -60,
-    bottom: -80,
+    right: -30,
+    bottom: -30,
   },
   section: {
     marginBottom: 20,
