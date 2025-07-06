@@ -8,11 +8,12 @@ import FavoritesScreen from '../screens/FavoritesScreen';
 import HomeScreen from "../screens/HomeScreen";
 import HorairesScreen from '../screens/HorairesScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import OriginalQuizScreen from '../screens/OriginalQuizScreen';
 import ParametresScreen from '../screens/ParametresScreen';
+import QuizChapterSelectScreen from '../screens/QuizChapterSelectScreen';
+import QuizGameScreen from '../screens/QuizGameScreen';
 import QuizScreen from '../screens/QuizScreen';
 import QuizStartScreen from '../screens/QuizStartScreen';
-import QuizGameScreen from '../screens/QuizGameScreen';
-import OriginalQuizScreen from '../screens/OriginalQuizScreen';
 import TasbihScreen from '../screens/TasbihScreen';
 import colors from "../theme/colors";
 
@@ -90,6 +91,13 @@ function HomeStack() {
         component={AuthorProfileScreen}
         options={{
           gestureEnabled: true, // Permet le swipe pour revenir
+        }}
+      />
+      <Stack.Screen 
+        name="QuizChapterSelect" 
+        component={QuizChapterSelectScreen}
+        options={{
+          gestureEnabled: false,
         }}
       />
     </Stack.Navigator>

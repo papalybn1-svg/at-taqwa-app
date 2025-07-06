@@ -1,10 +1,10 @@
 // src/screens/QuizScreen.tsx
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect, CommonActions, StackActions } from '@react-navigation/native';
+import { StackActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import React, { useContext, useState, useCallback, useEffect } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View, Image, Dimensions, BackHandler, PanResponder } from 'react-native';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { Animated, BackHandler, Dimensions, Image, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import chapitre02 from '../../data/exercices_par_chapitre/chapitre_02_exercices.json';
 import chapitre03 from '../../data/exercices_par_chapitre/chapitre_03_exercices.json';
@@ -15,7 +15,6 @@ import chapitre09 from '../../data/exercices_par_chapitre/chapitre_09_exercices.
 import chapitre10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
 import chapitre12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
 import chapitre01 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
-import colors from '../theme/colors';
 import { db } from './firebaseConfig';
 import { AuthContext } from './LoginScreen';
 
@@ -34,24 +33,66 @@ const chapterMap: Record<string, { question: string, reponse?: string, contenu?:
   '12': chapitre12,
 };
 
-// 📌 À rendre dynamique via navigation
+// 📌 On force le quiz sur le chapitre 1
 const chapterId = '01';
 const rawQuizData = chapterMap[chapterId] || [];
 
-const quizData = rawQuizData.map((item) => ({
-  question: item.question,
-  options: shuffleOptions([item.reponse || item.contenu || "Réponse", "Réponse A", "Réponse B", "Réponse C"]),
-  correctAnswerIndex: 0,
-}));
+// Génère des fausses réponses pertinentes pour chaque question
+function generateOptionsForQuiz(questions: {question: string, reponse?: string, contenu?: string}[]) {
+  return questions.map((item, idx, arr) => {
+    const correct = item.reponse || item.contenu || 'Réponse';
+    // Récupère toutes les autres réponses du chapitre
+    const otherAnswers = arr
+      .filter((q, i) => i !== idx && (q.reponse || q.contenu))
+      .map(q => q.reponse || q.contenu)
+      .filter((r): r is string => !!r && r !== correct);
+    // Filtrage contextuel : on évite les réponses trop similaires ou vides
+    const filteredFakes = otherAnswers.filter(r => r.length > 2 && r !== correct && !correct.includes(r) && !r.includes(correct));
+    // Mélange et prend jusqu'à 3 fausses réponses différentes
+    const shuffledFakes = shuffleOptions(filteredFakes).slice(0, 3);
+    // Si pas assez de fausses réponses, on complète avec des réponses génériques
+    const genericFakes = ["Aucune des réponses", "Je ne sais pas", "Voir le livre", "Non précisé"];
+    const allFakes = [...shuffledFakes, ...shuffleOptions(genericFakes)].slice(0, 3);
+    // Mélange la bonne réponse avec les fausses
+    const allOptions = shuffleOptions([correct, ...allFakes]);
+    // Trouve l'index de la bonne réponse dans le tableau mélangé
+    const correctAnswerIndex = allOptions.findIndex(opt => opt === correct);
+    return {
+      question: item.question,
+      options: allOptions,
+      correctAnswerIndex,
+    };
+  });
+}
 
 function shuffleOptions(options: string[]) {
-  return options.sort(() => Math.random() - 0.5);
+  return options.slice().sort(() => Math.random() - 0.5);
 }
+
+const quizData = generateOptionsForQuiz(rawQuizData);
 
 const optionLabels = ['A', 'B', 'C', 'D'];
 
 export default function OriginalQuizScreen() {
+  const route = useRoute();
   const { user } = useContext(AuthContext);
+  const navigation = useNavigation();
+  // On récupère la clé du fichier d'exercices à charger
+  const exercicesKey = (route.params && (route.params as any).exercicesKey) || '1';
+  // Mapping centralisé des fichiers d'exercices
+  const exercicesFiles: { [key: string]: any[] } = {
+    '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
+    '2': require('../../data/exercices_par_chapitre/chapitre_02_exercices.json'),
+    '3': require('../../data/exercices_par_chapitre/chapitre_03_exercices.json'),
+    '5': require('../../data/exercices_par_chapitre/chapitre_05_exercices.json'),
+    '6': require('../../data/exercices_par_chapitre/chapitre_06_exercices.json'),
+    '7': require('../../data/exercices_par_chapitre/chapitre_07_exercices.json'),
+    '9': require('../../data/exercices_par_chapitre/chapitre_09_exercices.json'),
+    '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
+    '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
+  };
+  const rawQuizData = exercicesFiles[exercicesKey] || [];
+  const quizData = generateOptionsForQuiz(rawQuizData);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
@@ -60,7 +101,26 @@ export default function OriginalQuizScreen() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [showQuestionPage, setShowQuestionPage] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(1));
-  const navigation = useNavigation();
+
+  // Protection : si pas de questions, on affiche un message et on redirige
+  useEffect(() => {
+    if (!quizData.length) {
+      navigation.navigate('QuizChapterSelect' as never);
+    }
+  }, [quizData.length, navigation]);
+
+  if (!quizData.length) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <Text style={{ color: '#174C3C', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+          Aucune question disponible pour ce chapitre.
+        </Text>
+        <Text style={{ color: '#888', fontSize: 14, marginTop: 10, textAlign: 'center' }}>
+          Veuillez choisir un autre chapitre.
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   const goToHome = () => {
     // Si on est sur la page des réponses, retourner à la page question
@@ -116,7 +176,7 @@ export default function OriginalQuizScreen() {
       await addDoc(collection(db, 'quizResults'), {
         userId: user.uid,
         userEmail: user.email,
-        quizId: `chapitre_${chapterId}`,
+        quizId: `chapitre_${exercicesKey}`,
         score: finalScore,
         totalQuestions: quizData.length,
         completedAt: serverTimestamp(),

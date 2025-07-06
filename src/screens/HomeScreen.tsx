@@ -376,7 +376,7 @@ export default function HomeScreen() {
           <View style={styles.categoriesGrid}>
             <CategoryButton icon="book-open-variant" title="Livres" onPress={() => navigation.navigate('Books')} />
             <CategoryButton icon="clock-time-four-outline" title="Heure de prière" onPress={() => navigation.navigate('Horaires')} />
-            <CategoryButton icon="puzzle" title="Quiz" onPress={() => navigation.navigate('Quiz')} />
+            <CategoryButton icon="puzzle" title="Quiz" onPress={() => navigation.navigate('QuizChapterSelect' as never)} />
             <CategoryButton icon="hand-heart" title="Tasbih" onPress={() => navigation.navigate('Tasbih')} />
           </View>
         </View>
