@@ -501,12 +501,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
 
       {/* Contenu animé */}
       <View style={{ flex: 1 }}>
-        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-          <ScrollView
-            ref={scrollViewRef}
-            style={{ flex: 1, width: '100%' }}
-            contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 18, paddingBottom: 90, maxWidth: 420, alignSelf: 'center' }}
-            showsVerticalScrollIndicator={false}
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={{ flex: 1, width: '100%' }}
+          contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 18, paddingBottom: 90, maxWidth: 420, alignSelf: 'center' }}
+          showsVerticalScrollIndicator={false}
             onScroll={e => {
               const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
               const totalScrollable = contentSize.height - layoutMeasurement.height;
@@ -519,11 +519,11 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               }
             }}
             scrollEventThrottle={16}
-          >
-            {currentSectionIndex === 0
-              ? renderContent(intro)
-              : renderContent(sections[currentSectionIndex - 1]?.items || [])}
-          </ScrollView>
+        >
+          {currentSectionIndex === 0
+            ? renderContent(intro)
+            : renderContent(sections[currentSectionIndex - 1]?.items || [])}
+    </ScrollView>
           {/* Barre de progression verticale */}
           {isScrollable && (
             <View style={{ position: 'absolute', right: 6, top: 0, bottom: 0, width: 8, justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
@@ -541,7 +541,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               <Text style={{ fontSize: 11, color: '#174C3C', marginTop: 4, fontWeight: 'bold' }}>{Math.round(scrollProgress * 100)}%</Text>
             </View>
           )}
-        </Animated.View>
+      </Animated.View>
       </View>
 
       {/* Navigation bas */}

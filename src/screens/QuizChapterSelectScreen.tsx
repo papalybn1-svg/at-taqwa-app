@@ -106,11 +106,13 @@ export default function QuizChapterSelectScreen() {
             onPress={() => (navigation as any).navigate('OriginalQuiz', { exercicesKey: chapter.exercicesKey, chapterTitle: chapter.title, chapterPart: chapter.partie })}
             activeOpacity={0.85}
           >
-            <Image
-              source={imageMap[chapter.image] || imageMap['1']}
-              style={styles.chapterImage}
-              resizeMode="cover"
-            />
+            <View style={styles.chapterImageContainer}>
+              <Image
+                source={imageMap[chapter.image] || imageMap['1']}
+                style={styles.chapterImage}
+                resizeMode="cover"
+              />
+            </View>
             <View style={styles.chapterInfo}>
               <Text style={styles.chapterTitle}>{chapter.title && chapter.title.trim() !== '' ? chapter.title : `Chapitre ${chapter.exercicesKey}`}</Text>
               <Text style={styles.chapterPart}>{chapter.partie || 'Partie inconnue'}</Text>
@@ -139,12 +141,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
-  chapterImage: {
+  chapterImageContainer: {
     width: 60,
     height: 60,
     borderRadius: 12,
     marginRight: 16,
+    overflow: 'hidden',
     backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chapterImage: {
+    width: '140%',
+    height: '140%',
+    resizeMode: 'cover',
+    minWidth: '140%',
+    minHeight: '140%',
+    transform: [{ scale: 1.4 }],
   },
   chapterInfo: { flex: 1 },
   chapterTitle: { fontSize: 16, fontWeight: 'bold', color: colors.text, marginBottom: 2 },
