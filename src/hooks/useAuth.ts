@@ -120,15 +120,13 @@ export function useAuth() {
           try {
             const freshRole = await fetchUserRoleFromFirestore(firebaseUser);
             const freshUserData = { ...firebaseUser, role: freshRole };
-            
-            // Mettre à jour seulement si les données ont changé
-            if (freshRole !== userWithRole.role && isMounted) {
-              console.log('🔄 Mise à jour rôle:', freshRole);
+            console.log('🔥 Rôle Firestore:', freshRole, 'pour', firebaseUser.email, 'UID:', firebaseUser.uid);
+
+            if (isMounted) {
+              // Toujours mettre à jour le rôle, même si c'est la même valeur
               setUser(freshUserData);
               await saveUserDataLocally(freshUserData);
-            } else if (isMounted) {
-              // Sauvegarder même si pas de changement pour mettre à jour lastLogin
-              await saveUserDataLocally(freshUserData);
+              console.log('🔄 Rôle utilisateur mis à jour depuis Firestore:', freshRole);
             }
           } catch (firestoreError) {
             console.log('⚠️ Erreur Firestore, utilisation du cache local');

@@ -1,16 +1,15 @@
 // src/firebaseConfig.ts
 import { initializeApp } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import { collection, disableNetwork, enableNetwork, getDocs, initializeFirestore } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD_wGrGiN81UbBiLpeezXU8oHvXbXCVuk8",
-  authDomain: "at-taqwa-app-adc7e.firebaseapp.com",
-  projectId: "at-taqwa-app-adc7e",
-  storageBucket: "at-taqwa-app-adc7e.appspot.com",
-  messagingSenderId: "372160219580",
-  appId: "1:372160219580:web:3e5a696faf7b6ea632c3b9"
+  apiKey: "AIzaSyDuMPU5-gMrwaPYngnCWnUsgTtOK8FKLXY",
+  authDomain: "at-taqwa-app-14b7f.firebaseapp.com",
+  projectId: "at-taqwa-app-14b7f",
+  storageBucket: "at-taqwa-app-14b7f.appspot.com",
+  messagingSenderId: "569440550273",
+  appId: "1:569440550273:web:70b659a16255e0a643fc80"
 };
 
 // Initialisation unique pour Expo
