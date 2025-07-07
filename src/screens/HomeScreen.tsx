@@ -22,6 +22,7 @@ type RootStackParamList = {
   QuizStart: undefined;
   QuizGame: undefined;
   OriginalQuiz: undefined;
+  QuizChapterSelect: undefined;
   Tasbih: undefined;
   Admin: undefined;
   AuthorProfile: undefined;
@@ -404,7 +405,7 @@ export default function HomeScreen() {
           <View style={styles.categoriesGrid}>
             <CategoryButton icon="book-open-variant" title="Livres" onPress={() => navigation.navigate('Books')} />
             <CategoryButton icon="clock-time-four-outline" title="Heure de prière" onPress={() => navigation.navigate('Horaires')} />
-            <CategoryButton icon="puzzle" title="Quiz" onPress={() => navigation.navigate('QuizChapterSelect' as never)} />
+            <CategoryButton icon="puzzle" title="Quiz" onPress={() => navigation.navigate('Quiz')} />
             <CategoryButton icon="hands-pray" title="Tasbih" onPress={() => navigation.navigate('Tasbih')} />
           </View>
         </View>

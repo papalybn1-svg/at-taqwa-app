@@ -1,9 +1,10 @@
-import { useNavigation } from '@react-navigation/native';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import colors from '../theme/colors';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Liste centralisée des fichiers d'exercices (clé = numéro de chapitre sous forme de string)
 const exercicesFiles: { [key: string]: any[] } = {
@@ -18,8 +19,37 @@ const exercicesFiles: { [key: string]: any[] } = {
   '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
 };
 
+// SplashFamille copié depuis App.tsx
+function SplashFamille() {
+  return (
+    <View style={styles.splashFamilleBg}>
+      {/* Bloc image + texte en haut */}
+      <View style={styles.topContentBlock}>
+        {/* Logo en haut */}
+        <Image 
+          source={require('../../assets/Page acceuil dome mosquée.png')} 
+          style={styles.splashFamilleLogo}
+        />
+        {/* Texte principal */}
+        <View style={styles.splashFamilleTextContainer}>
+          <Text style={styles.splashMainTitle}>Assalamu Alaikum,</Text>
+          <Text style={styles.splashSubtitleGreen}>Bienvenue sur AT-Taqwa</Text>
+          <Text style={styles.splashDescription}>Votre guide pour la réparation de la Prière</Text>
+        </View>
+      </View>
+      {/* Image de la famille en bas */}
+      <Image 
+        source={require('../../assets/femme et enfant (2).png')} 
+        style={styles.splashFamilleImageXL}
+      />
+    </View>
+  );
+}
+
 export default function QuizChapterSelectScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+
   // Génère la liste plate de tous les chapitres, sans doublon, avec association fiable
   const seen: { [key: string]: boolean } = {};
   const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie], partieIndex) =>
@@ -41,6 +71,29 @@ export default function QuizChapterSelectScreen() {
       return null;
     })
   ).filter((chapter): chapter is { id: string; partie: string; exercicesKey: string; image: string; title: string; desc: string; author: string } => !!chapter);
+
+  // Gestion du bouton retour Android pour aller à l'accueil
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate('HomeMain' as never);
+        return true;
+      };
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [navigation])
+  );
+
+  // Intercepter le retour (swipe ou bouton) pour forcer l'accueil
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (e.data.action.type === 'GO_BACK' || e.data.action.type === 'POP') {
+        e.preventDefault();
+        navigation.navigate('HomeMain' as never);
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 40}}>
@@ -96,4 +149,64 @@ const styles = StyleSheet.create({
   chapterInfo: { flex: 1 },
   chapterTitle: { fontSize: 16, fontWeight: 'bold', color: colors.text, marginBottom: 2 },
   chapterPart: { fontSize: 13, color: colors.primary, fontWeight: '600' },
+  // Styles pour SplashFamille
+  splashFamilleBg: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 20,
+  },
+  topContentBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+    width: '100%',
+  },
+  splashFamilleLogo: {
+    width: 200,
+    height: 200,
+    resizeMode: 'contain',
+    marginBottom: 0,
+    marginTop: 40,
+    alignSelf: 'center',
+  },
+  splashFamilleTextContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginTop: -40,
+    marginBottom: 8,
+  },
+  splashMainTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#174C3C',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  splashSubtitleGreen: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#174C3C',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  splashDescription: {
+    fontSize: 17,
+    color: '#174C3C',
+    textAlign: 'center',
+    marginBottom: 0,
+    lineHeight: 22,
+  },
+  splashFamilleImageXL: {
+    width: '110%',
+    height: '55%',
+    resizeMode: 'cover',
+    position: 'absolute',
+    bottom: 0,
+    left: '-10%',
+    marginBottom: 0,
+    marginTop: 0,
+    alignSelf: 'center',
+  },
 }); 

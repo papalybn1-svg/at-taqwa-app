@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { NavigationProp, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from "react";
 import { Animated, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -33,11 +33,29 @@ export default function BooksScreen() {
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   // Charger la progression utilisateur
+  const loadProgress = async () => {
+    try {
+      const data = await AsyncStorage.getItem('chapterProgress');
+      if (data) {
+        const parsedProgress = JSON.parse(data);
+        setProgress(parsedProgress);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la progression:', error);
+    }
+  };
+
+  // Charger la progression au montage
   React.useEffect(() => {
-    AsyncStorage.getItem('chapterProgress').then(data => {
-      if (data) setProgress(JSON.parse(data));
-    });
+    loadProgress();
   }, []);
+
+  // Recharger la progression quand l'écran redevient actif
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProgress();
+    }, [])
+  );
 
   // Sauvegarder la progression
   const saveProgress = (newProgress: {[key:string]:number}) => {
@@ -125,11 +143,7 @@ export default function BooksScreen() {
                          source={imageMap[ch.image] || require('../../assets/1.png')} 
                          style={styles.newChapterImage} 
                        />
-                       {chapterProgress > 0 && (
-                         <View style={styles.progressOverlay}>
-                           <MaterialCommunityIcons name="check-circle" size={16} color="#D4AF37" />
-                         </View>
-                       )}
+
                      </View>
                     
                     {/* Contenu du chapitre */}

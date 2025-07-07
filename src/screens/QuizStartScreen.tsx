@@ -1,62 +1,53 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect, CommonActions, StackActions } from '@react-navigation/native';
-import React, { useCallback } from 'react';
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, BackHandler, PanResponder } from 'react-native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
+import React, { useCallback, useEffect } from 'react';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function QuizStartScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
 
-  const startQuiz = () => {
-    console.log('Navigation vers OriginalQuiz');
-    navigation.navigate('OriginalQuiz' as never);
-  };
-
-  const goToHome = () => {
-    // Utilise popToTop pour revenir à la racine de la pile
-    navigation.dispatch(StackActions.popToTop());
-  };
-
-  // Gestionnaire de swipe personnalisé pour iOS
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Détecter un swipe horizontal de gauche à droite
-      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && gestureState.dx > 50;
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      // Optionnel: ajouter un feedback visuel pendant le swipe
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      // Si c'est un swipe de gauche à droite suffisant, aller à l'accueil
-      if (gestureState.dx > 100 && Math.abs(gestureState.dy) < 100) {
-        console.log('Swipe détecté - retour à l\'accueil');
-        goToHome();
-      }
-    },
-  });
-
-  // Gestionnaire pour le bouton retour Android uniquement
+  // Gestion du bouton retour Android pour aller à l'accueil
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        goToHome();
-        return true; // Empêche le comportement par défaut
+        navigation.navigate('HomeMain' as never);
+        return true;
       };
-
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
       return () => subscription.remove();
-    }, [])
+    }, [navigation])
   );
 
+  // Intercepter le retour (swipe ou bouton) pour forcer l'accueil
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Si ce n'est pas déjà un retour vers HomeMain, on force
+      if (e.data.action.type === 'GO_BACK' || e.data.action.type === 'POP') {
+        e.preventDefault();
+        navigation.navigate('HomeMain' as never);
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const goToChapters = () => {
+    navigation.navigate('QuizChapterSelect' as never);
+  };
+
+  const goHome = () => {
+    navigation.navigate('HomeMain' as never);
+  };
+
   return (
-    <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
-      {/* Bouton de retour */}
+    <SafeAreaView style={styles.container}>
+      {/* Bouton retour */}
       <TouchableOpacity 
         style={styles.backButton} 
-        onPress={goToHome}
+        onPress={goHome}
       >
         <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
       </TouchableOpacity>
@@ -72,24 +63,18 @@ export default function QuizStartScreen() {
         </View>
       </View>
 
-      {/* Cartes empilées en bas */}
+      {/* Carte blanche principale */}
       <View style={styles.cardStack}>
-        {/* Carte arrière (la plus profonde) */}
         <View style={styles.backCard} />
-        
-        {/* Carte du milieu */}
         <View style={styles.middleCard} />
-        
-        {/* Carte blanche principale */}
         <View style={styles.whiteCard}>
-          <Text style={styles.cardTitle}>Commençons le{'\n'}Quizz</Text>
-          
+          <Text style={styles.cardTitle}>{'Commençons le\nQuizz'}</Text>
           <TouchableOpacity 
             style={styles.playButton} 
-            onPress={startQuiz}
+            onPress={goToChapters}
             activeOpacity={0.7}
           >
-            <Text style={styles.playButtonText}>Jouer</Text>
+            <Text style={styles.playButtonText}>Commencer</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -100,8 +85,8 @@ export default function QuizStartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#174C3C', // Vert principal de l'application
-    paddingBottom: 30, // Ajout d'une marge en bas de la page
+    backgroundColor: '#174C3C',
+    paddingBottom: 30,
   },
   backButton: {
     position: 'absolute',
@@ -116,10 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
@@ -129,42 +111,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 0,
-    pointerEvents: 'none', // Empêche tout le conteneur de bloquer les interactions
-    zIndex: 200, // Augmenté pour mettre tout le contenu au premier plan
+    pointerEvents: 'none',
+    zIndex: 200,
   },
   imageContainer: {
     pointerEvents: 'none',
-    zIndex: 300, // Encore plus élevé pour le conteneur de l'image
+    zIndex: 300,
   },
   manImage: {
-    width: screenWidth * 1.4, // Augmenté de 1.2 à 1.4
-    height: screenHeight * 0.9, // Augmenté de 0.8 à 0.9
-    maxWidth: 800, // Augmenté de 650 à 800
-    maxHeight: 1000, // Augmenté de 800 à 1000
-    marginTop: -150, // Augmenté de -100 à -150 pour diminuer la marge en haut
-    zIndex: 400, // Encore plus élevé pour garantir que l'image soit au premier plan
+    width: screenWidth * 1.4,
+    height: screenHeight * 0.9,
+    maxWidth: 800,
+    maxHeight: 1000,
+    marginTop: -200,
+    zIndex: 400,
   },
   cardStack: {
     position: 'absolute',
-    bottom: 80, // Augmenté de 40 à 80 pour faire monter les cartes
+    bottom: 80,
     left: 15,
     right: 15,
     alignItems: 'center',
   },
   backCard: {
-    backgroundColor: '#0F3A2E', // Vert plus foncé que #174C3C
+    backgroundColor: '#0F3A2E',
     borderRadius: 30,
-    height: 300, // Augmenté de 250 à 300
+    height: 300,
     width: '100%',
     position: 'absolute',
     bottom: -20,
     borderWidth: 2,
     borderColor: '#0A2D23',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
@@ -172,17 +151,14 @@ const styles = StyleSheet.create({
   middleCard: {
     backgroundColor: '#BB9B4E',
     borderRadius: 30,
-    height: 310, // Augmenté de 260 à 310
+    height: 310,
     width: '95%',
     position: 'absolute',
     bottom: -10,
     borderWidth: 2,
     borderColor: '#A08642',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 7,
@@ -196,17 +172,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 15,
     borderWidth: 2,
     borderColor: '#F0F0F0',
     width: '90%',
-    height: 320, // Augmenté de 270 à 320
+    height: 320,
   },
   cardTitle: {
     fontSize: 28,
@@ -223,10 +196,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 25,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 8,
