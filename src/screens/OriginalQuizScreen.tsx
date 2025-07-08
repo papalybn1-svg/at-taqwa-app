@@ -125,12 +125,15 @@ export default function OriginalQuizScreen() {
   }
 
   const goToHome = () => {
+    console.log('Bouton retour cliqué');
     // Si on est sur la page des réponses, retourner à la page question
     if (!showQuestionPage) {
+      console.log('Retour à la page question');
       setShowQuestionPage(true);
       return;
     }
-    // Sinon, utilise popToTop pour revenir à la racine de la pile
+    // Sinon, naviguer directement vers l'accueil
+    console.log('Navigation vers l\'accueil');
     navigation.dispatch(StackActions.popToTop());
   };
 
@@ -162,14 +165,14 @@ export default function OriginalQuizScreen() {
           return true;
         }
         // Sinon, aller à l'accueil
-        goToHome();
+        navigation.dispatch(StackActions.popToTop());
         return true;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
 
       return () => subscription.remove();
-    }, [showQuestionPage]) // Ajout de showQuestionPage dans les dépendances
+    }, [showQuestionPage, navigation]) // Ajout de navigation dans les dépendances
   );
 
   const logQuizResult = async (finalScore: number) => {
@@ -286,10 +289,14 @@ export default function OriginalQuizScreen() {
         {/* Bouton de retour */}
         <TouchableOpacity 
           style={styles.backButton} 
-          onPress={goToHome}
+          onPress={() => {
+            console.log('Bouton retour TOUCHÉ (résultats) !');
+            goToHome();
+          }}
+          activeOpacity={0.7}
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-          </TouchableOpacity>
+        </TouchableOpacity>
 
         {/* Section du personnage - identique aux autres pages */}
         <View style={styles.characterSection}>
@@ -334,10 +341,14 @@ export default function OriginalQuizScreen() {
       {/* Bouton de retour */}
       <TouchableOpacity 
         style={styles.backButton} 
-        onPress={goToHome}
+        onPress={() => {
+          console.log('Bouton retour TOUCHÉ !');
+          goToHome();
+        }}
+        activeOpacity={0.7}
       >
         <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-        </TouchableOpacity>
+      </TouchableOpacity>
 
       {/* Section du personnage - Plus compacte */}
               <View style={styles.characterSection}>
@@ -466,7 +477,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     left: 20,
-    zIndex: 10,
+    zIndex: 100,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
     padding: 8,
