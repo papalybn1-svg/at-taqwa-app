@@ -107,11 +107,11 @@ export default function QuizChapterSelectScreen() {
             activeOpacity={0.85}
           >
             <View style={styles.chapterImageContainer}>
-              <Image
-                source={imageMap[chapter.image] || imageMap['1']}
-                style={styles.chapterImage}
-                resizeMode="cover"
-              />
+            <Image
+              source={imageMap[chapter.image] || imageMap['1']}
+              style={styles.chapterImage}
+              resizeMode="cover"
+            />
             </View>
             <View style={styles.chapterInfo}>
               <Text style={styles.chapterTitle}>{chapter.title && chapter.title.trim() !== '' ? chapter.title : `Chapitre ${chapter.exercicesKey}`}</Text>

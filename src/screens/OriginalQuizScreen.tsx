@@ -296,7 +296,7 @@ export default function OriginalQuizScreen() {
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-        </TouchableOpacity>
+          </TouchableOpacity>
 
         {/* Section du personnage - identique aux autres pages */}
         <View style={styles.characterSection}>
@@ -348,16 +348,16 @@ export default function OriginalQuizScreen() {
         activeOpacity={0.7}
       >
         <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-      </TouchableOpacity>
+        </TouchableOpacity>
 
       {/* Section du personnage - Plus compacte */}
-              <View style={styles.characterSection}>
-          <Image 
+      <View style={styles.characterSection}>
+        <Image 
             source={require('../../assets/16 (copie).png')} 
-            style={styles.characterImage}
-            resizeMode="contain"
-          />
-        </View>
+          style={styles.characterImage}
+          resizeMode="contain"
+        />
+      </View>
 
       {/* Carte du quiz - Système à 2 pages */}
       <View style={styles.quizCardContainer}>
@@ -396,7 +396,7 @@ export default function OriginalQuizScreen() {
                 style={getOptionStyle(index)}
                 onPress={() => handleAnswerPress(index)}
                 onLongPress={() => handleLongPress(`${optionLabels[index]}: ${option}`)}
-                disabled={showAnswer}
+                    disabled={showAnswer}
               >
                     <Text style={getOptionTextStyle(index)} numberOfLines={2} ellipsizeMode="tail">
                       {optionLabels[index]}: {option}
