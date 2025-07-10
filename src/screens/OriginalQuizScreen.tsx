@@ -317,7 +317,7 @@ export default function OriginalQuizScreen() {
 
   if (showResults) {
     const scorePercentage = Math.round((score / quizData.length) * 100);
-    const isPerfectScore = scorePercentage === 100;
+    const canProceedToNext = scorePercentage >= 80;
     
     return (
       <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
@@ -360,7 +360,7 @@ export default function OriginalQuizScreen() {
             {/* Espace pour pousser le bouton vers le bas */}
             <View style={styles.spacer} />
             
-            {isPerfectScore ? (
+            {canProceedToNext ? (
               <TouchableOpacity style={styles.restartButton} onPress={goToNextQuiz}>
                 <Text style={styles.restartButtonText}>Quiz suivant</Text>
               </TouchableOpacity>
