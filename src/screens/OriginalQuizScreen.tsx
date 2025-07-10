@@ -6,6 +6,7 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import chapitre02 from '../../data/exercices_par_chapitre/chapitre_02_exercices.json';
 import chapitre03 from '../../data/exercices_par_chapitre/chapitre_03_exercices.json';
 import chapitre05 from '../../data/exercices_par_chapitre/chapitre_05_exercices.json';
@@ -71,7 +72,7 @@ function shuffleOptions(options: string[]) {
 
 const quizData = generateOptionsForQuiz(rawQuizData);
 
-const optionLabels = ['A', 'B', 'C', 'D'];
+
 
 export default function OriginalQuizScreen() {
   const route = useRoute();
@@ -92,7 +93,9 @@ export default function OriginalQuizScreen() {
     '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
   };
   const rawQuizData = exercicesFiles[exercicesKey] || [];
-  const quizData = generateOptionsForQuiz(rawQuizData);
+  
+  // Générer les questions une seule fois et les stocker dans un état
+  const [quizData, setQuizData] = useState(() => generateOptionsForQuiz(rawQuizData));
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
@@ -124,7 +127,7 @@ export default function OriginalQuizScreen() {
     );
   }
 
-  const goToHome = () => {
+  const goToQuizSelection = () => {
     console.log('Bouton retour cliqué');
     // Si on est sur la page des réponses, retourner à la page question
     if (!showQuestionPage) {
@@ -132,9 +135,9 @@ export default function OriginalQuizScreen() {
       setShowQuestionPage(true);
       return;
     }
-    // Sinon, naviguer directement vers l'accueil
-    console.log('Navigation vers l\'accueil');
-    navigation.dispatch(StackActions.popToTop());
+    // Sinon, naviguer vers la page de sélection des chapitres
+    console.log('Navigation vers la sélection des chapitres');
+    navigation.navigate('QuizChapterSelect' as never);
   };
 
   // Gestionnaire de swipe personnalisé pour iOS
@@ -147,10 +150,10 @@ export default function OriginalQuizScreen() {
       // Optionnel: ajouter un feedback visuel pendant le swipe
     },
     onPanResponderRelease: (evt, gestureState) => {
-      // Si c'est un swipe de gauche à droite suffisant, aller à l'accueil
+      // Si c'est un swipe de gauche à droite suffisant, aller à la sélection des chapitres
       if (gestureState.dx > 100 && Math.abs(gestureState.dy) < 100) {
-        console.log('Swipe détecté depuis Quiz - retour à l\'accueil');
-        goToHome();
+        console.log('Swipe détecté depuis Quiz - retour à la sélection des chapitres');
+        goToQuizSelection();
       }
     },
   });
@@ -164,8 +167,8 @@ export default function OriginalQuizScreen() {
           setShowQuestionPage(true);
           return true;
         }
-        // Sinon, aller à l'accueil
-        navigation.dispatch(StackActions.popToTop());
+        // Sinon, aller à la sélection des chapitres
+        navigation.navigate('QuizChapterSelect' as never);
         return true;
       };
 
@@ -192,8 +195,18 @@ export default function OriginalQuizScreen() {
   };
 
   const handleAnswerPress = (index: number) => {
-    if (selectedAnswerIndex !== null) return;
-    setSelectedAnswerIndex(index);
+    // Si on clique sur la même réponse déjà sélectionnée, on la décoche
+    if (selectedAnswerIndex === index) {
+      setSelectedAnswerIndex(null);
+    } else {
+      // Sinon on sélectionne la nouvelle réponse
+      setSelectedAnswerIndex(index);
+    }
+  };
+
+  const handleTextPress = (text: string) => {
+    setSelectedText(text);
+    setShowTextModal(true);
   };
 
   const handleLongPress = (text: string) => {
@@ -202,12 +215,16 @@ export default function OriginalQuizScreen() {
   };
 
   const handleVerify = () => {
-    if (selectedAnswerIndex === null) return;
+    if (selectedAnswerIndex === null || showAnswer) return; // Empêche la vérification multiple
     
     const correct = selectedAnswerIndex === quizData[currentQuestionIndex].correctAnswerIndex;
     setIsAnswerCorrect(correct);
     setShowAnswer(true);
-    if (correct) setScore(prev => prev + 1);
+    
+    // Incrémenter le score seulement si c'est correct ET si on n'a pas déjà vérifié
+    if (correct) {
+      setScore(prev => prev + 1);
+    }
   };
 
   const handleNext = () => {
@@ -220,10 +237,35 @@ export default function OriginalQuizScreen() {
         setShowQuestionPage(true);
         Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
       } else {
+        // Calculer le pourcentage de score
+        const finalScorePercentage = Math.round((score / quizData.length) * 100);
+        
+        // Sauvegarder le score localement
+        saveQuizScore(exercicesKey, finalScorePercentage);
+        
+        // Logger le résultat sur Firebase
         logQuizResult(score);
         setShowResults(true);
       }
     });
+  };
+
+  // Fonction pour sauvegarder le score localement
+  const saveQuizScore = async (chapterKey: string, scorePercentage: number) => {
+    try {
+      // Récupérer les scores existants
+      const existingScores = await AsyncStorage.getItem('quizScores');
+      const scores = existingScores ? JSON.parse(existingScores) : {};
+      
+      // Mettre à jour le score seulement s'il est meilleur ou s'il n'existe pas
+      if (!scores[chapterKey] || scorePercentage > scores[chapterKey]) {
+        scores[chapterKey] = scorePercentage;
+        await AsyncStorage.setItem('quizScores', JSON.stringify(scores));
+        console.log(`Score sauvegardé pour le chapitre ${chapterKey}: ${scorePercentage}%`);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du score:', error);
+    }
   };
 
   const goToAnswersPage = () => {
@@ -239,51 +281,44 @@ export default function OriginalQuizScreen() {
     setShowAnswer(false);
     setShowQuestionPage(true);
     fadeAnim.setValue(1);
+    
+    // Régénérer les questions pour un nouveau quiz
+    setQuizData(generateOptionsForQuiz(rawQuizData));
   };
 
-  const getOptionStyle = (index: number) => {
-    const isSelected = selectedAnswerIndex === index;
-    const isCorrect = index === quizData[currentQuestionIndex].correctAnswerIndex;
-    const isGreen = index % 2 === 0; // A et C en vert, B et D en doré
+  // Fonction pour naviguer vers le quiz suivant
+  const goToNextQuiz = () => {
+    console.log('🔄 goToNextQuiz appelé avec exercicesKey:', exercicesKey);
     
-    if (showAnswer) {
-      if (isCorrect) {
-        return [styles.optionButton, styles.correctOptionButton];
-      } else if (isSelected && !isCorrect) {
-        return [styles.optionButton, styles.incorrectOptionButton];
-      }
-      // Options non sélectionnées et incorrectes gardent leur couleur de base
-      return [styles.optionButton, isGreen ? styles.greenOption : styles.goldOption];
+    // Séquence correcte des chapitres disponibles
+    const availableChapters = ['1', '2', '3', '5', '6', '7', '9', '10', '12'];
+    const currentIndex = availableChapters.indexOf(exercicesKey);
+    
+    console.log('📍 Index actuel:', currentIndex, 'sur', availableChapters.length, 'chapitres');
+    
+    if (currentIndex !== -1 && currentIndex < availableChapters.length - 1) {
+      // Il y a un quiz suivant
+      const nextQuizKey = availableChapters[currentIndex + 1];
+      console.log('➡️ Navigation vers le quiz suivant:', nextQuizKey);
+      
+      // Utiliser reset pour forcer un rechargement complet
+      (navigation as any).reset({
+        index: 0,
+        routes: [{ name: 'OriginalQuiz', params: { exercicesKey: nextQuizKey } }],
+      });
+    } else {
+      // C'était le dernier quiz, retourner à la sélection des chapitres
+      console.log('🏠 Retour à la sélection des chapitres (dernier quiz)');
+      navigation.navigate('QuizChapterSelect' as never);
     }
-    
-    if (isSelected) {
-      return [styles.optionButton, isGreen ? styles.selectedGreenOption : styles.selectedGoldOption];
-    }
-    
-    return [styles.optionButton, isGreen ? styles.greenOption : styles.goldOption];
   };
 
-  const getOptionTextStyle = (index: number) => {
-    const isSelected = selectedAnswerIndex === index;
-    const isCorrect = index === quizData[currentQuestionIndex].correctAnswerIndex;
-    const isGreen = index % 2 === 0;
-    
-    if (showAnswer) {
-      if (isCorrect || (isSelected && !isCorrect)) {
-        return styles.whiteOptionText; // Texte blanc pour les réponses correctes/incorrectes
-      }
-      // Options non sélectionnées gardent leur couleur de base
-      return isGreen ? styles.greenOptionText : styles.goldOptionText;
-    }
-    
-    if (isSelected) {
-      return styles.whiteOptionText; // Texte blanc pour les options sélectionnées
-    }
-    
-    return isGreen ? styles.greenOptionText : styles.goldOptionText;
-  };
+
 
   if (showResults) {
+    const scorePercentage = Math.round((score / quizData.length) * 100);
+    const isPerfectScore = scorePercentage === 100;
+    
     return (
       <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
         {/* Bouton de retour */}
@@ -291,7 +326,7 @@ export default function OriginalQuizScreen() {
           style={styles.backButton} 
           onPress={() => {
             console.log('Bouton retour TOUCHÉ (résultats) !');
-            goToHome();
+            goToQuizSelection();
           }}
           activeOpacity={0.7}
         >
@@ -325,9 +360,15 @@ export default function OriginalQuizScreen() {
             {/* Espace pour pousser le bouton vers le bas */}
             <View style={styles.spacer} />
             
-            <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
-              <Text style={styles.restartButtonText}>Recommencer</Text>
-            </TouchableOpacity>
+            {isPerfectScore ? (
+              <TouchableOpacity style={styles.restartButton} onPress={goToNextQuiz}>
+                <Text style={styles.restartButtonText}>Quiz suivant</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
+                <Text style={styles.restartButtonText}>Recommencer</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -341,10 +382,10 @@ export default function OriginalQuizScreen() {
       {/* Bouton de retour */}
       <TouchableOpacity 
         style={styles.backButton} 
-        onPress={() => {
-          console.log('Bouton retour TOUCHÉ !');
-          goToHome();
-        }}
+                  onPress={() => {
+            console.log('Bouton retour TOUCHÉ !');
+            goToQuizSelection();
+          }}
         activeOpacity={0.7}
       >
         <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
@@ -390,20 +431,75 @@ export default function OriginalQuizScreen() {
             // PAGE 2: RÉPONSES MULTIPLES
             <>
           <View style={styles.optionsContainer}>
-            {currentQuestion.options.map((option, index) => (
-              <TouchableOpacity
-                key={index}
-                style={getOptionStyle(index)}
-                onPress={() => handleAnswerPress(index)}
-                onLongPress={() => handleLongPress(`${optionLabels[index]}: ${option}`)}
+            {currentQuestion.options.map((option, index) => {
+              const isSelected = selectedAnswerIndex === index;
+              const isCorrect = index === currentQuestion.correctAnswerIndex;
+              const isWrongSelected = showAnswer && isSelected && !isCorrect;
+              const showCorrectAnswer = showAnswer && isCorrect;
+              
+              return (
+                <View key={`${currentQuestionIndex}-${index}`} style={styles.optionRow}>
+                  {/* Checkbox pour la sélection */}
+                  <TouchableOpacity
+                    style={[
+                      styles.checkboxContainer,
+                      isSelected && !showAnswer && styles.checkboxSelected,
+                      showCorrectAnswer && styles.checkboxCorrect,
+                      isWrongSelected && styles.checkboxIncorrect
+                    ]}
+                    onPress={() => handleAnswerPress(index)}
                     disabled={showAnswer}
-              >
-                    <Text style={getOptionTextStyle(index)} numberOfLines={2} ellipsizeMode="tail">
-                      {optionLabels[index]}: {option}
-                    </Text>
-              </TouchableOpacity>
-            ))}
-            <Text style={styles.hintText}>Appuie long pour voir toute la réponse</Text>
+                  >
+                    {isSelected && !showAnswer && (
+                      <MaterialCommunityIcons 
+                        name="check" 
+                        size={16} 
+                        color="white" 
+                      />
+                    )}
+                    {showCorrectAnswer && (
+                      <MaterialCommunityIcons 
+                        name="check" 
+                        size={16} 
+                        color="white" 
+                      />
+                    )}
+                    {isWrongSelected && (
+                      <MaterialCommunityIcons 
+                        name="close" 
+                        size={16} 
+                        color="white" 
+                      />
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Zone de texte cliquable */}
+                  <TouchableOpacity
+                    style={[
+                      styles.textContainer,
+                      isSelected && !showAnswer && styles.textContainerSelected,
+                      showCorrectAnswer && styles.textContainerCorrect,
+                      isWrongSelected && styles.textContainerIncorrect
+                    ]}
+                    onPress={() => handleTextPress(option)}
+                    onLongPress={() => handleLongPress(option)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.optionContent}>
+                      <Text style={[
+                        styles.optionText,
+                        isSelected && !showAnswer && styles.optionTextSelected,
+                        showCorrectAnswer && styles.optionTextCorrect,
+                        isWrongSelected && styles.optionTextIncorrect
+                      ]} numberOfLines={2} ellipsizeMode="tail">
+                        {option}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+            <Text style={styles.hintText}>Clique sur le texte pour voir toute la réponse</Text>
           </View>
 
               {/* Section des boutons avec espace réservé */}
@@ -420,7 +516,7 @@ export default function OriginalQuizScreen() {
                   <View style={styles.answerSection}>
                     <View style={styles.correctAnswerBanner}>
                       <Text style={styles.correctAnswerText}>
-                        Réponse correcte : {optionLabels[quizData[currentQuestionIndex].correctAnswerIndex]}
+                        Réponse correcte
                       </Text>
                     </View>
                     <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
@@ -503,7 +599,7 @@ const styles = StyleSheet.create({
     flex: 1, // Prend tout l'espace disponible
     justifyContent: 'center',
     alignItems: 'center', 
-    paddingHorizontal: 16,
+    paddingHorizontal: 8, // Réduit de 16 à 8 pour plus d'espace
     paddingBottom: 30,
     position: 'relative',
     paddingTop: 0,
@@ -521,87 +617,24 @@ const styles = StyleSheet.create({
   optionsContainer: { 
     marginBottom: 8, // Réduit de 12 à 8
     marginTop: 15, // Réduit de 30 à 15
+    width: '100%', // Assure que le conteneur prend toute la largeur
+    maxHeight: '70%', // Limite la hauteur pour éviter le débordement
+    overflow: 'hidden', // Cache le contenu qui déborde
   },
-  optionButton: { 
-    borderRadius: 12, 
-    marginBottom: 4, // Réduit de 6 à 4
-    padding: 10, // Réduit de 12 à 10
-    borderWidth: 2,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    zIndex: 20, // Ajouté pour que les boutons soient au-dessus de l'image
-    minHeight: 50, // Hauteur fixe pour toutes les options
-    maxHeight: 50, // Hauteur maximale fixe
-  },
-  greenOption: {
-    backgroundColor: '#E8F5E8',
-    borderColor: '#174C3C',
-  },
-  goldOption: {
-    backgroundColor: '#FFF8E1',
-    borderColor: '#BB9B4E',
-  },
-  selectedGreenOption: {
-    backgroundColor: '#174C3C',
-    borderColor: '#174C3C',
-  },
-  selectedGoldOption: {
-    backgroundColor: '#BB9B4E',
-    borderColor: '#BB9B4E',
-  },
-  correctOptionButton: {
-    backgroundColor: '#174C3C',
-    borderColor: '#174C3C',
-  },
-  incorrectOptionButton: {
-    backgroundColor: '#DC3545',
-    borderColor: '#DC3545',
-  },
+
   optionContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  optionLabel: {
-    width: 24,
-    height: 24,
-    borderRadius: 12, 
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  optionLabelText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  greenOptionText: {
-    color: '#174C3C',
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'left',
-    lineHeight: 18,
-  },
-  goldOptionText: {
-    color: '#BB9B4E',
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'left',
-    lineHeight: 18,
-  },
-  whiteOptionText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'left',
-    lineHeight: 18,
-  },
+
   verifyButton: {
     backgroundColor: '#BB9B4E',
     padding: 10,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 6,
+    width: '100%', // Assure que le bouton prend toute la largeur disponible
+    maxWidth: '95%', // Limite la largeur pour rester dans le cadre
   },
   disabledButton: { 
     backgroundColor: '#CCCCCC',
@@ -644,6 +677,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold', 
     color: '#174C3C',
     textAlign: 'center',
+    marginTop: 20, // Ajouté pour descendre le texte
     marginBottom: 22,
   },
   scoreText: { 
@@ -673,12 +707,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   backCard: {
-    backgroundColor: '#0F3A2E', // Vert plus foncé que #174C3C (comme QuizStartScreen)
+    backgroundColor: '#0F3A2E',
     borderRadius: 30,
-    height: screenHeight * 0.45,
-    width: '100%',
+    height: screenHeight * 0.55,
+    width: '98%',
     position: 'absolute',
-    bottom: 60, // Augmenté de 30 à 60 pour faire monter
+    bottom: 3,
     borderWidth: 2,
     borderColor: '#0A2D23',
     shadowColor: '#000',
@@ -692,12 +726,12 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   middleCard: {
-    backgroundColor: '#BB9B4E', // Même couleur que le bouton (comme QuizStartScreen)
+    backgroundColor: '#BB9B4E',
     borderRadius: 30,
-    height: screenHeight * 0.46,
+    height: screenHeight * 0.535,
     width: '95%',
     position: 'absolute',
-    bottom: 70, // Augmenté de 40 à 70 pour faire monter
+    bottom: 10,
     borderWidth: 2,
     borderColor: '#A08642',
     shadowColor: '#000',
@@ -714,7 +748,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 30,
     paddingHorizontal: 20,
-    paddingTop: 40, // Augmenté de 25 à 40 pour faire descendre le contenu
+    paddingTop: 25,
     paddingBottom: 20,
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -728,11 +762,12 @@ const styles = StyleSheet.create({
     elevation: 15,
     borderWidth: 2,
     borderColor: '#F0F0F0',
-    width: '90%',
-    height: screenHeight * 0.47,
+    width: '92%',
+    height: screenHeight * 0.525,
     position: 'absolute',
-    bottom: 80, // Augmenté de 50 à 80 pour faire monter
-    zIndex: 15, // Augmenté de 3 à 15 pour être au-dessus de tout
+    bottom: 15,
+    zIndex: 15,
+    overflow: 'hidden',
   },
 
   spacer: {
@@ -827,19 +862,19 @@ const styles = StyleSheet.create({
   },
   // Styles pour les cartes empilées du modal
   modalCardContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    width: '90%',
-    maxWidth: 400,
+    width: '100%',
   },
   modalBackCard: {
     backgroundColor: '#0F3A2E',
     borderRadius: 30,
-    height: screenHeight * 0.45, // Même hauteur que backCard
-    width: '100%',
+    height: screenHeight * 0.55,
+    width: '92%',
     position: 'absolute',
-    bottom: -270, // Réduit de -250 à -270 pour descendre légèrement
+    bottom: 35,
     borderWidth: 2,
     borderColor: '#0A2D23',
     shadowColor: '#000',
@@ -852,10 +887,10 @@ const styles = StyleSheet.create({
   modalMiddleCard: {
     backgroundColor: '#BB9B4E',
     borderRadius: 30,
-    height: screenHeight * 0.46, // Même hauteur que middleCard
-    width: '95%',
+    height: screenHeight * 0.535,
+    width: '89%',
     position: 'absolute',
-    bottom: -260, // Réduit de -240 à -260 pour descendre légèrement
+    bottom: 42,
     borderWidth: 2,
     borderColor: '#A08642',
     shadowColor: '#000',
@@ -869,7 +904,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 30,
     paddingHorizontal: 20,
-    paddingTop: 40, // Même padding que whiteCard
+    paddingTop: 25,
     paddingBottom: 20,
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -880,11 +915,85 @@ const styles = StyleSheet.create({
     elevation: 15,
     borderWidth: 2,
     borderColor: '#F0F0F0',
-    width: '90%',
-    height: screenHeight * 0.47, // Même hauteur que whiteCard
+    width: '86%',
+    height: screenHeight * 0.525,
     position: 'absolute',
-    bottom: -250, // Réduit de -230 à -250 pour descendre légèrement
+    bottom: 47,
     zIndex: 15,
+    overflow: 'hidden',
   },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6, // Réduit pour économiser l'espace
+    paddingVertical: 10, // Réduit pour économiser l'espace
+    paddingHorizontal: 12, // Ajouté pour plus d'espace horizontal
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    width: '100%', // Assure que la boîte prend toute la largeur disponible
+    minHeight: 55, // Réduit pour économiser l'espace
+    maxHeight: 55, // Hauteur maximale fixe pour éviter le débordement
+  },
+  checkboxContainer: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#BB9B4E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    backgroundColor: 'transparent',
+  },
+  checkboxSelected: {
+    backgroundColor: '#BB9B4E',
+    borderColor: '#BB9B4E',
+  },
+  checkboxCorrect: {
+    backgroundColor: '#174C3C',
+    borderColor: '#174C3C',
+  },
+  checkboxIncorrect: {
+    backgroundColor: '#DC3545',
+    borderColor: '#DC3545',
+  },
+  textContainer: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  textContainerSelected: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+  },
+  textContainerCorrect: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+  },
+  textContainerIncorrect: {
+    backgroundColor: '#FDE6E6',
+    borderRadius: 8,
+  },
+
+  optionText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#333',
+    lineHeight: 16,
+    textAlignVertical: 'center',
+  },
+  optionTextSelected: {
+    color: '#174C3C',
+  },
+  optionTextCorrect: {
+    color: '#174C3C',
+  },
+  optionTextIncorrect: {
+    color: '#DC3545',
+  },
+
 
 });

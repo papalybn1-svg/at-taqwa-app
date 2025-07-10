@@ -1,6 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, BackHandler, Alert, Modal } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import colors from '../theme/colors';
@@ -49,6 +50,89 @@ function SplashFamille() {
 export default function QuizChapterSelectScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const [quizScores, setQuizScores] = useState<{ [key: string]: number }>({});
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [lockedChapter, setLockedChapter] = useState<any>(null);
+  const [previousScore, setPreviousScore] = useState<number | undefined>(undefined);
+
+  // Charger les scores des quiz depuis le stockage local
+  useEffect(() => {
+    loadQuizScores();
+  }, []);
+
+  // Recharger les scores quand l'écran redevient actif
+  useFocusEffect(
+    useCallback(() => {
+      loadQuizScores();
+    }, [])
+  );
+
+  const loadQuizScores = async () => {
+    try {
+      const scores = await AsyncStorage.getItem('quizScores');
+      if (scores) {
+        setQuizScores(JSON.parse(scores));
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des scores:', error);
+    }
+  };
+
+  // Vérifier si un quiz est débloqué (le premier quiz est toujours débloqué)
+  const isQuizUnlocked = (chapterKey: string) => {
+    if (chapterKey === '1') return true; // Premier quiz toujours débloqué
+    
+    // Pour les autres quiz, vérifier si le quiz précédent a été complété avec 80%
+    // Mais d'abord, vérifier si le chapitre précédent existe dans notre liste
+    const allChapterKeys = allChapters.map(ch => ch.exercicesKey).sort((a, b) => parseInt(a) - parseInt(b));
+    const currentIndex = allChapterKeys.indexOf(chapterKey);
+    
+    if (currentIndex <= 0) return true; // Premier chapitre ou chapitre non trouvé
+    
+    // Vérifier si le chapitre précédent dans la liste a été complété avec 80%
+    const previousChapterKey = allChapterKeys[currentIndex - 1];
+    const previousScore = quizScores[previousChapterKey];
+    return previousScore !== undefined && previousScore >= 80;
+  };
+
+  // Gérer le clic sur un chapitre
+  const handleChapterPress = (chapter: any) => {
+    if (!isQuizUnlocked(chapter.exercicesKey)) {
+      // Trouver le quiz précédent pour afficher son score actuel
+      const allChapterKeys = allChapters.map(ch => ch.exercicesKey).sort((a, b) => parseInt(a) - parseInt(b));
+      const currentIndex = allChapterKeys.indexOf(chapter.exercicesKey);
+      const previousChapterKey = allChapterKeys[currentIndex - 1];
+      const score = quizScores[previousChapterKey];
+      
+      setLockedChapter(chapter);
+      setPreviousScore(score);
+      setShowLockModal(true);
+      return;
+    }
+    
+    (navigation as any).navigate('OriginalQuiz', { 
+      exercicesKey: chapter.exercicesKey, 
+      chapterTitle: chapter.title, 
+      chapterPart: chapter.partie 
+    });
+  };
+
+  // Naviguer vers le chapitre précédent pour lecture
+  const goToPreviousChapter = () => {
+    if (lockedChapter) {
+      const allChapterKeys = allChapters.map(ch => ch.exercicesKey).sort((a, b) => parseInt(a) - parseInt(b));
+      const currentIndex = allChapterKeys.indexOf(lockedChapter.exercicesKey);
+      if (currentIndex > 0) {
+        const previousChapter = allChapters.find(ch => ch.exercicesKey === allChapterKeys[currentIndex - 1]);
+        if (previousChapter) {
+          setShowLockModal(false);
+          (navigation as any).navigate('Chapter', { 
+            chapter: previousChapter
+          });
+        }
+      }
+    }
+  };
 
   // Génère la liste plate de tous les chapitres, sans doublon, avec association fiable
   const seen: { [key: string]: boolean } = {};
@@ -95,31 +179,136 @@ export default function QuizChapterSelectScreen() {
     return unsubscribe;
   }, [navigation]);
 
+
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 40}}>
       <Text style={styles.title}>Choisissez un chapitre pour le quiz</Text>
       <View style={styles.list}>
-        {allChapters.map((chapter, idx) => (
-          <TouchableOpacity
-            key={chapter.id}
-            style={styles.chapterCard}
-            onPress={() => (navigation as any).navigate('OriginalQuiz', { exercicesKey: chapter.exercicesKey, chapterTitle: chapter.title, chapterPart: chapter.partie })}
-            activeOpacity={0.85}
-          >
-            <View style={styles.chapterImageContainer}>
-            <Image
-              source={imageMap[chapter.image] || imageMap['1']}
-              style={styles.chapterImage}
-              resizeMode="cover"
-            />
+                {allChapters.map((chapter, idx) => {
+          const isUnlocked = isQuizUnlocked(chapter.exercicesKey);
+          const score = quizScores[chapter.exercicesKey];
+          
+          return (
+            <View key={chapter.id} style={styles.chapterWrapper}>
+              <TouchableOpacity
+                style={[
+                  styles.chapterCard,
+                  !isUnlocked && styles.lockedCard
+                ]}
+                onPress={() => handleChapterPress(chapter)}
+                activeOpacity={isUnlocked ? 0.85 : 1}
+              >
+                <View style={styles.chapterImageContainer}>
+                  <Image
+                    source={imageMap[chapter.image] || imageMap['1']}
+                    style={[
+                      styles.chapterImage,
+                      !isUnlocked && styles.lockedImage
+                    ]}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.chapterInfo}>
+                  <Text style={[
+                    styles.chapterTitle,
+                    !isUnlocked && styles.lockedText
+                  ]}>
+                    {chapter.title && chapter.title.trim() !== '' ? `Quiz du ${chapter.title}` : `Quiz du chapitre ${chapter.exercicesKey}`}
+                  </Text>
+                  <Text style={[
+                    styles.chapterPart,
+                    !isUnlocked && styles.lockedText
+                  ]}>
+                    {chapter.partie || 'Partie inconnue'}
+                  </Text>
+                  {isUnlocked && score !== undefined && (
+                    <View style={styles.scoreContainer}>
+                      <Text style={styles.scoreText}>Score: {score}%</Text>
+                    </View>
+                  )}
+                  {!isUnlocked && (
+                    <Text style={styles.lockedMessage}>Quiz verrouillé</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+              {!isUnlocked && (
+                <View style={styles.lockContainer}>
+                  <Image
+                    source={require('../../assets/lock-closed.png')}
+                    style={styles.lockIcon}
+                    resizeMode="contain"
+                  />
+                </View>
+              )}
             </View>
-            <View style={styles.chapterInfo}>
-              <Text style={styles.chapterTitle}>{chapter.title && chapter.title.trim() !== '' ? chapter.title : `Chapitre ${chapter.exercicesKey}`}</Text>
-              <Text style={styles.chapterPart}>{chapter.partie || 'Partie inconnue'}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+          );
+        })}
       </View>
+      
+      {/* Modal personnalisé pour les quiz verrouillés */}
+      <Modal
+        visible={showLockModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLockModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCardContainer}>
+            {/* Carte arrière (la plus profonde) - Vert foncé */}
+            <View style={styles.modalBackCard} />
+            
+            {/* Carte du milieu - Dorée */}
+            <View style={styles.modalMiddleCard} />
+            
+            {/* Carte blanche principale */}
+            <View style={styles.modalWhiteCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>🔒 Quiz Verrouillé</Text>
+                <TouchableOpacity 
+                  style={styles.closeModalButton}
+                  onPress={() => setShowLockModal(false)}
+                >
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.modalContent}>
+                <Text style={styles.modalMessage}>
+                  {previousScore !== undefined 
+                    ? `Vous avez obtenu ${previousScore}% au quiz précédent.`
+                    : 'Vous n\'avez pas encore fait le quiz précédent.'
+                  }
+                </Text>
+                
+                <Text style={styles.modalRequirement}>
+                  📚 Pour débloquer ce quiz, vous devez obtenir au moins 80%.
+                </Text>
+                
+                <Text style={styles.modalAdvice}>
+                  💡 Conseil : Relisez le chapitre pour mieux comprendre, puis refaites le quiz !
+                </Text>
+              </View>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.cancelButton}
+                  onPress={() => setShowLockModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Annuler</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={goToPreviousChapter}
+                >
+                  <Text style={styles.actionButtonText}>Lire le chapitre précédent</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -133,13 +322,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 16,
-    marginBottom: 16,
     padding: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
+    minHeight: 80,
   },
   chapterImageContainer: {
     width: 60,
@@ -221,5 +410,210 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     marginTop: 0,
     alignSelf: 'center',
+  },
+  // Styles pour les chapitres verrouillés
+  lockedCard: {
+    opacity: 0.7,
+    backgroundColor: '#f8f8f8',
+  },
+  lockedImage: {
+    opacity: 0.5,
+  },
+  lockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 12,
+  },
+  lockIcon: {
+    width: 45,
+    height: 45,
+    tintColor: '#BB9B4E',
+  },
+  lockedText: {
+    color: '#999',
+  },
+  lockedMessage: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  scoreContainer: {
+    marginTop: 4,
+    backgroundColor: colors.primary + '15',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+  },
+  scoreText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  chapterWrapper: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  lockContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  clearButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginHorizontal: 18,
+    marginBottom: 10,
+    alignSelf: 'center',
+  },
+  clearButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  // Styles pour le modal personnalisé
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCardContainer: {
+    width: '90%',
+    maxWidth: 400,
+    position: 'relative',
+  },
+  modalBackCard: {
+    backgroundColor: '#0F3A2E',
+    borderRadius: 20,
+    height: 280,
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
+    borderWidth: 2,
+    borderColor: '#0A2D23',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalMiddleCard: {
+    backgroundColor: '#BB9B4E',
+    borderRadius: 20,
+    height: 270,
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    right: 4,
+    borderWidth: 2,
+    borderColor: '#A08642',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 7,
+  },
+  modalWhiteCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 15,
+    borderWidth: 2,
+    borderColor: '#F0F0F0',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  closeModalButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  modalContent: {
+    marginBottom: 24,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  modalRequirement: {
+    fontSize: 15,
+    color: colors.primary,
+    fontWeight: '600',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  modalAdvice: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#BB9B4E',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 }); 
