@@ -106,6 +106,7 @@ export default function OriginalQuizScreen() {
   const [fadeAnim] = useState(new Animated.Value(1));
   const [showTextModal, setShowTextModal] = useState(false);
   const [selectedText, setSelectedText] = useState('');
+  const [starAnim] = useState(new Animated.Value(1));
 
   // Protection : si pas de questions, on affiche un message et on redirige
   useEffect(() => {
@@ -113,6 +114,44 @@ export default function OriginalQuizScreen() {
       navigation.navigate('QuizChapterSelect' as never);
     }
   }, [quizData.length, navigation]);
+
+  // Recharger le quiz quand les paramètres changent
+  useEffect(() => {
+    const newExercicesKey = (route.params && (route.params as any).exercicesKey) || '1';
+    if (newExercicesKey !== exercicesKey) {
+      // Les paramètres ont changé, recharger le quiz
+      const newRawQuizData = exercicesFiles[newExercicesKey] || [];
+      setQuizData(generateOptionsForQuiz(newRawQuizData));
+      setCurrentQuestionIndex(0);
+      setScore(0);
+      setSelectedAnswerIndex(null);
+      setIsAnswerCorrect(null);
+      setShowAnswer(false);
+      setShowResults(false);
+      setShowQuestionPage(true);
+      fadeAnim.setValue(1);
+    }
+  }, [route.params, exercicesKey, exercicesFiles]);
+
+  // Animation de l'étoile qui scintille
+  useEffect(() => {
+    const animateStar = () => {
+      Animated.sequence([
+        Animated.timing(starAnim, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(starAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]).start(() => animateStar());
+    };
+    
+    animateStar();
+  }, [starAnim]);
 
   if (!quizData.length) {
     return (
@@ -301,11 +340,8 @@ export default function OriginalQuizScreen() {
       const nextQuizKey = availableChapters[currentIndex + 1];
       console.log('➡️ Navigation vers le quiz suivant:', nextQuizKey);
       
-      // Utiliser reset pour forcer un rechargement complet
-      (navigation as any).reset({
-        index: 0,
-        routes: [{ name: 'OriginalQuiz', params: { exercicesKey: nextQuizKey } }],
-      });
+      // Utiliser replace pour forcer le rechargement de l'écran
+      (navigation as any).replace('OriginalQuiz', { exercicesKey: nextQuizKey });
     } else {
       // C'était le dernier quiz, retourner à la sélection des chapitres
       console.log('🏠 Retour à la sélection des chapitres (dernier quiz)');
@@ -320,7 +356,7 @@ export default function OriginalQuizScreen() {
     const canProceedToNext = scorePercentage >= 80;
     
     return (
-      <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
+      <SafeAreaView key={`results-${exercicesKey}`} style={styles.container} {...panResponder.panHandlers}>
         {/* Bouton de retour */}
         <TouchableOpacity 
           style={styles.backButton} 
@@ -357,6 +393,16 @@ export default function OriginalQuizScreen() {
               Votre score : {score} / {quizData.length}
             </Text>
             
+            {/* Message de félicitations pour 100% */}
+            {scorePercentage === 100 && (
+              <View style={styles.congratulationsContainer}>
+                <Text style={styles.congratulationsText}>Bravo, vous avez réussi le quiz</Text>
+                <Animated.View style={[styles.starContainer, { opacity: starAnim }]}>
+                  <MaterialCommunityIcons name="star" size={30} color="#D4AF37" />
+                </Animated.View>
+              </View>
+            )}
+            
             {/* Espace pour pousser le bouton vers le bas */}
             <View style={styles.spacer} />
             
@@ -378,7 +424,7 @@ export default function OriginalQuizScreen() {
   const currentQuestion = quizData[currentQuestionIndex];
 
   return (
-    <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
+    <SafeAreaView key={`quiz-${exercicesKey}`} style={styles.container} {...panResponder.panHandlers}>
       {/* Bouton de retour */}
       <TouchableOpacity 
         style={styles.backButton} 
@@ -993,6 +1039,23 @@ const styles = StyleSheet.create({
   },
   optionTextIncorrect: {
     color: '#DC3545',
+  },
+  congratulationsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  congratulationsText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#174C3C',
+    marginRight: 8,
+  },
+  starContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
 
