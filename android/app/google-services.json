@@ -1,36 +1,26 @@
 {
   "project_info": {
-    "project_number": "372160219580",
-    "project_id": "at-taqwa-app-adc7e",
-    "storage_bucket": "at-taqwa-app-adc7e.firebasestorage.app"
+    "project_number": "569440550273",
+    "project_id": "at-taqwa-app-14b7f",
+    "storage_bucket": "at-taqwa-app-14b7f.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:372160219580:android:73a9023c01f3f2b732c3b9",
+        "mobilesdk_app_id": "1:569440550273:android:c8ce88c156d784a643fc80",
         "android_client_info": {
           "package_name": "com.anonymous.attaqwaapp"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "372160219580-n5ep9ap5c4h2322cvrouc0jner2avj4n.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCOU8YAwyeL4Q7h3IbPrajVHAFvwblEkSI"
+          "current_key": "AIzaSyAxEHjynhNxiWP6HFdeWamSFk3YJy0-rto"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "372160219580-n5ep9ap5c4h2322cvrouc0jner2avj4n.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

@@ -74,7 +74,7 @@ function SplashFamille() {
       <View style={styles.topContentBlock}>
         {/* Logo en haut */}
         <Image 
-          source={require('./assets/Page acceuil dome mosquée.png')} 
+          source={require('./assets/Page_acceuil_dome_mosquee.png')} 
           style={styles.splashFamilleLogo}
         />
         {/* Texte principal */}
@@ -86,7 +86,7 @@ function SplashFamille() {
       </View>
       {/* Image de la famille en bas */}
       <Image 
-        source={require('./assets/femme et enfant (2).png')} 
+        source={require('./assets/femme_et_enfant_2.png')} 
         style={styles.splashFamilleImageXL}
       />
     </View>

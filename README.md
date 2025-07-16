@@ -97,6 +97,12 @@ npm install -g @expo/eas-cli
 
 # Se connecter à Expo
 eas login
+mdp application
+
+ltao-qwfr-alqa-yyrj
+ltao-qwfr-alqa-yyrj
+ltao-qwfr-alqa-yyrj
+ltao-qwfr-alqa-yyrj
 
 # Build iOS
 eas build --platform ios --profile preview

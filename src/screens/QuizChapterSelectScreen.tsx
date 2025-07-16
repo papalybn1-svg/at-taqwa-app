@@ -1,11 +1,10 @@
-import { useNavigation, useRoute } from '@react-navigation/native';
-import React, { useState, useEffect, useCallback } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, BackHandler, Alert, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { BackHandler, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import colors from '../theme/colors';
-import { useFocusEffect } from '@react-navigation/native';
 
 // Liste centralisée des fichiers d'exercices (clé = numéro de chapitre sous forme de string)
 const exercicesFiles: { [key: string]: any[] } = {
@@ -28,7 +27,7 @@ function SplashFamille() {
       <View style={styles.topContentBlock}>
         {/* Logo en haut */}
         <Image 
-          source={require('../../assets/Page acceuil dome mosquée.png')} 
+          source={require('../../assets/Page_acceuil_dome_mosquee.png')} 
           style={styles.splashFamilleLogo}
         />
         {/* Texte principal */}
@@ -40,7 +39,7 @@ function SplashFamille() {
       </View>
       {/* Image de la famille en bas */}
       <Image 
-        source={require('../../assets/femme et enfant (2).png')} 
+        source={require('../../assets/femme_et_enfant_2.png')} 
         style={styles.splashFamilleImageXL}
       />
     </View>

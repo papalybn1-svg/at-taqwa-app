@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyDW5FH70GhqIdIAkTb1qno2syl87-O-cHw</string>
+	<string>AIzaSyAG7_EjOI-4K0l5EfE1lcK_9AqaeoggjGk</string>
 	<key>GCM_SENDER_ID</key>
-	<string>372160219580</string>
+	<string>569440550273</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.attaqwa.app</string>
+	<string>com.anonymous.attaqwaapp</string>
 	<key>PROJECT_ID</key>
-	<string>at-taqwa-app-adc7e</string>
+	<string>at-taqwa-app-14b7f</string>
 	<key>STORAGE_BUCKET</key>
-	<string>at-taqwa-app-adc7e.firebasestorage.app</string>
+	<string>at-taqwa-app-14b7f.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:372160219580:ios:2ecf0436837d293f32c3b9</string>
+	<string>1:569440550273:ios:15d97a6c1924536543fc80</string>
 </dict>
 </plist>

@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "at-taqwa-app",
+    "owner": "brahim98",
     "slug": "at-taqwa-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -41,7 +42,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "ea2b8603-1d83-4fd3-a8e3-b66867893279"
+        "projectId": "c0367c88-9331-4f3c-b747-fa3750f9072e"
       }
     }
   }

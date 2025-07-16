@@ -4,8 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, Image, Platform, Vibration } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import colors from "../theme/colors";
 
 const ZIKR_PROGRESS_KEY = '@zikr_progress';
@@ -411,7 +410,7 @@ export default function TasbihScreen() {
                   activeOpacity={0.8}
                 >
                   <Image 
-                    source={require('../../assets/Chapelet éléctronique.png')} 
+                    source={require('../../assets/Chapelet_electronique.png')} 
                     style={styles.tasbihImage}
                     resizeMode="contain"
                   />
