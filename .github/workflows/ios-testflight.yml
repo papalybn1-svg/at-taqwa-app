@@ -24,11 +24,7 @@ jobs:
     - name: Setup Expo CLI
       run: npm install -g @expo/cli eas-cli
       
-    - name: Login to Expo
-      run: |
-        echo ${{ secrets.EXPO_TOKEN }} | eas login --non-interactive
-      env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      
     - name: Build and submit to TestFlight
-      run: eas submit -p ios --latest --non-interactive 
+      run: eas submit -p ios --latest --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }} 
