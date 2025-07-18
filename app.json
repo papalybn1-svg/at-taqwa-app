@@ -16,12 +16,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-      "buildNumber": "1.0.2",
+      "buildNumber": "1.1.1",
       "infoPlist": {
         "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
         "NSCameraUsageDescription": "Cette application nécessite l'accès à la caméra pour certaines fonctionnalités.",
         "NSPhotoLibraryUsageDescription": "Cette application nécessite l'accès à la galerie pour certaines fonctionnalités.",
+        "NSLocationWhenInUseUsageDescription": "Cette application nécessite l'accès à votre localisation pour calculer les heures de prière précises selon votre position géographique.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Cette application nécessite l'accès à votre localisation pour calculer les heures de prière et vous envoyer des notifications de rappel.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -32,7 +34,14 @@
       },
       "edgeToEdgeEnabled": false,
       "enableHermes": true,
-      "package": "com.anonymous.attaqwaapp"
+      "package": "com.attaqwa.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "WAKE_LOCK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

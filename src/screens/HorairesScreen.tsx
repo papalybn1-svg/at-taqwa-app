@@ -14,6 +14,35 @@ const PRAYER_LABELS = [
   { key: 'Isha', label: 'Isha', icon: 'weather-night', color: '#7E57C2' },
 ];
 
+// Fonction pour obtenir la date actuelle en français
+function getCurrentDate() {
+  const now = new Date();
+  const options: Intl.DateTimeFormatOptions = { 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  };
+  return now.toLocaleDateString('fr-FR', options);
+}
+
+// Fonction pour obtenir la date Hijri approximative
+function getHijriDate() {
+  const now = new Date();
+  // Conversion approximative (peut être améliorée avec une vraie API Hijri)
+  const gregorianYear = now.getFullYear();
+  const hijriYear = gregorianYear - 579; // Approximation
+  const hijriMonth = now.getMonth() + 1;
+  const hijriDay = now.getDate();
+  
+  const hijriMonths = [
+    'Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
+    'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Shaaban',
+    'Ramadan', 'Shawwal', 'Dhu al-Qadah', 'Dhu al-Hijjah'
+  ];
+  
+  return `${hijriDay} ${hijriMonths[hijriMonth - 1]} ${hijriYear}`;
+}
+
 // Fonction utilitaire pour formater l'heure
 function formatPrayerTime(time: string) {
   if (!time) return '6H01';
@@ -45,87 +74,180 @@ export default function HorairesScreen() {
   const navigation = require('@react-navigation/native').useNavigation();
 
   useEffect(() => {
-    fetchPrayerTimes();
-    // Ne pas afficher d'alerte si expo-notifications n'est pas supporté
-    try {
-      Notifications.requestPermissionsAsync();
-    } catch (e) {
-      // Silencieux
-    }
+    // Fonction sécurisée pour charger les données
+    const loadData = async () => {
+      try {
+        await fetchPrayerTimes();
+      } catch (error) {
+        console.log('❌ Erreur lors du chargement initial:', error);
+        // L'erreur est déjà gérée dans fetchPrayerTimes
+      }
+    };
+    
+    // Gestion sécurisée des permissions de notifications
+    const requestNotificationPermissions = async () => {
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        console.log('🔔 Status permissions notifications:', status);
+      } catch (error) {
+        console.log('❌ Erreur permissions notifications:', error);
+        // Continue sans notifications si erreur
+      }
+    };
+    
+    // Exécuter les fonctions de manière sécurisée
+    loadData();
+    requestNotificationPermissions();
   }, []);
 
   const fetchPrayerTimes = async (manualCity?: string) => {
     setLoading(true);
     try {
       let url = '';
-      if (manualCity || city) {
-        const targetCity = manualCity || city;
-        url = `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(targetCity)}&country=&method=2&school=1&iso8601=true`;
+      let targetCity = 'Dakar'; // Ville par défaut
+      
+      if (manualCity) {
+        targetCity = manualCity;
+        // API pour une ville spécifique du Sénégal
+        url = `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(targetCity)}&country=Senegal&method=4&school=1`;
       } else {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          // Utiliser des données par défaut
-          setPrayerTimes({
-            Fajr: '05:30',
-            Sunrise: '06:45',
-            Dhuhr: '13:15',
-            Asr: '16:30',
-            Maghrib: '19:45',
-            Isha: '21:00'
-          });
-          setDate('23 Janvier 2025');
-          setHijri('24 Rajab 1446');
-          setCity('Dakar');
-          setLoading(false);
-          return;
+        try {
+          // Demander la permission de localisation
+          let { status } = await Location.requestForegroundPermissionsAsync();
+          
+          if (status === 'granted') {
+            // Si permission accordée, utiliser la localisation GPS
+            const location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+              timeInterval: 5000,
+              distanceInterval: 10
+            });
+            
+            console.log('📍 Localisation GPS obtenue:', location.coords.latitude, location.coords.longitude);
+            
+            // API avec coordonnées GPS précises
+            url = `https://api.aladhan.com/v1/timings/${Math.floor(Date.now()/1000)}?latitude=${location.coords.latitude}&longitude=${location.coords.longitude}&method=4&school=1`;
+          } else {
+            console.log('🚫 Permission localisation refusée, utilisation Dakar par défaut');
+            url = `https://api.aladhan.com/v1/timingsByCity?city=Dakar&country=Senegal&method=4&school=1`;
+          }
+        } catch (locationError) {
+          console.log('❌ Erreur localisation, utilisation Dakar par défaut:', locationError);
+          url = `https://api.aladhan.com/v1/timingsByCity?city=Dakar&country=Senegal&method=4&school=1`;
         }
-        const location = await Location.getCurrentPositionAsync({});
-        url = `https://api.aladhan.com/v1/timings/${Math.floor(Date.now()/1000)}?latitude=${location.coords.latitude}&longitude=${location.coords.longitude}&method=2&school=1&iso8601=true`;
       }
-      const res = await fetch(url);
+      
+      console.log('🌐 Appel API heures de prière:', url);
+      
+      // Timeout pour éviter les appels trop longs
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 secondes max
+      
+      const res = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'At-Taqwa-App/1.0'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
-      if (data.code === 200) {
+      console.log('✅ Réponse API reçue:', data.status);
+      
+      if (data.code === 200 && data.data && data.data.timings) {
         setPrayerTimes(data.data.timings);
-        setDate(`${data.data.date.gregorian.day} ${data.data.date.gregorian.month.en} ${data.data.date.gregorian.year}`);
-        setHijri(`${data.data.date.hijri.day} ${data.data.date.hijri.month.en} ${data.data.date.hijri.year}`);
-        if (data.data.meta && data.data.meta.timezone) {
-          setCity(manualCity || city); 
+        
+        // Formatage de la date
+        if (data.data.date) {
+          const gregorian = data.data.date.gregorian;
+          const hijri = data.data.date.hijri;
+          
+          setDate(`${gregorian.day} ${gregorian.month.fr || gregorian.month.en} ${gregorian.year}`);
+          setHijri(`${hijri.day} ${hijri.month.fr || hijri.month.en} ${hijri.year}`);
         }
+        
+        // Mise à jour de la ville
+        if (manualCity) {
+          setCity(manualCity);
+        } else if (data.data.meta && data.data.meta.timezone) {
+          setCity(targetCity);
+        }
+        
+        console.log('✅ Heures de prière mises à jour avec succès');
       } else {
-        // Données par défaut en cas d'erreur
-        setPrayerTimes({
-          Fajr: '05:30',
-          Sunrise: '06:45',
-          Dhuhr: '13:15',
-          Asr: '16:30',
-          Maghrib: '19:45',
-          Isha: '21:00'
-        });
-        setDate('23 Janvier 2025');
-        setHijri('24 Rajab 1446');
-        setCity('Dakar');
+        throw new Error('Format de réponse API invalide');
       }
-    } catch (e) {
-      // Données par défaut en cas d'erreur
-      setPrayerTimes({
-        Fajr: '05:30',
-        Sunrise: '06:45',
+      
+    } catch (error) {
+      console.log('❌ Erreur lors de la récupération des heures de prière:', error);
+      
+      // En cas d'erreur API, utiliser des données de fallback mais avec la date actuelle
+      const fallbackTimes = {
+        Fajr: '05:45',
+        Sunrise: '07:00',
         Dhuhr: '13:15',
         Asr: '16:30',
-        Maghrib: '19:45',
-        Isha: '21:00'
-      });
-      setDate('23 Janvier 2025');
-      setHijri('24 Rajab 1446');
-      setCity('Dakar');
+        Maghrib: '19:30',
+        Isha: '20:45'
+      };
+      
+      setPrayerTimes(fallbackTimes);
+      setDate(getCurrentDate());
+      setHijri(getHijriDate());
+      setCity(manualCity || 'Dakar');
+      
+      console.log('⚠️ Utilisation des données de fallback en raison d\'une erreur API');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleCitySelect = () => {
-    setModalVisible(false);
-    setCity(cityInput);
-    fetchPrayerTimes(cityInput);
+    try {
+      setModalVisible(false);
+      if (cityInput.trim()) {
+        const selectedCity = cityInput.trim();
+        
+        // Liste des villes principales du Sénégal
+        const senegalCities = [
+          'Dakar', 'Saint-Louis', 'Thiès', 'Kaolack', 'Ziguinchor',
+          'Touba', 'Mbour', 'Rufisque', 'Diourbel', 'Louga',
+          'Tambacounda', 'Kolda', 'Fatick', 'Kaffrine', 'Sédhiou',
+          'Matam', 'Kédougou', 'Podor', 'Bakel', 'Kédougou'
+        ];
+        
+        // Recherche de la ville (insensible à la casse)
+        const foundCity = senegalCities.find(city => 
+          city.toLowerCase().includes(selectedCity.toLowerCase()) ||
+          selectedCity.toLowerCase().includes(city.toLowerCase())
+        );
+        
+        if (foundCity) {
+          setCity(foundCity);
+          fetchPrayerTimes(foundCity);
+          console.log('✅ Ville sélectionnée:', foundCity);
+        } else {
+          console.log('⚠️ Ville non trouvée, utilisation Dakar par défaut');
+          setCity('Dakar');
+          fetchPrayerTimes('Dakar');
+        }
+      } else {
+        console.log('⚠️ Nom de ville vide, utilisation Dakar par défaut');
+        setCity('Dakar');
+        fetchPrayerTimes('Dakar');
+      }
+    } catch (error) {
+      console.log('❌ Erreur lors du changement de ville:', error);
+      setModalVisible(false);
+      setCity('Dakar');
+      fetchPrayerTimes('Dakar');
+    }
   };
 
   // Détection de la prochaine prière
@@ -161,6 +283,13 @@ export default function HorairesScreen() {
   // Fonction pour planifier une notification locale
   async function schedulePrayerNotification(prayerKey: string, time: string, label: string) {
     try {
+      // Vérifier d'abord les permissions
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('🔔 Permissions notifications non accordées');
+        return;
+      }
+      
       // Formate l'heure
       let h, m;
       if (/^\d{2}:\d{2}$/.test(time)) {
@@ -169,10 +298,20 @@ export default function HorairesScreen() {
         const match = time.match(/T(\d{2}):(\d{2})/);
         if (match) {
           h = match[1]; m = match[2];
-        } else return;
+        } else {
+          console.log('❌ Format d\'heure invalide pour notification:', time);
+          return;
+        }
       }
+      
       const hour = Number(h);
       const minute = Number(m);
+      
+      if (isNaN(hour) || isNaN(minute)) {
+        console.log('❌ Heures invalides pour notification:', h, m);
+        return;
+      }
+      
       const id = await Notifications.scheduleNotificationAsync({
         content: {
           title: `Heure de ${label}`,
@@ -186,9 +325,11 @@ export default function HorairesScreen() {
           repeats: true,
         },
       });
+      
       setEnabledNotifications((prev) => ({ ...prev, [prayerKey]: id }));
-    } catch (e) {
-      // Silencieux si non supporté
+      console.log('✅ Notification programmée pour', label, 'à', `${h}:${m}`);
+    } catch (error) {
+      console.log('❌ Erreur lors de la programmation de notification:', error);
     }
   }
 
@@ -199,9 +340,10 @@ export default function HorairesScreen() {
       if (id) {
         await Notifications.cancelScheduledNotificationAsync(id);
         setEnabledNotifications((prev) => ({ ...prev, [prayerKey]: null }));
+        console.log('✅ Notification annulée pour', prayerKey);
       }
-    } catch (e) {
-      // Silencieux si non supporté
+    } catch (error) {
+      console.log('❌ Erreur lors de l\'annulation de notification:', error);
     }
   }
 
@@ -279,10 +421,14 @@ export default function HorairesScreen() {
                   <TouchableOpacity
                       style={styles.notificationButton}
                     onPress={async () => {
-                      if (enabledNotifications[item.key]) {
-                        await cancelPrayerNotification(item.key);
-                      } else if (prayerTimes && prayerTimes[item.key]) {
-                        await schedulePrayerNotification(item.key, prayerTimes[item.key], item.label);
+                      try {
+                        if (enabledNotifications[item.key]) {
+                          await cancelPrayerNotification(item.key);
+                        } else if (prayerTimes && prayerTimes[item.key]) {
+                          await schedulePrayerNotification(item.key, prayerTimes[item.key], item.label);
+                        }
+                      } catch (error) {
+                        console.log('❌ Erreur lors de la gestion de notification:', error);
                       }
                     }}
                   >
@@ -313,6 +459,29 @@ export default function HorairesScreen() {
               onChangeText={setCityInput}
               placeholderTextColor="#999"
             />
+            
+            {/* Liste des villes disponibles */}
+            <View style={styles.availableCitiesContainer}>
+              <Text style={styles.availableCitiesTitle}>Villes principales du Sénégal :</Text>
+              <View style={styles.availableCitiesList}>
+                {[
+                  'Dakar', 'Saint-Louis', 'Thiès', 'Kaolack', 'Ziguinchor',
+                  'Touba', 'Mbour', 'Rufisque', 'Diourbel', 'Louga',
+                  'Tambacounda', 'Kolda', 'Fatick', 'Kaffrine', 'Sédhiou'
+                ].map((cityName) => (
+                  <TouchableOpacity
+                    key={cityName}
+                    style={styles.cityOption}
+                    onPress={() => {
+                      setCityInput(cityName);
+                    }}
+                  >
+                    <Text style={styles.cityOptionText}>{cityName}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisible(false)}>
                 <Text style={styles.modalCancelText}>Annuler</Text>
@@ -575,6 +744,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     marginRight: 3,
+  },
+  availableCitiesContainer: {
+    marginTop: 15,
+    marginBottom: 15,
+  },
+  availableCitiesTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#555',
+    marginBottom: 8,
+  },
+  availableCitiesList: {
+    backgroundColor: '#F0F0F0',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  cityOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginVertical: 2,
+  },
+  cityOptionText: {
+    fontSize: 13,
+    color: '#333',
   },
 
 }); 

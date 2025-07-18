@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "569440550273",
-    "project_id": "at-taqwa-app-14b7f",
-    "storage_bucket": "at-taqwa-app-14b7f.firebasestorage.app"
+    "project_number": "910575592863",
+    "project_id": "at-taqwa-ff71e",
+    "storage_bucket": "at-taqwa-ff71e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:569440550273:android:c8ce88c156d784a643fc80",
+        "mobilesdk_app_id": "1:910575592863:android:86f93a3acf7e0a8a8249aa",
         "android_client_info": {
-          "package_name": "com.anonymous.attaqwaapp"
+          "package_name": "com.attaqwa.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAxEHjynhNxiWP6HFdeWamSFk3YJy0-rto"
+          "current_key": "AIzaSyBKTghU1ZJbC2MMHQJ7U9lS_uu1Ehr6zL4"
         }
       ],
       "services": {
