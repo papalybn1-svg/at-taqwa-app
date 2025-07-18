@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -7,7 +8,10 @@ import { AuthUser } from '../hooks/useAuth';
 import { auth } from './firebaseConfig';
 
 // Créer le contexte utilisateur
-export const AuthContext = createContext<{ user: AuthUser | null, setUser: (u: AuthUser | null) => void }>({ user: null, setUser: () => {} });
+export const AuthContext = createContext<{ user: AuthUser | null, setUser: (u: AuthUser | null) => void }>({ 
+  user: null, 
+  setUser: () => {} 
+});
 
 // Ajouter un composant Toast moderne
 function Toast({ visible, message, type, onHide }: { visible: boolean, message: string, type: 'success' | 'error', onHide: () => void }) {
@@ -26,6 +30,14 @@ function Toast({ visible, message, type, onHide }: { visible: boolean, message: 
 }
 
 const db = getFirestore();
+
+// Clés pour AsyncStorage (même que dans useAuth)
+const STORAGE_KEYS = {
+  USER_ROLE: 'userRole',
+  USER_EMAIL: 'userEmail',
+  USER_DISPLAY_NAME: 'userDisplayName',
+  LAST_LOGIN: 'lastLogin'
+};
 
 export default function LoginScreen({ navigation }: any) {
   const [screen, setScreen] = useState<'intro' | 'login' | 'register'>('intro');
@@ -56,6 +68,19 @@ export default function LoginScreen({ navigation }: any) {
           createdAt: new Date(),
           displayName: `${prenom} ${nom}`,
         });
+
+        // Sauvegarder les données utilisateur localement pour Expo Go
+        try {
+          await AsyncStorage.multiSet([
+            [STORAGE_KEYS.USER_ROLE, 'user'],
+            [STORAGE_KEYS.USER_EMAIL, userCred.user.email || ''],
+            [STORAGE_KEYS.USER_DISPLAY_NAME, `${prenom} ${nom}`],
+            [STORAGE_KEYS.LAST_LOGIN, new Date().toISOString()]
+          ]);
+          console.log('✅ Données utilisateur sauvegardées localement (inscription)');
+        } catch (error) {
+          console.error('❌ Erreur sauvegarde locale:', error);
+        }
 
         showToast('Inscription réussie ! Vous êtes maintenant connecté.', 'success');
         console.log('✅ Inscription réussie pour:', userCred.user.email);
@@ -101,6 +126,20 @@ export default function LoginScreen({ navigation }: any) {
           } catch (notifError) {
             console.log("⚠️ Erreur création notification de bienvenue:", notifError);
           }
+        }
+
+        // Sauvegarder les données utilisateur localement pour Expo Go
+        try {
+          const userRole = userData?.role || 'user';
+          await AsyncStorage.multiSet([
+            [STORAGE_KEYS.USER_ROLE, userRole],
+            [STORAGE_KEYS.USER_EMAIL, userCred.user.email || ''],
+            [STORAGE_KEYS.USER_DISPLAY_NAME, userCred.user.displayName || ''],
+            [STORAGE_KEYS.LAST_LOGIN, new Date().toISOString()]
+          ]);
+          console.log('✅ Données utilisateur sauvegardées localement (connexion)');
+        } catch (error) {
+          console.error('❌ Erreur sauvegarde locale:', error);
         }
 
         showToast('Connexion réussie ! Redirection en cours...', 'success');

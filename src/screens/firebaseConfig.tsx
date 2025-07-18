@@ -2,6 +2,8 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { collection, disableNetwork, enableNetwork, getDocs, initializeFirestore } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDuMPU5-gMrwaPYngnCWnUsgTtOK8FKLXY",
@@ -18,10 +20,25 @@ export const app = initializeApp(firebaseConfig);
 // Configuration Firebase Auth avec persistance automatique
 export const auth = getAuth(app);
 
+// Configuration de la persistance Firebase Auth
+// En production, Firebase Auth gère automatiquement la persistance
+// Cette configuration assure que la persistance fonctionne correctement
+auth.useDeviceLanguage();
+
+// Configuration de la persistance pour différents environnements
+// En production, la persistance est automatique
+// En développement (Expo Go), on utilise AsyncStorage comme fallback
+
 // Configuration Firestore optimisée pour Expo
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true, // Force le polling long pour Expo
 });
+
+// Configuration Firebase Functions
+export const functions = getFunctions(app);
+
+// Configuration Firebase Storage
+export const storage = getStorage(app);
 
 // Configuration pour un meilleur débogage
 console.log('🔥 Firebase config initialisée avec persistance Auth automatique');

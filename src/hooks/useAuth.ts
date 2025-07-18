@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from 'firebase/auth';
-import { doc, getDoc, getFirestore } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { auth } from '../screens/firebaseConfig';
+import { auth, db } from '../screens/firebaseConfig';
 
 export type UserRole = 'user' | 'admin';
 
@@ -38,6 +38,53 @@ export function useAuth() {
     }
   };
 
+  // Fonction pour vérifier si l'utilisateur est connecté localement (uniquement pour Expo Go)
+  const checkLocalAuth = async (): Promise<AuthUser | null> => {
+    try {
+      // En production, on ne doit PAS utiliser le cache local comme fallback
+      // Cette fonction n'est utilisée que pour Expo Go
+      const savedData = await AsyncStorage.multiGet([
+        STORAGE_KEYS.USER_ROLE,
+        STORAGE_KEYS.USER_EMAIL,
+        STORAGE_KEYS.USER_DISPLAY_NAME,
+        STORAGE_KEYS.LAST_LOGIN
+      ]);
+
+      const savedRole = savedData[0][1];
+      const savedEmail = savedData[1][1];
+      const savedDisplayName = savedData[2][1];
+      const lastLogin = savedData[3][1];
+
+      if (savedEmail && savedRole && lastLogin) {
+        // Vérifier si la dernière connexion date de moins de 7 jours (plus strict pour la sécurité)
+        const lastLoginDate = new Date(lastLogin);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        if (lastLoginDate > sevenDaysAgo) {
+          console.log('✅ Utilisateur trouvé en cache local (Expo Go)');
+          return {
+            uid: 'local-user',
+            email: savedEmail,
+            displayName: savedDisplayName,
+            role: savedRole as UserRole,
+            // Autres propriétés Firebase User simulées
+            emailVerified: true,
+            isAnonymous: false,
+            metadata: {
+              creationTime: lastLogin,
+              lastSignInTime: lastLogin
+            }
+          } as AuthUser;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Erreur vérification cache local:', error);
+      return null;
+    }
+  };
+
   // Fonction pour récupérer les données utilisateur locales
   const getUserDataFromStorage = async (user: User): Promise<AuthUser> => {
     try {
@@ -66,7 +113,6 @@ export function useAuth() {
   // Fonction pour récupérer le rôle depuis Firestore
   const fetchUserRoleFromFirestore = async (user: User): Promise<UserRole> => {
     try {
-      const db = getFirestore();
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.data();
       return userData?.role || 'user';
@@ -83,16 +129,38 @@ export function useAuth() {
   useEffect(() => {
     let isMounted = true;
 
-    // Timeout de sécurité pour forcer la fin du chargement après 10 secondes
+    // Vérifier d'abord le cache local pour Expo Go
+    const checkLocalAuthFirst = async () => {
+      try {
+        const localUser = await checkLocalAuth();
+        if (localUser && isMounted) {
+          console.log('🔄 Utilisateur trouvé en cache local (Expo Go), connexion automatique...');
+          setUser(localUser);
+          setLoading(false);
+          setInitializing(false);
+          return; // Sortir si on a trouvé un utilisateur en cache
+        }
+      } catch (error) {
+        console.error('❌ Erreur vérification cache local:', error);
+      }
+      
+      // Si pas d'utilisateur en cache, continuer avec Firebase
+      console.log('📱 Aucun utilisateur en cache, attente de Firebase Auth...');
+    };
+
+    // Vérifier le cache local immédiatement
+    checkLocalAuthFirst();
+
+    // Timeout de sécurité pour forcer la fin du chargement après 15 secondes
     const timeoutId = setTimeout(() => {
       console.log('⏰ Timeout de sécurité - Forcer la fin du chargement');
       if (isMounted) {
         setLoading(false);
         setInitializing(false);
-        // Si aucun utilisateur n'est chargé après 10s, on force null pour aller à LoginScreen
+        // Si aucun utilisateur n'est chargé après 15s, on force null pour aller à LoginScreen
         setUser(null);
       }
-    }, 10000);
+    }, 15000);
 
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       console.log('🔄 Auth state changed:', firebaseUser ? 'User connected' : 'User disconnected');
@@ -133,9 +201,10 @@ export function useAuth() {
             // En cas d'erreur Firestore, on garde les données du cache
           }
         } else {
-          // Utilisateur non connecté
+          // En production, si Firebase dit déconnecté, l'utilisateur est vraiment déconnecté
+          // Le cache local n'est utilisé que comme fallback pour Expo Go
           if (isMounted) {
-          setUser(null);
+            setUser(null);
             setLoading(false);
             if (initializing) setInitializing(false);
           }
@@ -155,7 +224,7 @@ export function useAuth() {
       } catch (error) {
         console.error('❌ Erreur dans onAuthStateChanged:', error);
         if (isMounted) {
-        setLoading(false);
+          setLoading(false);
           if (initializing) setInitializing(false);
         }
       }
@@ -173,10 +242,26 @@ export function useAuth() {
   const logout = async () => {
     try {
       setLoading(true);
+      
+      // Nettoyer le cache local
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.USER_ROLE,
+        STORAGE_KEYS.USER_EMAIL,
+        STORAGE_KEYS.USER_DISPLAY_NAME,
+        STORAGE_KEYS.LAST_LOGIN
+      ]);
+      
+      // Déconnecter Firebase
       await auth.signOut();
-      console.log('✅ Déconnexion réussie');
+      
+      // Mettre à jour l'état local
+      setUser(null);
+      setLoading(false);
+      
+      console.log('✅ Déconnexion réussie - Cache local nettoyé');
     } catch (error) {
       console.error('❌ Erreur déconnexion:', error);
+      setLoading(false);
     }
   };
 

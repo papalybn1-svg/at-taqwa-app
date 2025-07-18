@@ -96,9 +96,6 @@ function SplashFamille() {
 export default function App() {
   const [splashStep, setSplashStep] = useState(0);
   const { user, loading, setUser } = useAuth();
-  
-  // TEMPORAIRE: Forcer l'affichage de LoginScreen après les splash screens
-  const [forceLogin, setForceLogin] = useState(false);
 
   useEffect(() => {
     if (splashStep === 0) {
@@ -106,13 +103,6 @@ export default function App() {
       return () => clearTimeout(timer);
     } else if (splashStep === 1) {
       const timer = setTimeout(() => setSplashStep(2), 2000);
-      return () => clearTimeout(timer);
-    } else if (splashStep === 2) {
-      // TEMPORAIRE: Après les splash screens, forcer LoginScreen après 2 secondes max
-      const timer = setTimeout(() => {
-        console.log('🔧 TEMPORAIRE: Forcer affichage LoginScreen');
-        setForceLogin(true);
-      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [splashStep]);
