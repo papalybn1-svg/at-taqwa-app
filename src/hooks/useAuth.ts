@@ -204,7 +204,7 @@ export function useAuth() {
           // En production, si Firebase dit déconnecté, l'utilisateur est vraiment déconnecté
           // Le cache local n'est utilisé que comme fallback pour Expo Go
           if (isMounted) {
-            setUser(null);
+          setUser(null);
             setLoading(false);
             if (initializing) setInitializing(false);
           }
@@ -224,7 +224,7 @@ export function useAuth() {
       } catch (error) {
         console.error('❌ Erreur dans onAuthStateChanged:', error);
         if (isMounted) {
-          setLoading(false);
+        setLoading(false);
           if (initializing) setInitializing(false);
         }
       }

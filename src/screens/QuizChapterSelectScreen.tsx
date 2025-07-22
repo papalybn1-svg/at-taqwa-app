@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { BackHandler, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import colors from '../theme/colors';
@@ -94,6 +95,16 @@ export default function QuizChapterSelectScreen() {
     return previousScore !== undefined && previousScore >= 80;
   };
 
+  // Gestionnaire de geste de swipe
+  const onGestureEvent = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX, velocityX } = event.nativeEvent;
+      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
+        navigation.goBack();
+      }
+    }
+  };
+
   // Gérer le clic sur un chapitre
   const handleChapterPress = (chapter: any) => {
     if (!isQuizUnlocked(chapter.exercicesKey)) {
@@ -181,7 +192,9 @@ export default function QuizChapterSelectScreen() {
 
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 40}}>
+    <GestureHandlerRootView style={styles.container}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+        <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 40}}>
       <Text style={styles.title}>Choisissez un chapitre pour le quiz</Text>
       <View style={styles.list}>
                 {allChapters.map((chapter, idx) => {
@@ -254,16 +267,9 @@ export default function QuizChapterSelectScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCardContainer}>
-            {/* Carte arrière (la plus profonde) - Vert foncé */}
-            <View style={styles.modalBackCard} />
-            
-            {/* Carte du milieu - Dorée */}
-            <View style={styles.modalMiddleCard} />
-            
-            {/* Carte blanche principale */}
-            <View style={styles.modalWhiteCard}>
+            <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>🔒 Quiz Verrouillé</Text>
+                <Text style={styles.modalTitle}>Quiz Verrouillé</Text>
                 <TouchableOpacity 
                   style={styles.closeModalButton}
                   onPress={() => setShowLockModal(false)}
@@ -281,11 +287,11 @@ export default function QuizChapterSelectScreen() {
                 </Text>
                 
                 <Text style={styles.modalRequirement}>
-                  📚 Pour débloquer ce quiz, vous devez obtenir au moins 80%.
+                  Pour débloquer ce quiz, vous devez obtenir au moins 80%.
                 </Text>
                 
                 <Text style={styles.modalAdvice}>
-                  💡 Conseil : Relisez le chapitre pour mieux comprendre, puis refaites le quiz !
+                  Conseil : Relisez le chapitre pour mieux comprendre, puis refaites le quiz !
                 </Text>
               </View>
               
@@ -308,7 +314,9 @@ export default function QuizChapterSelectScreen() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+        </ScrollView>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 
@@ -485,81 +493,52 @@ const styles = StyleSheet.create({
   // Styles pour le modal personnalisé
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   modalCardContainer: {
-    width: '90%',
+    width: '100%',
     maxWidth: 400,
-    position: 'relative',
   },
-  modalBackCard: {
-    backgroundColor: '#0F3A2E',
-    borderRadius: 20,
-    height: 280,
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    right: 8,
-    borderWidth: 2,
-    borderColor: '#0A2D23',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalMiddleCard: {
-    backgroundColor: '#BB9B4E',
-    borderRadius: 20,
-    height: 270,
-    position: 'absolute',
-    bottom: 4,
-    left: 4,
-    right: 4,
-    borderWidth: 2,
-    borderColor: '#A08642',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 7,
-  },
-  modalWhiteCard: {
-    backgroundColor: 'white',
-    borderRadius: 20,
+  modalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 15,
-    borderWidth: 2,
-    borderColor: '#F0F0F0',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: colors.primary,
   },
   closeModalButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#f0f0f0',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
+    color: colors.darkGray,
     fontWeight: 'bold',
   },
   modalContent: {
@@ -567,20 +546,20 @@ const styles = StyleSheet.create({
   },
   modalMessage: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     marginBottom: 16,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   modalRequirement: {
-    fontSize: 15,
+    fontSize: 16,
     color: colors.primary,
     fontWeight: '600',
     marginBottom: 12,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   modalAdvice: {
     fontSize: 14,
-    color: '#666',
+    color: colors.darkGray,
     fontStyle: 'italic',
     lineHeight: 20,
   },
@@ -592,27 +571,27 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     backgroundColor: '#BB9B4E',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   cancelButtonText: {
     color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
+    fontWeight: '600',
+    fontSize: 15,
   },
   actionButton: {
     flex: 1,
     backgroundColor: colors.primary,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   actionButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
+    color: colors.white,
+    fontWeight: '600',
+    fontSize: 15,
   },
 }); 

@@ -5,6 +5,7 @@ import { StackActions, useFocusEffect, useNavigation, useRoute } from '@react-na
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import chapitre02 from '../../data/exercices_par_chapitre/chapitre_02_exercices.json';
@@ -153,16 +154,30 @@ export default function OriginalQuizScreen() {
     animateStar();
   }, [starAnim]);
 
+  // Gestionnaire de geste de swipe
+  const onGestureEvent = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX, velocityX } = event.nativeEvent;
+      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
+        goToQuizSelection();
+      }
+    }
+  };
+
   if (!quizData.length) {
     return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-        <Text style={{ color: '#174C3C', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
-          Aucune question disponible pour ce chapitre.
-        </Text>
-        <Text style={{ color: '#888', fontSize: 14, marginTop: 10, textAlign: 'center' }}>
-          Veuillez choisir un autre chapitre.
-        </Text>
-      </SafeAreaView>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fff' }}>
+        <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+          <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+            <Text style={{ color: '#174C3C', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+              Aucune question disponible pour ce chapitre.
+            </Text>
+            <Text style={{ color: '#888', fontSize: 14, marginTop: 10, textAlign: 'center' }}>
+              Veuillez choisir un autre chapitre.
+            </Text>
+          </SafeAreaView>
+        </PanGestureHandler>
+      </GestureHandlerRootView>
     );
   }
 

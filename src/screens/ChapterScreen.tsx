@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { ChaptersData } from '../types/chapters';
@@ -260,6 +261,16 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   };
 
   // Fonction pour initialiser la progression d'un chapitre
+  // Gestionnaire de geste de swipe
+  const onGestureEvent = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX, velocityX } = event.nativeEvent;
+      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
+        navigation.goBack();
+      }
+    }
+  };
+
   const initializeChapterProgress = async () => {
     if (!chapter) return;
     
@@ -405,7 +416,9 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+        <View style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
       {/* Header avec image et titre */}
       <View style={{ position: 'relative', overflow: 'visible' }}>
         <Image
@@ -597,7 +610,9 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         )}
         </View>
       </View>
-    </View>
+        </View>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 };
 

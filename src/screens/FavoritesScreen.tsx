@@ -2,22 +2,38 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React from 'react';
-import { Animated, Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import colors from '../theme/colors';
+import { useAuth } from '../hooks/useAuth';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function FavoritesScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [favorites, setFavorites] = React.useState<{ id: string; title: string; desc: string; author?: string; image?: string; partie?: string; chapterData?: any }[]>([]); 
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const scaleAnim = React.useRef(new Animated.Value(0.9)).current;
 
   // Charger les favoris depuis AsyncStorage
   const loadFavorites = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
+      // Vérifier si l'utilisateur est connecté (même en mode local pour Expo Go)
+      if (!user) {
+        console.log('Utilisateur non connecté, favoris non disponibles');
+        setFavorites([]);
+        setLoading(false);
+        return;
+      }
+
       const storedFavorites = await AsyncStorage.getItem('favorites');
       console.log('Favoris chargés depuis AsyncStorage:', storedFavorites);
       if (storedFavorites) {
@@ -30,6 +46,10 @@ export default function FavoritesScreen() {
       }
     } catch (error) {
       console.error('Erreur lors du chargement des favoris:', error);
+      setError('Erreur lors du chargement des favoris');
+      setFavorites([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,7 +76,23 @@ export default function FavoritesScreen() {
     ]).start();
   }, [favorites]);
 
+  // Gestionnaire de geste de swipe
+  const onGestureEvent = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX, velocityX } = event.nativeEvent;
+      // Geste très sensible pour les pages avec FlatList
+      if (translationX > 20 || (translationX > 10 && velocityX > 200)) {
+        navigation.goBack();
+      }
+    }
+  };
+
   const removeFavorite = async (id: string) => {
+    if (!user) {
+      console.log('Utilisateur non connecté, impossible de supprimer le favori');
+      return;
+    }
+
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 300,
@@ -112,6 +148,10 @@ export default function FavoritesScreen() {
               <Image 
                 source={imageMap[item.image] || imageMap['1']} 
                 style={styles.favoriteImage}
+                onError={(error) => {
+                  console.log('Erreur de chargement image favori:', error);
+                }}
+                defaultSource={imageMap['1']}
               />
             </View>
           )}
@@ -146,6 +186,49 @@ export default function FavoritesScreen() {
     );
   };
 
+  const LoadingState = () => (
+    <Animated.View style={[
+      styles.emptyContainer,
+      {
+        opacity: fadeAnim,
+        transform: [{ scale: scaleAnim }]
+      }
+    ]}>
+      <View style={styles.emptyIconContainer}>
+        <MaterialCommunityIcons name="loading" size={80} color="#E8F5E8" />
+      </View>
+      <Text style={styles.emptyTitle}>Chargement...</Text>
+      <Text style={styles.emptySubtitle}>
+        Chargement de vos favoris
+      </Text>
+    </Animated.View>
+  );
+
+  const ErrorState = () => (
+    <Animated.View style={[
+      styles.emptyContainer,
+      {
+        opacity: fadeAnim,
+        transform: [{ scale: scaleAnim }]
+      }
+    ]}>
+      <View style={styles.emptyIconContainer}>
+        <MaterialCommunityIcons name="alert-circle" size={80} color="#FF6B6B" />
+      </View>
+      <Text style={styles.emptyTitle}>Erreur de chargement</Text>
+      <Text style={styles.emptySubtitle}>
+        Impossible de charger vos favoris. Essayez de redémarrer l'application.
+      </Text>
+      <TouchableOpacity 
+        style={styles.emptyButton}
+        onPress={loadFavorites}
+      >
+        <MaterialCommunityIcons name="refresh" size={20} color="white" />
+        <Text style={styles.emptyButtonText}>Réessayer</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+
   const EmptyState = () => (
     <Animated.View style={[
       styles.emptyContainer,
@@ -157,43 +240,66 @@ export default function FavoritesScreen() {
       <View style={styles.emptyIconContainer}>
         <MaterialCommunityIcons name="heart-outline" size={80} color="#E8F5E8" />
       </View>
-      <Text style={styles.emptyTitle}>Aucun favori</Text>
+      <Text style={styles.emptyTitle}>
+        {user ? 'Aucun favori' : 'Connexion requise'}
+      </Text>
       <Text style={styles.emptySubtitle}>
-        Ajoutez vos chapitres préférés à vos favoris pour les retrouver facilement
+        {user 
+          ? 'Ajoutez vos chapitres préférés à vos favoris pour les retrouver facilement'
+          : 'Connectez-vous pour accéder à vos favoris et les synchroniser'
+        }
       </Text>
       <TouchableOpacity 
         style={styles.emptyButton}
-        onPress={() => (navigation as any).navigate('Books')}
+        onPress={() => user ? (navigation as any).navigate('Books') : (navigation as any).navigate('Login')}
       >
-        <MaterialCommunityIcons name="book-open-variant" size={20} color="white" />
-        <Text style={styles.emptyButtonText}>Explorer les livres</Text>
+        <MaterialCommunityIcons 
+          name={user ? "book-open-variant" : "login"} 
+          size={20} 
+          color="white" 
+        />
+        <Text style={styles.emptyButtonText}>
+          {user ? 'Explorer les livres' : 'Se connecter'}
+        </Text>
       </TouchableOpacity>
     </Animated.View>
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header épuré */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mes Favoris</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+    <GestureHandlerRootView style={styles.container}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+        <View style={styles.container}>
+          {/* Header épuré */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Mes Favoris</Text>
+            <View style={styles.headerSpacer} />
+          </View>
 
-
-
-      {/* Liste des favoris */}
-      <FlatList
-        data={favorites}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={EmptyState}
-      />
-    </View>
+          {/* Zone de swipe pour le retour */}
+          <View style={styles.swipeZone}>
+            {/* Liste des favoris */}
+            <FlatList
+              data={favorites}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContainer}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                loading ? LoadingState : 
+                error ? ErrorState : 
+                EmptyState
+              }
+              scrollEnabled={true}
+              nestedScrollEnabled={false}
+              directionalLockEnabled={true}
+            />
+          </View>
+        </View>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 
@@ -231,7 +337,10 @@ const styles = StyleSheet.create({
     width: 32,
   },
 
-
+  // Zone de swipe
+  swipeZone: {
+    flex: 1,
+  },
 
   // Liste
   listContainer: {

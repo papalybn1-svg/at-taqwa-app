@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import React, { useCallback, useEffect } from 'react';
 import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -42,8 +43,20 @@ export default function QuizStartScreen() {
     navigation.navigate('HomeMain' as never);
   };
 
+  // Gestionnaire de geste de swipe
+  const onGestureEvent = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX, velocityX } = event.nativeEvent;
+      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
+        goHome();
+      }
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+        <SafeAreaView style={styles.container}>
       {/* Bouton retour */}
       <TouchableOpacity 
         style={styles.backButton} 
@@ -78,7 +91,9 @@ export default function QuizStartScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+        </SafeAreaView>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 

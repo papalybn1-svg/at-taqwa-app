@@ -2,8 +2,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View, Dimensions, Platform } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
+
+// Récupération des dimensions de l'écran
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const isTablet = screenWidth >= 768;
+const isSmallScreen = screenWidth < 375;
 
 const PRAYER_LABELS = [
   { key: 'Fajr', label: 'Fajr', icon: 'weather-sunset-up', color: '#FFA726' },
@@ -69,9 +76,19 @@ export default function HorairesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [cityInput, setCityInput] = useState('');
   const [enabledNotifications, setEnabledNotifications] = useState<{ [key: string]: string | null }>({});
+  const [dimensions, setDimensions] = useState({ width: screenWidth, height: screenHeight });
 
   // Ajout navigation pour bouton retour
   const navigation = require('@react-navigation/native').useNavigation();
+
+  // Gestion des changements de dimensions d'écran
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   useEffect(() => {
     // Fonction sécurisée pour charger les données
@@ -347,16 +364,28 @@ export default function HorairesScreen() {
     }
   }
 
+  const onGestureEvent = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX, velocityX } = event.nativeEvent;
+      // Swipe de droite à gauche avec une vitesse suffisante ou une distance suffisante
+      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
+        navigation.goBack();
+      }
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      {/* Header allégé avec bouton retour */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Heures de prière</Text>
-        <View style={{width:32}} />
-      </View>
+    <GestureHandlerRootView style={styles.container}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+        <View style={styles.container}>
+          {/* Header moderne cohérent avec les autres pages */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Heures de prière</Text>
+            <View style={styles.placeholder} />
+          </View>
       {/* Image plus discrète */}
       <View style={styles.headerContainer}>
         <Image 
@@ -384,12 +413,12 @@ export default function HorairesScreen() {
       {/* Section ville */}
       <View style={styles.citySection}>
         <View style={styles.cityInfo}>
-          <MaterialCommunityIcons name="map-marker" size={16} color={colors.primary} />
+          <MaterialCommunityIcons name="map-marker" size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} color={colors.primary} />
           <Text style={styles.cityText}>{city || 'Dakar'}</Text>
         </View>
         <TouchableOpacity style={styles.changeCityButton} onPress={() => setModalVisible(true)}>
           <Text style={styles.changeCityText}>Changer</Text>
-          <MaterialCommunityIcons name="chevron-right" size={14} color={colors.primary} />
+          <MaterialCommunityIcons name="chevron-right" size={isTablet ? 18 : (isSmallScreen ? 12 : 14)} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -406,7 +435,7 @@ export default function HorairesScreen() {
                     <View style={styles.prayerIconContainer}>
                       <MaterialCommunityIcons 
                         name={item.icon as any} 
-                        size={16} 
+                        size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} 
                         color={item.color} 
                       />
                     </View>
@@ -434,7 +463,7 @@ export default function HorairesScreen() {
                   >
                       <MaterialCommunityIcons 
                         name={enabledNotifications[item.key] ? "bell" : "bell-outline"} 
-                        size={16} 
+                        size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} 
                         color={enabledNotifications[item.key] ? "#FFD700" : "rgba(255, 255, 255, 0.8)"} 
                     />
                   </TouchableOpacity>
@@ -493,7 +522,9 @@ export default function HorairesScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+        </View>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 
@@ -503,19 +534,50 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
 
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: '#eee', zIndex: 10 },
-  backButton: { padding: 8, borderRadius: 20, backgroundColor: '#f8f9fa', marginRight: 8 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
-  headerContainer: { height: 180, borderRadius: 18, marginHorizontal: 20, marginTop: 12, overflow: 'hidden', position: 'relative' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8F5E8',
+  },
+  backButton: { 
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(23, 76, 60, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { 
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    letterSpacing: 0.3,
+  },
+  placeholder: {
+    width: 44,
+  },
+  headerContainer: { 
+    height: isTablet ? 220 : (isSmallScreen ? 160 : 180), 
+    borderRadius: isTablet ? 22 : 18, 
+    marginHorizontal: isTablet ? 32 : 20, 
+    marginTop: 12, 
+    overflow: 'hidden', 
+    position: 'relative' 
+  },
   headerImage: { width: '100%', height: '100%', opacity: 0.7 },
   dateCard: {
     backgroundColor: '#D4AF37',
-    borderRadius: 22,
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    borderRadius: isTablet ? 26 : 22,
+    marginHorizontal: isTablet ? 32 : 20,
+    marginTop: 12,
+    marginBottom: 12,
+    paddingVertical: isTablet ? 14 : 10,
+    paddingHorizontal: isTablet ? 20 : 16,
     flexDirection: 'row',
     alignItems: 'center',
     elevation: 2,
@@ -526,13 +588,13 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   dateIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: isTablet ? 44 : 38,
+    height: isTablet ? 44 : 38,
+    borderRadius: isTablet ? 22 : 19,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: isTablet ? 14 : 10,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -540,8 +602,8 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
   },
   dateIcon: {
-    width: 38,
-    height: 38,
+    width: isTablet ? 44 : 38,
+    height: isTablet ? 44 : 38,
     backgroundColor: 'transparent',
   },
   dateTextContainer: {
@@ -549,13 +611,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateText: {
-    fontSize: 15,
+    fontSize: isTablet ? 18 : (isSmallScreen ? 14 : 15),
     fontWeight: 'bold',
     color: '#2C3E50',
     textAlign: 'center',
   },
   hijriText: {
-    fontSize: 12,
+    fontSize: isTablet ? 14 : (isSmallScreen ? 11 : 12),
     color: '#2C3E50',
     opacity: 0.7,
     marginTop: 2,
@@ -563,15 +625,15 @@ const styles = StyleSheet.create({
   },
   prayerListContainer: {
     backgroundColor: colors.primary,
-    marginHorizontal: 20,
+    marginHorizontal: isTablet ? 32 : 20,
     marginTop: 0,
     marginBottom: 0,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+    borderTopLeftRadius: isTablet ? 20 : 16,
+    borderTopRightRadius: isTablet ? 20 : 16,
+    borderBottomLeftRadius: isTablet ? 20 : 16,
+    borderBottomRightRadius: isTablet ? 20 : 16,
     paddingTop: 2,
-    paddingBottom: 24,
+    paddingBottom: isTablet ? 40 : 32,
     flex: 1,
     elevation: 2,
     shadowColor: '#000',
@@ -582,13 +644,14 @@ const styles = StyleSheet.create({
   prayerListContent: {
     flex: 1,
     justifyContent: 'flex-start',
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
   },
   prayerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: isTablet ? 24 : 18,
+    paddingVertical: isTablet ? 12 : 8,
   },
   prayerLeftSection: {
     flexDirection: 'row',
@@ -596,13 +659,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   prayerIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: isTablet ? 38 : 32,
+    height: isTablet ? 38 : 32,
+    borderRadius: isTablet ? 19 : 16,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: isTablet ? 14 : 10,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -612,11 +675,11 @@ const styles = StyleSheet.create({
   prayerSeparator: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.10)',
-    marginHorizontal: 20,
+    marginHorizontal: isTablet ? 28 : 20,
     marginVertical: 1,
   },
   prayerLabel: {
-    fontSize: 15,
+    fontSize: isTablet ? 18 : (isSmallScreen ? 14 : 15),
     fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: 0.2,
@@ -626,15 +689,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   prayerTime: {
-    fontSize: 14,
+    fontSize: isTablet ? 16 : (isSmallScreen ? 13 : 14),
     fontWeight: '700',
     color: '#FFFFFF',
-    marginRight: 10,
+    marginRight: isTablet ? 14 : 10,
     letterSpacing: 0.3,
   },
   notificationButton: {
-    padding: 4,
-    borderRadius: 14,
+    padding: isTablet ? 6 : 4,
+    borderRadius: isTablet ? 16 : 14,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     elevation: 1,
     shadowColor: '#000',
@@ -650,10 +713,10 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    width: '85%',
-    maxWidth: 300,
+    borderRadius: isTablet ? 24 : 20,
+    padding: isTablet ? 32 : 24,
+    width: isTablet ? '70%' : '85%',
+    maxWidth: isTablet ? 500 : 300,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -661,19 +724,19 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: isTablet ? 22 : (isSmallScreen ? 16 : 18),
     fontWeight: 'bold',
     color: '#2C3E50',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: isTablet ? 24 : 20,
   },
   modalInput: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 20,
+    borderRadius: isTablet ? 16 : 12,
+    padding: isTablet ? 16 : 12,
+    fontSize: isTablet ? 18 : (isSmallScreen ? 15 : 16),
+    marginBottom: isTablet ? 24 : 20,
     backgroundColor: '#F8F9FA',
   },
   modalButtons: {
@@ -682,38 +745,40 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 12,
+    padding: isTablet ? 16 : 12,
+    borderRadius: isTablet ? 16 : 12,
     backgroundColor: '#E0E0E0',
-    marginRight: 8,
+    marginRight: isTablet ? 12 : 8,
     alignItems: 'center',
   },
   modalCancelText: {
     color: '#666',
     fontWeight: 'bold',
+    fontSize: isTablet ? 16 : (isSmallScreen ? 13 : 14),
   },
   modalConfirmButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 12,
+    padding: isTablet ? 16 : 12,
+    borderRadius: isTablet ? 16 : 12,
     backgroundColor: colors.primary,
-    marginLeft: 8,
+    marginLeft: isTablet ? 12 : 8,
     alignItems: 'center',
   },
   modalConfirmText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
+    fontSize: isTablet ? 16 : (isSmallScreen ? 13 : 14),
   },
   citySection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    marginHorizontal: isTablet ? 32 : 20,
+    marginBottom: 12,
+    paddingVertical: isTablet ? 8 : 6,
+    paddingHorizontal: isTablet ? 16 : 12,
+    borderRadius: isTablet ? 16 : 12,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -726,49 +791,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cityText: {
-    fontSize: 13,
+    fontSize: isTablet ? 16 : (isSmallScreen ? 12 : 13),
     fontWeight: '600',
     color: '#2C3E50',
-    marginLeft: 6,
+    marginLeft: isTablet ? 8 : 6,
   },
   changeCityButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    paddingVertical: isTablet ? 6 : 4,
+    paddingHorizontal: isTablet ? 12 : 8,
+    borderRadius: isTablet ? 14 : 10,
   },
   changeCityText: {
-    fontSize: 12,
+    fontSize: isTablet ? 14 : (isSmallScreen ? 11 : 12),
     fontWeight: '600',
     color: colors.primary,
-    marginRight: 3,
+    marginRight: isTablet ? 4 : 3,
   },
   availableCitiesContainer: {
-    marginTop: 15,
-    marginBottom: 15,
+    marginTop: isTablet ? 20 : 15,
+    marginBottom: isTablet ? 20 : 15,
   },
   availableCitiesTitle: {
-    fontSize: 14,
+    fontSize: isTablet ? 16 : (isSmallScreen ? 13 : 14),
     fontWeight: 'bold',
     color: '#555',
-    marginBottom: 8,
+    marginBottom: isTablet ? 12 : 8,
   },
   availableCitiesList: {
     backgroundColor: '#F0F0F0',
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    borderRadius: isTablet ? 14 : 10,
+    paddingVertical: isTablet ? 12 : 8,
+    paddingHorizontal: isTablet ? 14 : 10,
   },
   cityOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginVertical: 2,
+    paddingVertical: isTablet ? 10 : 8,
+    paddingHorizontal: isTablet ? 14 : 10,
+    borderRadius: isTablet ? 10 : 8,
+    marginVertical: isTablet ? 3 : 2,
   },
   cityOptionText: {
-    fontSize: 13,
+    fontSize: isTablet ? 15 : (isSmallScreen ? 12 : 13),
     color: '#333',
   },
 

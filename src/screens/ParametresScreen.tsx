@@ -115,15 +115,15 @@ export default function ParametresScreen() {
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
         quality: 0.8,
         allowsMultipleSelection: false,
-      });
+    });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
         await uploadImage(result.assets[0].uri);
       }
     } catch (error) {
@@ -310,11 +310,11 @@ export default function ParametresScreen() {
             {/* Champ nom d'utilisateur */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Nom d'utilisateur</Text>
-              <TextInput 
-                style={styles.input} 
+            <TextInput 
+              style={styles.input} 
                 placeholder="Entrez votre nom" 
-                value={editName} 
-                onChangeText={setEditName}
+              value={editName} 
+              onChangeText={setEditName} 
                 placeholderTextColor={colors.placeholder}
               />
             </View>
@@ -322,13 +322,13 @@ export default function ParametresScreen() {
             {/* Boutons pour la photo */}
             <View style={styles.imageButtonsContainer}>
               <TouchableOpacity style={styles.imageButton} onPress={takePhoto} disabled={loading}>
-                <MaterialCommunityIcons name="camera" size={20} color={colors.primary} />
+              <MaterialCommunityIcons name="camera" size={20} color={colors.primary} />
                 <Text style={styles.imageButtonText}>Caméra</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.imageButton} onPress={pickImage} disabled={loading}>
                 <MaterialCommunityIcons name="image" size={20} color={colors.primary} />
                 <Text style={styles.imageButtonText}>Galerie</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
             </View>
 
             {/* Indicateur de chargement */}
@@ -392,7 +392,7 @@ export default function ParametresScreen() {
               >
                 <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Annuler</Text>
               </TouchableOpacity>
-                          <TouchableOpacity 
+            <TouchableOpacity 
               style={[styles.modalButton, styles.saveButton]} 
               onPress={handleResetPassword} 
               disabled={loading || !firebaseUser?.email}

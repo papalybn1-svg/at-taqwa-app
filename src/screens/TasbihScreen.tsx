@@ -4,11 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, Vibration, View, TextInput, Alert, TouchableWithoutFeedback, Keyboard } from "react-native";
 import colors from "../theme/colors";
 
 const ZIKR_PROGRESS_KEY = '@zikr_progress';
 const SOUND_ENABLED_KEY = '@sound_enabled';
+const CUSTOM_ZIKRS_KEY = '@custom_zikrs';
 const { width: screenWidth } = Dimensions.get('window');
 
 export type Zikr = {
@@ -22,11 +23,19 @@ export type Zikr = {
 type ActiveZikr = Zikr & { count: number };
 
 export default function TasbihScreen() {
-  const [zikrs, setZikrs] = useState<Zikr[]>([]);
+  const [systemZikrs, setSystemZikrs] = useState<Zikr[]>([]);
+  const [customZikrs, setCustomZikrs] = useState<Zikr[]>([]);
   const [zikrProgress, setZikrProgress] = useState<{ [key: string]: number }>({});
   const [loading, setLoading] = useState(true);
   const [activeZikr, setActiveZikr] = useState<ActiveZikr | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'custom' | 'system'>('system');
+  const [newZikr, setNewZikr] = useState({
+    text: '',
+    description: '',
+    max: 33
+  });
   const db = getFirestore();
   const navigation = useNavigation();
 
@@ -96,6 +105,81 @@ export default function TasbihScreen() {
     }
   }, [soundEnabled]);
 
+  // Charger les zikrs personnalisés
+  const loadCustomZikrs = useCallback(async () => {
+    try {
+      const savedCustomZikrs = await AsyncStorage.getItem(CUSTOM_ZIKRS_KEY);
+      if (savedCustomZikrs) {
+        const parsedCustomZikrs = JSON.parse(savedCustomZikrs);
+        setCustomZikrs(parsedCustomZikrs);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des zikrs personnalisés:', error);
+    }
+  }, []);
+
+  // Sauvegarder les zikrs personnalisés
+  const saveCustomZikrs = useCallback(async (zikrs: Zikr[]) => {
+    try {
+      await AsyncStorage.setItem(CUSTOM_ZIKRS_KEY, JSON.stringify(zikrs));
+      setCustomZikrs(zikrs);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des zikrs personnalisés:', error);
+    }
+  }, []);
+
+  // Créer un nouveau zikr
+  const createCustomZikr = useCallback(async () => {
+    if (!newZikr.text.trim() || !newZikr.description.trim()) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      return;
+    }
+
+    const customZikr: Zikr = {
+      id: `custom_${Date.now()}`,
+      category: 'Mes Zikrs',
+      text: newZikr.text.trim(),
+      description: newZikr.description.trim(),
+      max: newZikr.max
+    };
+
+    const updatedCustomZikrs = [...customZikrs, customZikr];
+    await saveCustomZikrs(updatedCustomZikrs);
+    
+    // Initialiser le progrès pour le nouveau zikr
+    setZikrProgress(prev => ({ ...prev, [customZikr.id]: 0 }));
+    
+    // Réinitialiser le formulaire
+    setNewZikr({ text: '', description: '', max: 33 });
+    setShowCreateModal(false);
+    
+    Alert.alert('Succès', 'Zikr créé avec succès !');
+  }, [customZikrs, newZikr, saveCustomZikrs]);
+
+  // Supprimer un zikr personnalisé
+  const deleteCustomZikr = useCallback(async (id: string) => {
+    Alert.alert(
+      'Confirmation',
+      'Êtes-vous sûr de vouloir supprimer ce zikr ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            const updatedCustomZikrs = customZikrs.filter(zikr => zikr.id !== id);
+            await saveCustomZikrs(updatedCustomZikrs);
+            
+            // Supprimer le progrès associé
+            const updatedProgress = { ...zikrProgress };
+            delete updatedProgress[id];
+            setZikrProgress(updatedProgress);
+          }
+        }
+      ]
+    );
+  }, [customZikrs, zikrProgress, saveCustomZikrs]);
+
   const loadZikrData = useCallback(async () => {
     setLoading(true);
     try {
@@ -129,7 +213,7 @@ export default function TasbihScreen() {
         });
       });
       
-      setZikrs(fetchedZikrs);
+      setSystemZikrs(fetchedZikrs);
 
       // Set progress for fetched zikrs
       const initialProgress = { ...progress };
@@ -166,7 +250,7 @@ export default function TasbihScreen() {
           max: 34 
         }
       ];
-      setZikrs(defaultZikrs);
+      setSystemZikrs(defaultZikrs);
       const defaultProgress: { [key: string]: number } = {};
       defaultZikrs.forEach(zikr => {
         defaultProgress[zikr.id] = 0;
@@ -179,15 +263,17 @@ export default function TasbihScreen() {
 
   useEffect(() => {
     loadZikrData();
+    loadCustomZikrs();
     loadSoundPreference();
-  }, [loadZikrData, loadSoundPreference]);
+  }, [loadZikrData, loadCustomZikrs, loadSoundPreference]);
 
   useEffect(() => {
     AsyncStorage.setItem(ZIKR_PROGRESS_KEY, JSON.stringify(zikrProgress));
   }, [zikrProgress]);
 
   const increment = (id: string) => {
-    const zikr = zikrs.find(z => z.id === id);
+    const allZikrs = [...systemZikrs, ...customZikrs];
+    const zikr = allZikrs.find(z => z.id === id);
     if (!zikr) return;
     
     const currentCount = zikrProgress[id] || 0;
@@ -239,112 +325,244 @@ export default function TasbihScreen() {
         <View style={styles.placeholder} />
       </View>
 
+      {/* Onglets horizontaux */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'system' && styles.activeTab]}
+          onPress={() => setActiveTab('system')}
+        >
+          <Text style={[styles.tabText, activeTab === 'system' && styles.activeTabText]}>
+            Autres Zikrs
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'custom' && styles.activeTab]}
+          onPress={() => setActiveTab('custom')}
+        >
+          <Text style={[styles.tabText, activeTab === 'custom' && styles.activeTabText]}>
+            Mes Zikrs
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Bouton d'ajout pour les zikrs personnalisés */}
+      {activeTab === 'custom' && (
+        <TouchableOpacity 
+          style={styles.floatingAddButton}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <MaterialCommunityIcons name="plus" size={24} color={colors.white} />
+        </TouchableOpacity>
+      )}
+
       <ScrollView 
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Section principale des zikrs */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Mes Zikrs</Text>
-            <View style={styles.sectionLine} />
-          </View>
-
-          {zikrs.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <MaterialCommunityIcons name="book-open-variant" size={64} color={colors.gray} />
-              <Text style={styles.emptyStateTitle}>Aucun zikr disponible</Text>
-              <Text style={styles.emptyStateText}>
-                Ajoutez des zikrs depuis le panneau administrateur pour commencer à pratiquer le dhikr.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.zikrsList}>
-              {zikrs.map((item, index) => {
-            const count = zikrProgress[item.id] || 0;
-                const progressPercentage = (count / item.max) * 100;
-                const isCompleted = count >= item.max;
-                
-            return (
-                  <TouchableOpacity 
-                    key={item.id} 
-                    style={[
-                      styles.zikrCard,
-                      isCompleted && styles.zikrCardCompleted
-                    ]}
-                    onPress={() => handleOpenTasbih(item)}
-                    activeOpacity={0.7}
-                  >
-                    {/* Header de la carte */}
-                    <View style={styles.zikrCardHeader}>
-                      <View style={styles.categoryBadge}>
-                        <Text style={styles.categoryText}>{item.category}</Text>
-                      </View>
-                      {isCompleted && (
-                        <View style={styles.completedBadge}>
-                          <MaterialCommunityIcons name="check-circle" size={16} color="#fff" />
+        {/* Contenu de l'onglet actif */}
+        {activeTab === 'custom' ? (
+          <View style={styles.section}>
+            {customZikrs.length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <MaterialCommunityIcons name="heart-outline" size={64} color={colors.gray} />
+                <Text style={styles.emptyStateTitle}>Aucun zikr personnalisé</Text>
+                <Text style={styles.emptyStateText}>
+                  Créez vos propres zikrs en appuyant sur le bouton + ci-dessus.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.zikrsList}>
+                {customZikrs.map((item, index) => {
+                  const count = zikrProgress[item.id] || 0;
+                  const progressPercentage = (count / item.max) * 100;
+                  const isCompleted = count >= item.max;
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={item.id} 
+                      style={[
+                        styles.zikrCard,
+                        isCompleted && styles.zikrCardCompleted
+                      ]}
+                      onPress={() => handleOpenTasbih(item)}
+                      activeOpacity={0.7}
+                    >
+                      {/* Header de la carte */}
+                      <View style={styles.zikrCardHeader}>
+                        <View style={styles.categoryBadge}>
+                          <Text style={styles.categoryText}>{item.category}</Text>
                         </View>
-                      )}
-                    </View>
+                        <View style={styles.cardHeaderActions}>
+                          {isCompleted && (
+                            <View style={styles.completedBadge}>
+                              <MaterialCommunityIcons name="check-circle" size={16} color="#fff" />
+                            </View>
+                          )}
+                          <TouchableOpacity 
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              deleteCustomZikr(item.id);
+                            }}
+                            style={styles.deleteButton}
+                          >
+                            <MaterialCommunityIcons name="delete" size={16} color="#FF6B6B" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
 
-                    {/* Contenu principal */}
-                    <View style={styles.zikrCardContent}>
-                      <Text style={styles.zikrTextArabic}>{item.text}</Text>
-                    <Text style={styles.zikrDescription}>{item.description}</Text>
-                    </View>
+                      {/* Contenu principal */}
+                      <View style={styles.zikrCardContent}>
+                        <Text style={styles.zikrTextArabic}>{item.text}</Text>
+                        <Text style={styles.zikrDescription}>{item.description}</Text>
+                      </View>
 
-                    {/* Progress et actions */}
-                    <View style={styles.zikrCardFooter}>
-                      <View style={styles.progressInfo}>
-                        <Text style={styles.progressCount}>
-                          {count} / {item.max}
-                        </Text>
-                        <View style={styles.progressBarContainer}>
-                    <View style={styles.progressBarBg}>
-                            <View 
-                              style={[
-                                styles.progressBarFill,
-                                { 
-                                  width: `${progressPercentage}%`,
-                                  backgroundColor: colors.secondary
-                                }
-                              ]} 
-                            />
+                      {/* Progress et actions */}
+                      <View style={styles.zikrCardFooter}>
+                        <View style={styles.progressInfo}>
+                          <Text style={styles.progressCount}>
+                            {count} / {item.max}
+                          </Text>
+                          <View style={styles.progressBarContainer}>
+                            <View style={styles.progressBarBg}>
+                              <View 
+                                style={[
+                                  styles.progressBarFill,
+                                  { 
+                                    width: `${progressPercentage}%`,
+                                    backgroundColor: colors.secondary
+                                  }
+                                ]} 
+                              />
+                            </View>
                           </View>
-                    </View>
-                  </View>
+                        </View>
 
-                      <View style={styles.cardActions}>
-                        <TouchableOpacity 
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            increment(item.id);
-                          }} 
-                          style={[styles.actionButton, styles.incrementButton]}
-                        >
-                          <MaterialCommunityIcons name="plus" size={18} color="#fff" />
+                        <View style={styles.cardActions}>
+                          <TouchableOpacity 
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              increment(item.id);
+                            }} 
+                            style={[styles.actionButton, styles.incrementButton]}
+                          >
+                            <MaterialCommunityIcons name="plus" size={18} color="#fff" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              reset(item.id);
+                            }} 
+                            style={[styles.actionButton, styles.resetButton]}
+                          >
+                            <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                     </TouchableOpacity>
-                        <TouchableOpacity 
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            reset(item.id);
-                          }} 
-                          style={[styles.actionButton, styles.resetButton]}
-                        >
-                          <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={styles.section}>
+            {systemZikrs.length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <MaterialCommunityIcons name="book-open-variant" size={64} color={colors.gray} />
+                <Text style={styles.emptyStateTitle}>Aucun zikr disponible</Text>
+                <Text style={styles.emptyStateText}>
+                  Ajoutez des zikrs depuis le panneau administrateur pour commencer à pratiquer le dhikr.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.zikrsList}>
+                {systemZikrs.map((item, index) => {
+                  const count = zikrProgress[item.id] || 0;
+                  const progressPercentage = (count / item.max) * 100;
+                  const isCompleted = count >= item.max;
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={item.id} 
+                      style={[
+                        styles.zikrCard,
+                        isCompleted && styles.zikrCardCompleted
+                      ]}
+                      onPress={() => handleOpenTasbih(item)}
+                      activeOpacity={0.7}
+                    >
+                      {/* Header de la carte */}
+                      <View style={styles.zikrCardHeader}>
+                        <View style={styles.categoryBadge}>
+                          <Text style={styles.categoryText}>{item.category}</Text>
+                        </View>
+                        {isCompleted && (
+                          <View style={styles.completedBadge}>
+                            <MaterialCommunityIcons name="check-circle" size={16} color="#fff" />
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Contenu principal */}
+                      <View style={styles.zikrCardContent}>
+                        <Text style={styles.zikrTextArabic}>{item.text}</Text>
+                        <Text style={styles.zikrDescription}>{item.description}</Text>
+                      </View>
+
+                      {/* Progress et actions */}
+                      <View style={styles.zikrCardFooter}>
+                        <View style={styles.progressInfo}>
+                          <Text style={styles.progressCount}>
+                            {count} / {item.max}
+                          </Text>
+                          <View style={styles.progressBarContainer}>
+                            <View style={styles.progressBarBg}>
+                              <View 
+                                style={[
+                                  styles.progressBarFill,
+                                  { 
+                                    width: `${progressPercentage}%`,
+                                    backgroundColor: colors.secondary
+                                  }
+                                ]} 
+                              />
+                            </View>
+                          </View>
+                        </View>
+
+                        <View style={styles.cardActions}>
+                          <TouchableOpacity 
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              increment(item.id);
+                            }} 
+                            style={[styles.actionButton, styles.incrementButton]}
+                          >
+                            <MaterialCommunityIcons name="plus" size={18} color="#fff" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              reset(item.id);
+                            }} 
+                            style={[styles.actionButton, styles.resetButton]}
+                          >
+                            <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                     </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-              })}
-            </View>
-          )}
-        </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Section statistiques */}
-        {zikrs.length > 0 && (
+        {(systemZikrs.length > 0 || customZikrs.length > 0) && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Statistiques</Text>
@@ -363,7 +581,7 @@ export default function TasbihScreen() {
               <View style={styles.statCard}>
                 <MaterialCommunityIcons name="check-circle-outline" size={24} color={colors.secondary} />
                 <Text style={styles.statNumber}>
-                  {zikrs.filter(zikr => (zikrProgress[zikr.id] || 0) >= zikr.max).length}
+                  {[...systemZikrs, ...customZikrs].filter(zikr => (zikrProgress[zikr.id] || 0) >= zikr.max).length}
               </Text>
                 <Text style={styles.statLabel}>Complétés</Text>
               </View>
@@ -371,7 +589,7 @@ export default function TasbihScreen() {
               <View style={styles.statCard}>
                 <MaterialCommunityIcons name="progress-clock" size={24} color="#FF6B6B" />
                 <Text style={styles.statNumber}>
-                  {zikrs.filter(zikr => (zikrProgress[zikr.id] || 0) > 0 && (zikrProgress[zikr.id] || 0) < zikr.max).length}
+                  {[...systemZikrs, ...customZikrs].filter(zikr => (zikrProgress[zikr.id] || 0) > 0 && (zikrProgress[zikr.id] || 0) < zikr.max).length}
               </Text>
                 <Text style={styles.statLabel}>En cours</Text>
               </View>
@@ -473,6 +691,82 @@ export default function TasbihScreen() {
             </View>
             </View>
           </View>
+        </Modal>
+
+        {/* Modal de création de zikr - Style Admin Amélioré */}
+        <Modal visible={showCreateModal} transparent animationType="slide">
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.adminModalContainer}>
+              <TouchableWithoutFeedback onPress={() => {}}>
+                <View style={styles.adminModalContent}>
+              <Text style={styles.adminModalTitle}>Nouveau Zikr</Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Texte du zikr</Text>
+                <TextInput
+                  style={styles.adminInput}
+                  placeholder="Entrez le texte de votre zikr"
+                  value={newZikr.text}
+                  onChangeText={(text) => setNewZikr(prev => ({ ...prev, text }))}
+                  multiline
+                  placeholderTextColor={colors.gray}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput
+                  style={styles.adminInput}
+                  placeholder="Description de votre zikr"
+                  value={newZikr.description}
+                  onChangeText={(description) => setNewZikr(prev => ({ ...prev, description }))}
+                  multiline
+                  placeholderTextColor={colors.gray}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Nombre maximum</Text>
+                <TextInput
+                  style={styles.adminInput}
+                  placeholder="33"
+                  value={String(newZikr.max)}
+                  onChangeText={(text) => {
+                    const max = parseInt(text) || 33;
+                    setNewZikr(prev => ({ ...prev, max: Math.max(1, Math.min(999, max)) }));
+                  }}
+                  keyboardType="numeric"
+                  placeholderTextColor={colors.gray}
+                />
+              </View>
+              
+              <View style={styles.adminModalActions}>
+                <TouchableOpacity 
+                  style={[styles.adminModalButton, styles.cancelAdminButton]}
+                  onPress={() => {
+                    setNewZikr({ text: '', description: '', max: 33 });
+                    setShowCreateModal(false);
+                  }}
+                >
+                  <Text style={styles.cancelAdminButtonText}>Annuler</Text>
+                </TouchableOpacity>
+                
+                                <TouchableOpacity 
+                  style={[
+                    styles.adminModalButton, 
+                    { backgroundColor: colors.primary },
+                    (!newZikr.text.trim() || !newZikr.description.trim()) && { opacity: 0.6 }
+                  ]}
+                  onPress={createCustomZikr}
+                  disabled={!newZikr.text.trim() || !newZikr.description.trim()}
+                >
+                  <Text style={styles.createAdminButtonText}>Créer</Text>
+                </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
         </Modal>
       </View>
   );
@@ -866,5 +1160,300 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.white,
     marginLeft: 6,
+  },
+
+  // Styles pour les nouvelles fonctionnalités
+  addButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  cardHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+
+  // Styles pour les onglets horizontaux
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingHorizontal: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.gray,
+  },
+  activeTabText: {
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  floatingAddButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: colors.primary,
+    borderRadius: 28,
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 1000,
+  },
+
+  // Styles pour le nouveau modal de création
+  createModalContainer: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+  },
+  createModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  createModalHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  createModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  createModalCloseButton: {
+    padding: 4,
+  },
+  createModalContent: {
+    padding: 20,
+  },
+  createInputContainer: {
+    marginBottom: 20,
+  },
+  inputLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  createInputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginLeft: 6,
+  },
+  createTextInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: colors.white,
+    minHeight: 50,
+    textAlignVertical: 'top',
+  },
+  inputCounter: {
+    fontSize: 12,
+    color: colors.gray,
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  numberInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numberButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 10,
+  },
+  createNumberInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 18,
+    backgroundColor: colors.white,
+    width: 80,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  previewContainer: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  previewCard: {
+    backgroundColor: colors.lightGray,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  previewText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  previewDescription: {
+    fontSize: 14,
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  previewCount: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.gray,
+  },
+  createModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  createModalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  cancelCreateButton: {
+    backgroundColor: '#BB9B4E',
+    borderWidth: 1,
+    borderColor: '#BB9B4E',
+  },
+  createButton: {
+    backgroundColor: colors.primary,
+  },
+  disabledButton: {
+    backgroundColor: colors.gray,
+    opacity: 0.4,
+  },
+  createModalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+
+  // Styles pour le modal admin
+  adminModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)'
+  },
+  adminModalContent: {
+    width: '90%',
+    backgroundColor: colors.white,
+    borderRadius: 10,
+    padding: 20,
+    elevation: 5
+  },
+  adminModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: colors.primary
+  },
+  adminInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 15,
+    fontSize: 16
+  },
+  adminModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around'
+  },
+  adminModalButton: {
+    padding: 15,
+    borderRadius: 10,
+    flex: 1,
+    marginHorizontal: 5,
+    alignItems: 'center'
+  },
+  adminButtonText: {
+    color: colors.white,
+    fontWeight: 'bold'
+  },
+
+  // Styles améliorés pour le modal admin
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+    marginBottom: 6,
+  },
+  cancelAdminButton: {
+    backgroundColor: '#BB9B4E',
+  },
+  cancelAdminButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  createAdminButton: {
+    backgroundColor: colors.primary,
+  },
+  createAdminButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  disabledAdminButton: {
+    backgroundColor: colors.gray,
+    opacity: 0.6,
   },
 }); 

@@ -2,14 +2,27 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
 
 export default function AuthorProfileScreen() {
   const navigation = useNavigation();
 
+  // Gestionnaire de geste de swipe
+  const onGestureEvent = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX, velocityX } = event.nativeEvent;
+      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
+        navigation.goBack();
+      }
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <GestureHandlerRootView style={styles.safeArea}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+        <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -129,7 +142,9 @@ export default function AuthorProfileScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+        </SafeAreaView>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 

@@ -96,7 +96,7 @@ function SplashFamille() {
 export default function App() {
   const [splashStep, setSplashStep] = useState(0);
   const { user, loading, setUser } = useAuth();
-
+  
   useEffect(() => {
     if (splashStep === 0) {
       const timer = setTimeout(() => setSplashStep(1), 2000);

@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
@@ -105,46 +106,65 @@ export default function QuizGameScreen() {
     navigation.navigate('HomeMain' as never);
   };
 
+  // Gestionnaire de geste de swipe
+  const onGestureEvent = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX, velocityX } = event.nativeEvent;
+      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
+        goHome();
+      }
+    }
+  };
+
   if (questions.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Chargement du quiz...</Text>
-        </View>
-      </SafeAreaView>
+      <GestureHandlerRootView style={styles.container}>
+        <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+          <SafeAreaView style={styles.container}>
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Chargement du quiz...</Text>
+            </View>
+          </SafeAreaView>
+        </PanGestureHandler>
+      </GestureHandlerRootView>
     );
   }
 
   if (quizFinished) {
     const percentage = Math.round((score / questions.length) * 100);
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.resultContainer}>
-          <MaterialCommunityIcons name="trophy" size={80} color="#D4AF37" />
-          <Text style={styles.resultTitle}>Quiz terminé !</Text>
-          <Text style={styles.scoreText}>
-            Votre score : {score}/{questions.length}
-          </Text>
-          <Text style={styles.percentageText}>{percentage}%</Text>
-          
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
-              <MaterialCommunityIcons name="refresh" size={24} color="white" />
-              <Text style={styles.buttonText}>Recommencer</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.homeButton} onPress={goHome}>
-              <MaterialCommunityIcons name="home" size={24} color="white" />
-              <Text style={styles.buttonText}>Accueil</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
+      <GestureHandlerRootView style={styles.container}>
+        <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+          <SafeAreaView style={styles.container}>
+            <View style={styles.resultContainer}>
+              <Text style={styles.resultTitle}>Quiz terminé !</Text>
+              <Text style={styles.scoreText}>
+                Votre score : {score}/{questions.length}
+              </Text>
+              <Text style={styles.percentageText}>{percentage}%</Text>
+              
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
+                  <MaterialCommunityIcons name="refresh" size={24} color="white" />
+                  <Text style={styles.buttonText}>Recommencer</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.homeButton} onPress={goHome}>
+                  <MaterialCommunityIcons name="home" size={24} color="white" />
+                  <Text style={styles.buttonText}>Accueil</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </SafeAreaView>
+        </PanGestureHandler>
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+        <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={goHome} style={styles.backButton}>
@@ -214,7 +234,9 @@ export default function QuizGameScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
-    </SafeAreaView>
+        </SafeAreaView>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 

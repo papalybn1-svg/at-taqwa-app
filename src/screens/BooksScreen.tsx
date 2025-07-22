@@ -483,6 +483,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#174C3C',
     borderTopRightRadius: 24,
     borderBottomRightRadius: 24,
+    marginTop: 45,
   },
   drawerHeader: {
     flexDirection: 'row',
