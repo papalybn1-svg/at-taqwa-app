@@ -26,14 +26,6 @@ export default function FavoritesScreen() {
       setLoading(true);
       setError(null);
       
-      // Vérifier si l'utilisateur est connecté (même en mode local pour Expo Go)
-      if (!user) {
-        console.log('Utilisateur non connecté, favoris non disponibles');
-        setFavorites([]);
-        setLoading(false);
-        return;
-      }
-
       const storedFavorites = await AsyncStorage.getItem('favorites');
       console.log('Favoris chargés depuis AsyncStorage:', storedFavorites);
       if (storedFavorites) {
@@ -88,11 +80,6 @@ export default function FavoritesScreen() {
   };
 
   const removeFavorite = async (id: string) => {
-    if (!user) {
-      console.log('Utilisateur non connecté, impossible de supprimer le favori');
-      return;
-    }
-
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 300,
@@ -241,25 +228,22 @@ export default function FavoritesScreen() {
         <MaterialCommunityIcons name="heart-outline" size={80} color="#E8F5E8" />
       </View>
       <Text style={styles.emptyTitle}>
-        {user ? 'Aucun favori' : 'Connexion requise'}
+        Aucun favori
       </Text>
       <Text style={styles.emptySubtitle}>
-        {user 
-          ? 'Ajoutez vos chapitres préférés à vos favoris pour les retrouver facilement'
-          : 'Connectez-vous pour accéder à vos favoris et les synchroniser'
-        }
+        Ajoutez vos chapitres préférés à vos favoris pour les retrouver facilement
       </Text>
       <TouchableOpacity 
         style={styles.emptyButton}
-        onPress={() => user ? (navigation as any).navigate('Books') : (navigation as any).navigate('Login')}
+        onPress={() => (navigation as any).navigate('Books')}
       >
         <MaterialCommunityIcons 
-          name={user ? "book-open-variant" : "login"} 
+          name="book-open-variant"
           size={20} 
           color="white" 
         />
         <Text style={styles.emptyButtonText}>
-          {user ? 'Explorer les livres' : 'Se connecter'}
+          Explorer les livres
         </Text>
       </TouchableOpacity>
     </Animated.View>
