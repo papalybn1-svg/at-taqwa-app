@@ -572,7 +572,7 @@ export default function HomeScreen() {
                         <Text style={styles.bookCardTitleModern} numberOfLines={4}>
                           {item.desc || 'Titre du chapitre'}
                         </Text>
-                      </View>
+                        </View>
                                               <Text style={styles.bookCardSubtitleModern} numberOfLines={3}>{item.partie || 'Partie'}</Text>
                       <View style={styles.bookCardFooterModern}>
                         <View style={styles.pagesCountModern}>

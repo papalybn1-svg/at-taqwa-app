@@ -208,32 +208,39 @@ export default function QuizGameScreen() {
             <Text style={styles.answerText}>
               {currentQuestion.reponse || currentQuestion.contenu || 'Réponse non disponible'}
             </Text>
-            
-            <View style={styles.answerButtonContainer}>
-              <TouchableOpacity 
-                style={styles.correctButton} 
-                onPress={handleCorrectAnswer}
-              >
-                <MaterialCommunityIcons name="check" size={24} color="white" />
-                <Text style={styles.answerButtonText}>Correct</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.incorrectButton} 
-                onPress={handleIncorrectAnswer}
-              >
-                <MaterialCommunityIcons name="close" size={24} color="white" />
-                <Text style={styles.answerButtonText}>Incorrect</Text>
-              </TouchableOpacity>
-            </View>
           </View>
-        ) : (
+        ) : null}
+      </ScrollView>
+
+      {/* Fixed Button at Bottom */}
+      {showAnswer ? (
+        <View style={styles.fixedButtonContainer}>
+          <View style={styles.answerButtonContainer}>
+            <TouchableOpacity 
+              style={styles.correctButton} 
+              onPress={handleCorrectAnswer}
+            >
+              <MaterialCommunityIcons name="check" size={24} color="white" />
+              <Text style={styles.answerButtonText}>Correct</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.incorrectButton} 
+              onPress={handleIncorrectAnswer}
+            >
+              <MaterialCommunityIcons name="close" size={24} color="white" />
+              <Text style={styles.answerButtonText}>Incorrect</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.fixedButtonContainer}>
           <TouchableOpacity style={styles.showAnswerButton} onPress={handleShowAnswer}>
             <MaterialCommunityIcons name="eye" size={24} color="white" />
             <Text style={styles.showAnswerText}>Voir la réponse</Text>
           </TouchableOpacity>
-        )}
-      </ScrollView>
+        </View>
+      )}
         </SafeAreaView>
       </PanGestureHandler>
     </GestureHandlerRootView>
@@ -303,6 +310,17 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingBottom: 100, // Ajouter de l'espace en bas pour le bouton fixe
+  },
+  fixedButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#174C3C',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingBottom: 30, // Espace supplémentaire pour SafeAreaView
   },
   questionCard: {
     backgroundColor: 'white',
