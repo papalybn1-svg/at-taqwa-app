@@ -1080,14 +1080,18 @@ const styles = StyleSheet.create({
 
   fixedAnswerButtonContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 20, // Remonté de 0 à 20 pour être plus visible
+    left: 20, // Ajouté une marge gauche
+    right: 20, // Ajouté une marge droite
     backgroundColor: '#174C3C',
     paddingHorizontal: 20,
     paddingVertical: 15,
     paddingBottom: 30, // Espace supplémentaire pour SafeAreaView
     zIndex: 999, // Z-index très élevé pour être sûr qu'il soit au-dessus de tout
+    borderWidth: 2, // Debug temporaire
+    borderColor: 'red', // Debug temporaire
+    borderWidth: 2, // Debug temporaire
+    borderColor: 'red', // Debug temporaire
   },
   fixedAnswerButton: {
     backgroundColor: '#BB9B4E',
