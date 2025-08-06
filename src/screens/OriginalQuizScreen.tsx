@@ -829,9 +829,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#F0F0F0',
     width: '92%',
-    height: screenHeight * 0.525,
+    height: screenHeight * 0.45, // Réduit pour laisser de l'espace pour le bouton
     position: 'absolute',
-    bottom: 15,
+    bottom: 80, // Augmenté pour laisser de l'espace pour le bouton fixe
     zIndex: 15,
     overflow: 'hidden',
   },
@@ -1117,7 +1117,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     paddingBottom: 30, // Espace supplémentaire pour SafeAreaView
-    zIndex: 100,
+    zIndex: 200, // Augmenté pour être sûr qu'il soit au-dessus de tout
   },
   fixedAnswerButton: {
     backgroundColor: '#BB9B4E',
