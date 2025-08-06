@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-      "buildNumber": "1.3.1",
+      "buildNumber": "1.3.3",
       "infoPlist": {
         "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
