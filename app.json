@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-      "buildNumber": "1.2.3",
+      "buildNumber": "1.2.4",
       "infoPlist": {
         "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
@@ -47,14 +47,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser",
-      [
-        "@react-native-firebase/app",
-        {
-          "android_package_name": "com.attaqwa.app",
-          "ios_bundle_id": "com.attaqwa.app"
-        }
-      ]
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
