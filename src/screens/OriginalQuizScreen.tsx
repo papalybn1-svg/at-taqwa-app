@@ -1077,37 +1077,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fixedAnswerButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#174C3C',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingBottom: 30,
-    zIndex: 100,
-  },
-  fixedAnswerButton: {
-    backgroundColor: '#BB9B4E',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    zIndex: 20,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  fixedAnswerButtonText: {
-    fontSize: 16,
-    color: 'white',
-    fontWeight: 'bold',
-  },
+
   fixedAnswerButtonContainer: {
     position: 'absolute',
     bottom: 0,
@@ -1117,7 +1087,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     paddingBottom: 30, // Espace supplémentaire pour SafeAreaView
-    zIndex: 200, // Augmenté pour être sûr qu'il soit au-dessus de tout
+    zIndex: 300, // Augmenté encore plus pour être sûr qu'il soit au-dessus de tout
   },
   fixedAnswerButton: {
     backgroundColor: '#BB9B4E',
