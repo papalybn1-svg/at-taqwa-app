@@ -1,11 +1,11 @@
 {
-  "expo": {
-    "name": "at-taqwa-app",
+      "expo": {
+      "name": "At-Taqwa",
     "owner": "brahim98",
     "slug": "at-taqwa-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -29,7 +29,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": false,
