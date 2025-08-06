@@ -211,11 +211,11 @@
     },
     {
       "type": "texte",
-      "contenu": "Est-ce qu’il doit continuer son mouvement et se lever ?"
+      "contenu": "- Est-ce qu’il doit continuer son mouvement et se lever ?"
     },
     {
       "type": "texte",
-      "contenu": "Ou, doit-il rester assis ?"
+      "contenu": "- Ou, doit-il rester assis ?"
     },
     {
       "type": "texte",
@@ -423,7 +423,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Réciter les surates dans l’ordre du Coran, la 1ère raka étant plus longue que la 2ème. L’ordre du Coran signifie l’ordre des Surates, la 1ère étant la Fatiha, la 2èmebaqara…la 114ème et dernière étant nâssi."
+      "contenu": "Réciter les surates dans l’ordre du Coran, la 1ère raka étant plus longue que la 2ème. L’ordre du Coran signifie l’ordre des Surates, la 1ère étant la Fatiha, la 2ème baqara… la 114ème et dernière étant nâssi."
     },
     {
       "type": "texte",

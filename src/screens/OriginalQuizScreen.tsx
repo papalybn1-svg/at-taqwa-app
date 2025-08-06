@@ -479,6 +479,14 @@ export default function OriginalQuizScreen() {
 
               {/* Espace réservé pour maintenir la hauteur */}
               <View style={styles.spacer} />
+              
+              <TouchableOpacity
+                style={styles.answerButton}
+                onPress={goToAnswersPage}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.answerButtonText}>Répondre</Text>
+              </TouchableOpacity>
             </>
           ) : (
             // PAGE 2: RÉPONSES MULTIPLES
@@ -584,19 +592,6 @@ export default function OriginalQuizScreen() {
           )}
         </Animated.View>
     </View>
-
-    {/* Bouton fixe en bas pour la page de question */}
-    {showQuestionPage && (
-      <View style={styles.fixedAnswerButtonContainer}>
-        <TouchableOpacity
-          style={styles.fixedAnswerButton}
-          onPress={goToAnswersPage}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.fixedAnswerButtonText}>Répondre</Text>
-        </TouchableOpacity>
-      </View>
-    )}
 
     {/* Modal pour afficher le texte complet avec design empilé */}
     {showTextModal && (
@@ -829,9 +824,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#F0F0F0',
     width: '92%',
-    height: screenHeight * 0.4, // Réduit encore plus pour laisser de l'espace pour le bouton
+    height: screenHeight * 0.525,
     position: 'absolute',
-    bottom: 120, // Augmenté encore plus pour laisser de l'espace pour le bouton fixe
+    bottom: 15,
     zIndex: 15,
     overflow: 'hidden',
   },
@@ -1076,40 +1071,6 @@ const styles = StyleSheet.create({
   starContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-
-  fixedAnswerButtonContainer: {
-    position: 'absolute',
-    bottom: 20, // Remonté de 0 à 20 pour être plus visible
-    left: 20, // Ajouté une marge gauche
-    right: 20, // Ajouté une marge droite
-    backgroundColor: '#174C3C',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingBottom: 30, // Espace supplémentaire pour SafeAreaView
-    zIndex: 999, // Z-index très élevé pour être sûr qu'il soit au-dessus de tout
-    borderWidth: 2, // Debug temporaire
-    borderColor: 'red', // Debug temporaire
-  },
-  fixedAnswerButton: {
-    backgroundColor: '#BB9B4E',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    zIndex: 20,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  fixedAnswerButtonText: {
-    fontSize: 16,
-    color: 'white',
-    fontWeight: 'bold',
   },
 
 
