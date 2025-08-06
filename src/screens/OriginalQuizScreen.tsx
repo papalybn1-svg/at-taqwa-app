@@ -1090,8 +1090,6 @@ const styles = StyleSheet.create({
     zIndex: 999, // Z-index très élevé pour être sûr qu'il soit au-dessus de tout
     borderWidth: 2, // Debug temporaire
     borderColor: 'red', // Debug temporaire
-    borderWidth: 2, // Debug temporaire
-    borderColor: 'red', // Debug temporaire
   },
   fixedAnswerButton: {
     backgroundColor: '#BB9B4E',
