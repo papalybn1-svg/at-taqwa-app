@@ -2,10 +2,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { BackHandler, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import colors from '../theme/colors';
+import {
+    getResponsiveBorderRadius,
+    getResponsiveFontSize,
+    getResponsivePadding,
+    getResponsiveSpacing,
+    screenDimensions
+} from '../utils/responsive';
 
 // Liste centralisée des fichiers d'exercices (clé = numéro de chapitre sous forme de string)
 const exercicesFiles: { [key: string]: any[] } = {
@@ -95,16 +101,6 @@ export default function QuizChapterSelectScreen() {
     return previousScore !== undefined && previousScore >= 80;
   };
 
-  // Gestionnaire de geste de swipe
-  const onGestureEvent = (event: any) => {
-    if (event.nativeEvent.state === State.END) {
-      const { translationX, velocityX } = event.nativeEvent;
-      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
-        navigation.goBack();
-      }
-    }
-  };
-
   // Gérer le clic sur un chapitre
   const handleChapterPress = (chapter: any) => {
     if (!isQuizUnlocked(chapter.exercicesKey)) {
@@ -192,8 +188,6 @@ export default function QuizChapterSelectScreen() {
 
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
     <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 40}}>
       <Text style={styles.title}>Choisissez un chapitre pour le quiz</Text>
       <View style={styles.list}>
@@ -267,9 +261,16 @@ export default function QuizChapterSelectScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCardContainer}>
-            <View style={styles.modalCard}>
+            {/* Carte arrière (la plus profonde) - Vert foncé */}
+            <View style={styles.modalBackCard} />
+            
+            {/* Carte du milieu - Dorée */}
+            <View style={styles.modalMiddleCard} />
+            
+            {/* Carte blanche principale */}
+            <View style={styles.modalWhiteCard}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Quiz Verrouillé</Text>
+                <Text style={styles.modalTitle}>🔒 Quiz Verrouillé</Text>
                 <TouchableOpacity 
                   style={styles.closeModalButton}
                   onPress={() => setShowLockModal(false)}
@@ -287,11 +288,11 @@ export default function QuizChapterSelectScreen() {
                 </Text>
                 
                 <Text style={styles.modalRequirement}>
-                  Pour débloquer ce quiz, vous devez obtenir au moins 80%.
+                  📚 Pour débloquer ce quiz, vous devez obtenir au moins 80%.
                 </Text>
                 
                 <Text style={styles.modalAdvice}>
-                  Conseil : Relisez le chapitre pour mieux comprendre, puis refaites le quiz !
+                  💡 Conseil : Relisez le chapitre pour mieux comprendre, puis refaites le quiz !
                 </Text>
               </View>
               
@@ -315,105 +316,131 @@ export default function QuizChapterSelectScreen() {
         </View>
       </Modal>
     </ScrollView>
-      </PanGestureHandler>
-    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F4F7F6' },
-  title: { fontSize: 22, fontWeight: 'bold', color: colors.primary, marginTop: 30, marginBottom: 18, textAlign: 'center' },
-  list: { paddingHorizontal: 18 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F4F7F6' 
+  },
+  title: { 
+    fontSize: getResponsiveFontSize(22), 
+    fontWeight: 'bold', 
+    color: colors.primary, 
+    marginTop: getResponsiveSpacing(30), 
+    marginBottom: getResponsiveSpacing(18), 
+    textAlign: 'center',
+    paddingHorizontal: getResponsivePadding(),
+  },
+  list: { 
+    paddingHorizontal: getResponsivePadding(),
+    paddingBottom: getResponsiveSpacing(20),
+  },
   chapterCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: getResponsiveBorderRadius(16),
+    padding: getResponsiveSpacing(12),
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
-    minHeight: 80,
+    minHeight: screenDimensions.isSmallDevice ? 70 : 80,
+    marginBottom: getResponsiveSpacing(12),
   },
   chapterImageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    marginRight: 16,
+    width: screenDimensions.isSmallDevice ? 50 : 60,
+    height: screenDimensions.isSmallDevice ? 50 : 60,
+    borderRadius: getResponsiveBorderRadius(12),
+    marginRight: getResponsiveSpacing(16),
     overflow: 'hidden',
     backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
   },
   chapterImage: {
-    width: '140%',
-    height: '140%',
+    width: screenDimensions.isSmallDevice ? '130%' : '140%',
+    height: screenDimensions.isSmallDevice ? '130%' : '140%',
     resizeMode: 'cover',
-    minWidth: '140%',
-    minHeight: '140%',
-    transform: [{ scale: 1.4 }],
+    minWidth: screenDimensions.isSmallDevice ? '130%' : '140%',
+    minHeight: screenDimensions.isSmallDevice ? '130%' : '140%',
+    transform: [{ scale: screenDimensions.isSmallDevice ? 1.3 : 1.4 }],
   },
-  chapterInfo: { flex: 1 },
-  chapterTitle: { fontSize: 16, fontWeight: 'bold', color: colors.text, marginBottom: 2 },
-  chapterPart: { fontSize: 13, color: colors.primary, fontWeight: '600' },
+  chapterInfo: { 
+    flex: 1,
+    paddingRight: getResponsiveSpacing(8),
+  },
+  chapterTitle: { 
+    fontSize: getResponsiveFontSize(16), 
+    fontWeight: 'bold', 
+    color: colors.text, 
+    marginBottom: 2,
+    lineHeight: getResponsiveFontSize(16) * 1.3,
+  },
+  chapterPart: { 
+    fontSize: getResponsiveFontSize(13), 
+    color: colors.primary, 
+    fontWeight: '600' 
+  },
   // Styles pour SplashFamille
   splashFamilleBg: {
     flex: 1,
     backgroundColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 20,
+    paddingTop: getResponsiveSpacing(20),
   },
   topContentBlock: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 40,
+    marginBottom: getResponsiveSpacing(40),
     width: '100%',
   },
   splashFamilleLogo: {
-    width: 200,
-    height: 200,
+    width: screenDimensions.isSmallDevice ? 160 : 200,
+    height: screenDimensions.isSmallDevice ? 160 : 200,
     resizeMode: 'contain',
     marginBottom: 0,
-    marginTop: 40,
+    marginTop: getResponsiveSpacing(40),
     alignSelf: 'center',
   },
   splashFamilleTextContainer: {
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: -40,
-    marginBottom: 8,
+    paddingHorizontal: getResponsivePadding(),
+    marginTop: screenDimensions.isSmallDevice ? -30 : -40,
+    marginBottom: getResponsiveSpacing(8),
   },
   splashMainTitle: {
-    fontSize: 32,
+    fontSize: getResponsiveFontSize(32),
     fontWeight: 'bold',
     color: '#174C3C',
-    marginBottom: 8,
+    marginBottom: getResponsiveSpacing(8),
     textAlign: 'center',
   },
   splashSubtitleGreen: {
-    fontSize: 20,
+    fontSize: getResponsiveFontSize(20),
     fontWeight: '600',
     color: '#174C3C',
-    marginBottom: 10,
+    marginBottom: getResponsiveSpacing(10),
     textAlign: 'center',
   },
   splashDescription: {
-    fontSize: 17,
+    fontSize: getResponsiveFontSize(17),
     color: '#174C3C',
     textAlign: 'center',
     marginBottom: 0,
-    lineHeight: 22,
+    lineHeight: getResponsiveFontSize(17) * 1.3,
   },
   splashFamilleImageXL: {
-    width: '110%',
-    height: '55%',
+    width: screenDimensions.isSmallDevice ? '100%' : '110%',
+    height: screenDimensions.isSmallDevice ? '50%' : '55%',
     resizeMode: 'cover',
     position: 'absolute',
     bottom: 0,
-    left: '-10%',
+    left: screenDimensions.isSmallDevice ? '0%' : '-10%',
     marginBottom: 0,
     marginTop: 0,
     alignSelf: 'center',
@@ -435,163 +462,197 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 12,
+    borderRadius: getResponsiveBorderRadius(12),
   },
   lockIcon: {
-    width: 45,
-    height: 45,
+    width: screenDimensions.isSmallDevice ? 35 : 45,
+    height: screenDimensions.isSmallDevice ? 35 : 45,
     tintColor: '#BB9B4E',
   },
   lockedText: {
     color: '#999',
   },
   lockedMessage: {
-    fontSize: 11,
+    fontSize: getResponsiveFontSize(11),
     color: '#999',
-    marginTop: 4,
+    marginTop: getResponsiveSpacing(4),
     fontStyle: 'italic',
   },
   scoreContainer: {
-    marginTop: 4,
+    marginTop: getResponsiveSpacing(4),
     backgroundColor: colors.primary + '15',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: getResponsiveBorderRadius(6),
+    paddingHorizontal: getResponsiveSpacing(8),
+    paddingVertical: getResponsiveSpacing(3),
     alignSelf: 'flex-start',
   },
   scoreText: {
-    fontSize: 11,
+    fontSize: getResponsiveFontSize(11),
     fontWeight: '600',
     color: colors.primary,
   },
   chapterWrapper: {
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: getResponsiveSpacing(16),
   },
   lockContainer: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: getResponsiveSpacing(10),
+    right: getResponsiveSpacing(10),
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
   clearButton: {
     backgroundColor: '#FF6B6B',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginHorizontal: 18,
-    marginBottom: 10,
+    paddingHorizontal: getResponsiveSpacing(20),
+    paddingVertical: getResponsiveSpacing(10),
+    borderRadius: getResponsiveBorderRadius(8),
+    marginHorizontal: getResponsivePadding(),
+    marginBottom: getResponsiveSpacing(10),
     alignSelf: 'center',
   },
   clearButtonText: {
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
+    fontSize: getResponsiveFontSize(14),
   },
   // Styles pour le modal personnalisé
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlay,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
   modalCardContainer: {
-    width: '100%',
-    maxWidth: 400,
+    width: '90%',
+    maxWidth: screenDimensions.isTablet ? 500 : 400,
+    position: 'relative',
   },
-  modalCard: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
+  modalBackCard: {
+    backgroundColor: '#0F3A2E',
+    borderRadius: getResponsiveBorderRadius(20),
+    height: screenDimensions.isSmallDevice ? 240 : 280,
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
+    borderWidth: 2,
+    borderColor: '#0A2D23',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalMiddleCard: {
+    backgroundColor: '#BB9B4E',
+    borderRadius: getResponsiveBorderRadius(20),
+    height: screenDimensions.isSmallDevice ? 248 : 288,
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    right: 4,
+    borderWidth: 2,
+    borderColor: '#A08642',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
+    shadowRadius: 6,
+    elevation: 7,
+  },
+  modalWhiteCard: {
+    backgroundColor: 'white',
+    borderRadius: getResponsiveBorderRadius(20),
+    padding: getResponsiveSpacing(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 15,
+    borderWidth: 2,
+    borderColor: '#F0F0F0',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginBottom: getResponsiveSpacing(20),
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: getResponsiveFontSize(20),
     fontWeight: 'bold',
-    color: colors.primary,
+    color: '#174C3C',
+    marginBottom: getResponsiveSpacing(16),
+    textAlign: 'center',
   },
   closeModalButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.lightGray,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
-    fontSize: 18,
-    color: colors.darkGray,
+    fontSize: 16,
+    color: '#666',
     fontWeight: 'bold',
   },
   modalContent: {
-    marginBottom: 24,
+    marginBottom: getResponsiveSpacing(20),
   },
   modalMessage: {
-    fontSize: 16,
-    color: colors.text,
-    marginBottom: 16,
-    lineHeight: 24,
+    fontSize: getResponsiveFontSize(16),
+    color: '#333',
+    marginBottom: getResponsiveSpacing(16),
+    lineHeight: getResponsiveFontSize(16) * 1.4,
   },
   modalRequirement: {
-    fontSize: 16,
+    fontSize: getResponsiveFontSize(15),
     color: colors.primary,
     fontWeight: '600',
-    marginBottom: 12,
-    lineHeight: 22,
+    marginBottom: getResponsiveSpacing(12),
+    lineHeight: getResponsiveFontSize(15) * 1.3,
   },
   modalAdvice: {
-    fontSize: 14,
-    color: colors.darkGray,
+    fontSize: getResponsiveFontSize(14),
+    color: '#666',
     fontStyle: 'italic',
-    lineHeight: 20,
+    lineHeight: getResponsiveFontSize(14) * 1.3,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: getResponsiveSpacing(12),
   },
   cancelButton: {
     flex: 1,
     backgroundColor: '#BB9B4E',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: getResponsiveSpacing(12),
+    paddingHorizontal: getResponsiveSpacing(16),
+    borderRadius: getResponsiveBorderRadius(8),
     alignItems: 'center',
   },
   cancelButtonText: {
     color: 'white',
-    fontWeight: '600',
-    fontSize: 15,
+    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(14),
   },
   actionButton: {
     flex: 1,
     backgroundColor: colors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: getResponsiveSpacing(12),
+    paddingHorizontal: getResponsiveSpacing(16),
+    borderRadius: getResponsiveBorderRadius(8),
     alignItems: 'center',
   },
   actionButtonText: {
-    color: colors.white,
-    fontWeight: '600',
-    fontSize: 15,
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: getResponsiveFontSize(14),
   },
 }); 

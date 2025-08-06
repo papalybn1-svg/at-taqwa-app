@@ -47,7 +47,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@react-native-firebase/app",
+        {
+          "android_package_name": "com.attaqwa.app",
+          "ios_bundle_id": "com.attaqwa.app"
+        }
+      ]
     ],
     "extra": {
       "eas": {

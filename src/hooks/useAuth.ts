@@ -3,6 +3,13 @@ import { User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { auth, db } from '../screens/firebaseConfig';
+import { 
+  saveUserDataWithPersistence, 
+  getUserDataWithPersistence, 
+  clearAuthPersistence,
+  checkAuthWithPersistence,
+  AuthUser as PersistenceAuthUser
+} from '../utils/authPersistence';
 
 export type UserRole = 'user' | 'admin';
 
@@ -10,104 +17,40 @@ export interface AuthUser extends User {
   role?: UserRole;
 }
 
-// Clés pour AsyncStorage
-const STORAGE_KEYS = {
-  USER_ROLE: 'userRole',
-  USER_EMAIL: 'userEmail',
-  USER_DISPLAY_NAME: 'userDisplayName',
-  LAST_LOGIN: 'lastLogin'
-};
+// Les clés AsyncStorage sont maintenant gérées dans authPersistence.ts
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(true);
 
-  // Fonction pour sauvegarder les données utilisateur localement
+  // Fonction pour sauvegarder les données utilisateur avec persistance
   const saveUserDataLocally = async (userData: AuthUser) => {
     try {
-      await AsyncStorage.multiSet([
-        [STORAGE_KEYS.USER_ROLE, userData.role || 'user'],
-        [STORAGE_KEYS.USER_EMAIL, userData.email || ''],
-        [STORAGE_KEYS.USER_DISPLAY_NAME, userData.displayName || ''],
-        [STORAGE_KEYS.LAST_LOGIN, new Date().toISOString()]
-      ]);
-      console.log('✅ Données utilisateur sauvegardées localement');
+      await saveUserDataWithPersistence(userData);
     } catch (error) {
       console.error('❌ Erreur sauvegarde locale:', error);
     }
   };
 
-  // Fonction pour vérifier si l'utilisateur est connecté localement (uniquement pour Expo Go)
+  // Fonction pour vérifier si l'utilisateur est connecté avec persistance
   const checkLocalAuth = async (): Promise<AuthUser | null> => {
     try {
-      // En production, on ne doit PAS utiliser le cache local comme fallback
-      // Cette fonction n'est utilisée que pour Expo Go
-      const savedData = await AsyncStorage.multiGet([
-        STORAGE_KEYS.USER_ROLE,
-        STORAGE_KEYS.USER_EMAIL,
-        STORAGE_KEYS.USER_DISPLAY_NAME,
-        STORAGE_KEYS.LAST_LOGIN
-      ]);
-
-      const savedRole = savedData[0][1];
-      const savedEmail = savedData[1][1];
-      const savedDisplayName = savedData[2][1];
-      const lastLogin = savedData[3][1];
-
-      if (savedEmail && savedRole && lastLogin) {
-        // Vérifier si la dernière connexion date de moins de 7 jours (plus strict pour la sécurité)
-        const lastLoginDate = new Date(lastLogin);
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        if (lastLoginDate > sevenDaysAgo) {
-          console.log('✅ Utilisateur trouvé en cache local (Expo Go)');
-          return {
-            uid: 'local-user',
-            email: savedEmail,
-            displayName: savedDisplayName,
-            role: savedRole as UserRole,
-            // Autres propriétés Firebase User simulées
-            emailVerified: true,
-            isAnonymous: false,
-            metadata: {
-              creationTime: lastLogin,
-              lastSignInTime: lastLogin
-            }
-          } as AuthUser;
-        }
-      }
-      return null;
+      return await checkAuthWithPersistence();
     } catch (error) {
-      console.error('❌ Erreur vérification cache local:', error);
+      console.error('❌ Erreur vérification persistance:', error);
       return null;
     }
   };
 
-  // Fonction pour récupérer les données utilisateur locales
+  // Fonction pour récupérer les données utilisateur avec persistance
   const getUserDataFromStorage = async (user: User): Promise<AuthUser> => {
     try {
-      const savedData = await AsyncStorage.multiGet([
-        STORAGE_KEYS.USER_ROLE,
-        STORAGE_KEYS.USER_EMAIL,
-        STORAGE_KEYS.USER_DISPLAY_NAME
-      ]);
-
-      const savedRole = savedData[0][1];
-      const savedEmail = savedData[1][1];
-
-      // Vérifier si les données correspondent à l'utilisateur actuel
-      if (savedEmail === user.email && savedRole) {
-        console.log('✅ Données utilisateur récupérées depuis le cache local');
-        return { ...user, role: savedRole as UserRole };
-      }
+      return await getUserDataWithPersistence(user);
     } catch (error) {
-      console.error('❌ Erreur récupération cache local:', error);
+      console.error('❌ Erreur récupération données utilisateur:', error);
+      return { ...user, role: 'user' };
     }
-
-    // Si pas de données locales, retourner l'utilisateur avec rôle par défaut
-    return { ...user, role: 'user' };
   };
 
   // Fonction pour récupérer le rôle depuis Firestore
@@ -129,26 +72,29 @@ export function useAuth() {
   useEffect(() => {
     let isMounted = true;
 
-    // Vérifier d'abord le cache local pour Expo Go
+    // Vérifier d'abord le cache local pour Expo Go (développement uniquement)
     const checkLocalAuthFirst = async () => {
-      try {
-        const localUser = await checkLocalAuth();
-        if (localUser && isMounted) {
-          console.log('🔄 Utilisateur trouvé en cache local (Expo Go), connexion automatique...');
-          setUser(localUser);
-          setLoading(false);
-          setInitializing(false);
-          return; // Sortir si on a trouvé un utilisateur en cache
+      if (__DEV__) {
+        try {
+          const localUser = await checkLocalAuth();
+          if (localUser && isMounted) {
+            console.log('🔄 Utilisateur trouvé en cache local (Expo Go), connexion automatique...');
+            setUser(localUser);
+            setLoading(false);
+            setInitializing(false);
+            return; // Sortir si on a trouvé un utilisateur en cache
+          }
+        } catch (error) {
+          console.error('❌ Erreur vérification cache local:', error);
         }
-      } catch (error) {
-        console.error('❌ Erreur vérification cache local:', error);
+        
+        console.log('📱 Aucun utilisateur en cache, attente de Firebase Auth...');
+      } else {
+        console.log('🚀 Mode production - Attente de Firebase Auth native...');
       }
-      
-      // Si pas d'utilisateur en cache, continuer avec Firebase
-      console.log('📱 Aucun utilisateur en cache, attente de Firebase Auth...');
     };
 
-    // Vérifier le cache local immédiatement
+    // Vérifier le cache local immédiatement (développement uniquement)
     checkLocalAuthFirst();
 
     // Timeout de sécurité pour forcer la fin du chargement après 15 secondes
@@ -211,12 +157,7 @@ export function useAuth() {
           
           // Nettoyer le cache local
           try {
-            await AsyncStorage.multiRemove([
-              STORAGE_KEYS.USER_ROLE,
-              STORAGE_KEYS.USER_EMAIL,
-              STORAGE_KEYS.USER_DISPLAY_NAME,
-              STORAGE_KEYS.LAST_LOGIN
-            ]);
+            await clearAuthPersistence();
           } catch (error) {
             console.error('❌ Erreur nettoyage cache:', error);
           }
@@ -243,13 +184,8 @@ export function useAuth() {
     try {
       setLoading(true);
       
-      // Nettoyer le cache local
-      await AsyncStorage.multiRemove([
-        STORAGE_KEYS.USER_ROLE,
-        STORAGE_KEYS.USER_EMAIL,
-        STORAGE_KEYS.USER_DISPLAY_NAME,
-        STORAGE_KEYS.LAST_LOGIN
-      ]);
+      // Nettoyer complètement la persistance
+      await clearAuthPersistence();
       
       // Déconnecter Firebase
       await auth.signOut();
@@ -258,7 +194,7 @@ export function useAuth() {
       setUser(null);
       setLoading(false);
       
-      console.log('✅ Déconnexion réussie - Cache local nettoyé');
+      console.log('✅ Déconnexion réussie - Persistance et Firebase nettoyés');
     } catch (error) {
       console.error('❌ Erreur déconnexion:', error);
       setLoading(false);

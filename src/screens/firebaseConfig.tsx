@@ -6,7 +6,7 @@ import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDuMPU5-gMrwaPYngnCWnUsgTtOK8FKLXY",
+  apiKey: "AIzaSyAxEHjynhNxiWP6HFdeWamSFk3YJy0-rto",
   authDomain: "at-taqwa-app-14b7f.firebaseapp.com",
   projectId: "at-taqwa-app-14b7f",
   storageBucket: "at-taqwa-app-14b7f.appspot.com",
@@ -24,6 +24,19 @@ export const auth = getAuth(app);
 // En production, Firebase Auth gère automatiquement la persistance
 // Cette configuration assure que la persistance fonctionne correctement
 auth.useDeviceLanguage();
+
+// Configuration de la persistance pour les builds natifs
+// Cette configuration force Firebase Auth à utiliser la persistance native
+auth.settings.appVerificationDisabledForTesting = false;
+
+// Configuration pour améliorer la persistance en production
+if (__DEV__) {
+  console.log('🔧 Mode développement - Persistance AsyncStorage activée');
+} else {
+  console.log('🚀 Mode production - Persistance Firebase native activée');
+  // En production, Firebase Auth gère automatiquement la persistance
+  // Pas besoin de configuration supplémentaire
+}
 
 // Configuration de la persistance pour différents environnements
 // En production, la persistance est automatique

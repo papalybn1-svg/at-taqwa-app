@@ -3,25 +3,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
-import React from "react";
-import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React from 'react';
+import {
+    Animated,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
-const chapterFiles: { [key: string]: any } = {
-  "1": require('../../data/chapitres/chapitre_01.json'),
-  "2": require('../../data/chapitres/chapitre_02.json'),
-  "3": require('../../data/chapitres/chapitre_03.json'),
-  "4": require('../../data/chapitres/chapitre_04.json'),
-  "5": require('../../data/chapitres/chapitre_05.json'),
-  "6": require('../../data/chapitres/chapitre_06.json'),
-  "7": require('../../data/chapitres/chapitre_07.json'),
-  "8": require('../../data/chapitres/chapitre_08.json'),
-  "9": require('../../data/chapitres/chapitre_09.json'),
-  "10": require('../../data/chapitres/chapitre_10.json'),
-  "11": require('../../data/chapitres/chapitre_11.json'),
-  "12": require('../../data/chapitres/chapitre_12.json'),
-};
-import colors from "../theme/colors";
+import { colors } from '../constants/colors';
+import { getResponsiveBorderRadius, getResponsiveFontSize, getResponsivePadding, getResponsiveSpacing, screenDimensions } from '../utils/responsive';
 import { AuthContext } from './LoginScreen';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
 
@@ -112,70 +108,6 @@ Le vendredi est un jour béni dans l'Islam, un moment de rassemblement et de ren
 
 Le raccourcissement et la combinaison des prières sont permis au voyageur pour faciliter son adoration. Ces facilités témoignent de la sagesse divine qui tient compte des circonstances de la vie humaine.`
 };
-
-// Fonction pour calculer le nombre de pages d'un chapitre
-const getChapterPages = (chapterImage: string) => {
-  try {
-    const chapterData = chapterFiles[chapterImage];
-    if (chapterData && chapterData.contenu) {
-      const sections = splitIntroAndSections(chapterData.contenu);
-      return sections.sections.length;
-    }
-    return 0;
-  } catch (error) {
-    console.log('Erreur lors du calcul des pages:', error);
-    return 0;
-  }
-};
-
-// Fonction utilitaire pour découper l'intro et les sections (copiée de ChapterScreen)
-function splitIntroAndSections(contenu: any[]) {
-  const sections: { title: string, items: any[] }[] = [];
-  let currentSection: { title: string, items: any[] } | null = null;
-
-  contenu.forEach((item) => {
-    // Si c'est un titre de section (I., II., III., etc.)
-    if (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/^\s*[IVXLCDM]+[\.-]/)) {
-      // Sauvegarder la section précédente si elle existe
-      if (currentSection) {
-        sections.push(currentSection);
-      }
-      // Créer une nouvelle section avec ce titre
-      currentSection = { title: item.contenu, items: [] };
-    } else {
-      // Si on a une section en cours, ajouter l'item à cette section
-      if (currentSection) {
-        currentSection.items.push(item);
-      } else {
-        // Si on n'a pas encore de section (début du chapitre), créer une première section sans titre
-        if (sections.length === 0) {
-          sections.push({ title: "", items: [item] });
-        } else {
-          // Ajouter à la première section existante
-          sections[0].items.push(item);
-        }
-      }
-    }
-  });
-  
-  // Ajouter la dernière section si elle existe
-  if (currentSection) {
-    sections.push(currentSection);
-  }
-  
-  // Garder toutes les sections non vides, même celles qui n'ont que le titre principal
-  const filteredSections = sections.filter(section => {
-    // Vérifier si la section a des items
-    if (!section.items || section.items.length === 0) {
-      return false;
-    }
-    
-    // Garder toutes les sections qui ont des items
-    return true;
-  });
-  
-  return { sections: filteredSections };
-}
 
 const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; onPress: () => void }) => (
   <TouchableOpacity style={styles.categoryButton} onPress={onPress}>
@@ -565,21 +497,16 @@ export default function HomeScreen() {
                       />
                     </View>
                     <View style={styles.bookCardContentModern}>
-                      <View>
-                        <Text style={styles.bookCardTitleModern} numberOfLines={3}>
-                          {item.title ? item.title.replace(/\.\s*$/, ':') : 'Chapitre'}
-                        </Text>
-                        <Text style={styles.bookCardTitleModern} numberOfLines={4}>
-                          {item.desc || 'Titre du chapitre'}
-                        </Text>
-                        </View>
-                                              <Text style={styles.bookCardSubtitleModern} numberOfLines={3}>{item.partie || 'Partie'}</Text>
+                      <Text style={styles.bookCardTitleModern} numberOfLines={2}>{item.title || 'Titre du chapitre'}</Text>
+                      <Text style={styles.bookCardSubtitleModern} numberOfLines={1}>{item.partie || 'Partie'}</Text>
                       <View style={styles.bookCardFooterModern}>
+                        <View style={styles.readTimeModern}>
+                          <MaterialCommunityIcons name="clock-outline" size={12} color={colors.gray} />
+                          <Text style={styles.readTimeTextModern}>~15 min</Text>
+                        </View>
                         <View style={styles.pagesCountModern}>
                           <MaterialCommunityIcons name="book-open-page-variant" size={12} color={colors.gray} />
-                          <Text style={styles.pagesCountTextModern}>
-                            {getChapterPages(item.image)} page{getChapterPages(item.image) > 1 ? 's' : ''}
-                          </Text>
+                          <Text style={styles.pagesCountTextModern}>~3 pages</Text>
                         </View>
                       </View>
                     </View>
@@ -633,38 +560,33 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F4F7F6',
-  },
-  container: {
-    flex: 1,
-  },
+  safeArea: { flex: 1, backgroundColor: '#F4F7F6' },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 10,
-    marginTop: 15,
-    marginBottom: 20,
+    paddingHorizontal: getResponsivePadding(),
+    paddingTop: getResponsiveSpacing(20),
+    paddingBottom: getResponsiveSpacing(10),
+    marginTop: getResponsiveSpacing(15),
+    marginBottom: getResponsiveSpacing(20),
   },
   bismillah: {
-    fontSize: 24,
+    fontSize: getResponsiveFontSize(24),
     fontWeight: '800',
     color: colors.primary,
     textAlign: 'left',
     letterSpacing: 0.5,
   },
   welcomeMessage: {
-    fontSize: 14,
+    fontSize: getResponsiveFontSize(14),
     color: colors.gray,
-    marginTop: 4,
+    marginTop: getResponsiveSpacing(4),
   },
   notificationButton: {
-    padding: 8,
-    borderRadius: 20,
+    padding: getResponsiveSpacing(8),
+    borderRadius: getResponsiveBorderRadius(20),
     backgroundColor: '#FFF',
     elevation: 4,
     shadowColor: '#000',
@@ -683,19 +605,19 @@ const styles = StyleSheet.create({
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: getResponsiveSpacing(4),
   },
   notificationBadgeText: {
     color: colors.white,
-    fontSize: 10,
+    fontSize: getResponsiveFontSize(10),
     fontWeight: 'bold',
   },
   bannerContainer: {
     backgroundColor: colors.primary,
-    borderRadius: 24,
-    marginHorizontal: 24,
+    borderRadius: getResponsiveBorderRadius(24),
+    marginHorizontal: getResponsivePadding(),
     marginTop: -5,
-    padding: 20,
+    padding: getResponsiveSpacing(20),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -703,69 +625,69 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    marginBottom: 20,
+    marginBottom: getResponsiveSpacing(20),
     position: 'relative',
   },
   bannerTextContainer: {
     flex: 1,
-    paddingRight: 40,
+    paddingRight: getResponsiveSpacing(40),
     maxWidth: '70%',
   },
   bannerTitle: {
-    fontSize: 14,
+    fontSize: getResponsiveFontSize(14),
     fontWeight: 'bold',
     color: colors.white,
-    lineHeight: 18,
-    marginBottom: 10,
+    lineHeight: getResponsiveFontSize(14) * 1.3,
+    marginBottom: getResponsiveSpacing(10),
   },
   bannerButton: {
     backgroundColor: colors.white,
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderRadius: getResponsiveBorderRadius(18),
+    paddingVertical: getResponsiveSpacing(8),
+    paddingHorizontal: getResponsiveSpacing(14),
     alignSelf: 'flex-start',
   },
   bannerButtonText: {
     color: colors.primary,
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: getResponsiveFontSize(13),
   },
   bannerImage: {
-    width: 140,
-    height: 180,
+    width: screenDimensions.isSmallDevice ? 120 : 140,
+    height: screenDimensions.isSmallDevice ? 160 : 180,
     resizeMode: 'contain',
     position: 'absolute',
     right: -30,
     bottom: -30,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: getResponsiveSpacing(20),
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: getResponsiveFontSize(18),
     fontWeight: 'bold',
     color: colors.primary,
-    marginBottom: 14,
-    paddingHorizontal: 24,
+    marginBottom: getResponsiveSpacing(14),
+    paddingHorizontal: getResponsivePadding(),
   },
   categoriesGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: getResponsivePadding(),
   },
   categoryButton: {
     alignItems: 'center',
-    width: '25%',
+    width: screenDimensions.isSmallDevice ? '22%' : '25%',
   },
   categoryIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: screenDimensions.isSmallDevice ? 50 : 60,
+    height: screenDimensions.isSmallDevice ? 50 : 60,
+    borderRadius: screenDimensions.isSmallDevice ? 25 : 30,
     backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: getResponsiveSpacing(8),
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.15,
@@ -773,28 +695,28 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   categoryButtonText: {
-    fontSize: 12,
+    fontSize: getResponsiveFontSize(12),
     color: colors.text,
     textAlign: 'center',
   },
   bookCardModern: {
-    width: 180,
-    height: 240,
+    width: screenDimensions.isSmallDevice ? 160 : 180,
+    height: screenDimensions.isSmallDevice ? 240 : 260,
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: getResponsiveBorderRadius(18),
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.10,
     shadowRadius: 8,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: getResponsiveSpacing(8),
   },
   bookImageContainer: {
     width: '100%',
-    height: 100,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    height: screenDimensions.isSmallDevice ? 100 : 120,
+    borderTopLeftRadius: getResponsiveBorderRadius(18),
+    borderTopRightRadius: getResponsiveBorderRadius(18),
     overflow: 'hidden',
     backgroundColor: '#f8f9fa',
     justifyContent: 'center',
@@ -810,30 +732,28 @@ const styles = StyleSheet.create({
   },
   bookCardContentModern: {
     flex: 1,
-    padding: 8,
+    padding: getResponsiveSpacing(14),
     justifyContent: 'space-between',
   },
   bookCardTitleModern: {
-    fontSize: 14,
+    fontSize: getResponsiveFontSize(15),
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 1,
+    marginBottom: getResponsiveSpacing(4),
     textAlign: 'center',
-    lineHeight: 16,
   },
   bookCardSubtitleModern: {
     fontSize: 12,
     color: colors.primary,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 4,
-    lineHeight: 14,
+    marginBottom: 6,
   },
   bookCardFooterModern: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 8,
   },
   readTimeModern: {
     flexDirection: 'row',
