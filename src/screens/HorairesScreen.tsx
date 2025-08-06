@@ -109,7 +109,7 @@ export default function HorairesScreen() {
       } catch (error) {
         console.log('❌ Erreur permissions notifications:', error);
         // Continue sans notifications si erreur
-      }
+    }
     };
     
     // Exécuter les fonctions de manière sécurisée
@@ -130,7 +130,7 @@ export default function HorairesScreen() {
       } else {
         try {
           // Demander la permission de localisation
-          let { status } = await Location.requestForegroundPermissionsAsync();
+        let { status } = await Location.requestForegroundPermissionsAsync();
           
           if (status === 'granted') {
             // Si permission accordée, utiliser la localisation GPS
@@ -151,7 +151,7 @@ export default function HorairesScreen() {
         } catch (locationError) {
           console.log('❌ Erreur localisation, utilisation Dakar par défaut:', locationError);
           url = `https://api.aladhan.com/v1/timingsByCity?city=Dakar&country=Senegal&method=4&school=1`;
-        }
+      }
       }
       
       console.log('🌐 Appel API heures de prière:', url);
@@ -221,7 +221,7 @@ export default function HorairesScreen() {
       
       console.log('⚠️ Utilisation des données de fallback en raison d\'une erreur API');
     } finally {
-      setLoading(false);
+    setLoading(false);
     }
   };
 
@@ -261,7 +261,7 @@ export default function HorairesScreen() {
       }
     } catch (error) {
       console.log('❌ Erreur lors du changement de ville:', error);
-      setModalVisible(false);
+    setModalVisible(false);
       setCity('Dakar');
       fetchPrayerTimes('Dakar');
     }
@@ -370,22 +370,22 @@ export default function HorairesScreen() {
       // Swipe de droite à gauche avec une vitesse suffisante ou une distance suffisante
       if ((translationX > 50 && velocityX > 500) || translationX > 150) {
         navigation.goBack();
-      }
     }
+  }
   };
 
   return (
     <GestureHandlerRootView style={styles.container}>
       <PanGestureHandler onHandlerStateChange={onGestureEvent}>
-        <View style={styles.container}>
+    <View style={styles.container}>
           {/* Header moderne cohérent avec les autres pages */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Heures de prière</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Heures de prière</Text>
             <View style={styles.placeholder} />
-          </View>
+      </View>
       {/* Image plus discrète */}
       <View style={styles.headerContainer}>
         <Image 
@@ -451,10 +451,10 @@ export default function HorairesScreen() {
                       style={styles.notificationButton}
                     onPress={async () => {
                       try {
-                        if (enabledNotifications[item.key]) {
-                          await cancelPrayerNotification(item.key);
-                        } else if (prayerTimes && prayerTimes[item.key]) {
-                          await schedulePrayerNotification(item.key, prayerTimes[item.key], item.label);
+                      if (enabledNotifications[item.key]) {
+                        await cancelPrayerNotification(item.key);
+                      } else if (prayerTimes && prayerTimes[item.key]) {
+                        await schedulePrayerNotification(item.key, prayerTimes[item.key], item.label);
                         }
                       } catch (error) {
                         console.log('❌ Erreur lors de la gestion de notification:', error);
@@ -522,7 +522,7 @@ export default function HorairesScreen() {
           </View>
         </View>
       </Modal>
-        </View>
+    </View>
       </PanGestureHandler>
     </GestureHandlerRootView>
   );
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     width: 44,
   },
   headerContainer: { 
-    height: isTablet ? 220 : (isSmallScreen ? 160 : 180), 
+    height: isTablet ? 160 : (isSmallScreen ? 120 : 140), 
     borderRadius: isTablet ? 22 : 18, 
     marginHorizontal: isTablet ? 32 : 20, 
     marginTop: 12, 
@@ -588,9 +588,9 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   dateIconContainer: {
-    width: isTablet ? 44 : 38,
-    height: isTablet ? 44 : 38,
-    borderRadius: isTablet ? 22 : 19,
+    width: isTablet ? 32 : 28,
+    height: isTablet ? 32 : 28,
+    borderRadius: isTablet ? 16 : 14,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -602,8 +602,8 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
   },
   dateIcon: {
-    width: isTablet ? 44 : 38,
-    height: isTablet ? 44 : 38,
+    width: isTablet ? 32 : 28,
+    height: isTablet ? 32 : 28,
     backgroundColor: 'transparent',
   },
   dateTextContainer: {

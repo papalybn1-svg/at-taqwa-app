@@ -149,7 +149,9 @@ export default function BooksScreen() {
                     {/* Contenu du chapitre */}
                     <View style={styles.newChapterContent}>
                       <View style={styles.chapterHeader}>
-                        <Text style={styles.newChapterTitle} numberOfLines={2}>{ch.title}</Text>
+                        <Text style={styles.newChapterTitle} numberOfLines={4}>
+                          {ch.title ? `${ch.title.replace(/\.\s*$/, ': ')}${ch.desc}` : 'Chapitre'}
+                        </Text>
                         <View style={[
                           styles.progressBadge, 
                           { backgroundColor: chapterProgress === 100 ? '#D4AF37' : chapterProgress > 0 ? '#FFF3CD' : '#F1F3F4' }
@@ -239,7 +241,9 @@ export default function BooksScreen() {
                               color={chapterProgress === 100 ? "#D4AF37" : chapterProgress > 0 ? "#FFF3CD" : "#ffffff80"}
                             />
                           </View>
-                          <Text style={styles.drawerChapterText} numberOfLines={2}>{ch.title}</Text>
+                          <Text style={styles.drawerChapterText} numberOfLines={4}>
+                            {ch.title ? `${ch.title.replace(/\.\s*$/, ': ')}${ch.desc}` : 'Chapitre'}
+                          </Text>
                           <Text style={styles.drawerChapterProgress}>{Math.round(chapterProgress)}%</Text>
                         </TouchableOpacity>
                       );

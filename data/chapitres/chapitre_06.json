@@ -2,20 +2,16 @@
   "chapitre": "CHAPITRE III :",
   "contenu": [
     {
-      "type": "texte",
-      "contenu": "REPARATION DES ERREURS PORTANT SUR"
+      "type": "titre",
+      "contenu": "REPARATION DES ERREURS PORTANT SUR LES OBLIGATIONS DIVINES"
     },
     {
       "type": "texte",
-      "contenu": "LES OBLIGATIONS DIVINES"
+      "contenu": "Les obligations divines ou faratas sont énoncées dans des versets du noble Coran."
     },
     {
       "type": "texte",
-      "contenu": "I. Les obligations divines ou faratas sont énoncées dans des versets du noble Coran."
-    },
-    {
-      "type": "texte",
-      "contenu": "- Les diverses obligations divines  de la prière:"
+      "contenu": "I. Les diverses obligations divines  de la prière:"
     },
     {
       "type": "texte",
@@ -31,7 +27,7 @@
     },
     {
       "type": "texte",
-      "contenu": "-Dans un hadith cité par Bukhary, le Prophète (SPL) a dit :"
+      "contenu": "- Dans un hadith cité par Bukhary, le Prophète (PSL) a dit :"
     },
     {
       "type": "texte",
@@ -54,12 +50,16 @@
       "contenu": "Quant à la station debout, le noble Coran nous dit :"
     },
     {
-      "type": "texte",
+      "type": "arabe",
+      "contenu": "حَفِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ وَقُومُوا لِلَّهِ قَانِتِينَ s.2,v.238."
+    },
+    {
+      "type": "explication",
       "contenu": "Et tenez vous debout pour Allah, avec humilité s.2,v.238."
     },
     {
       "type": "texte",
-      "contenu": "- Rukû : la flexion du corps en avant les mains sur les genoux ; cette flexion est suivie du redressement ; il faut garder le corps droit avec calme et sérénité. Attention de bien s’appliquer ! Le Prophète (SPL) a dit un jour à quelqu’un qui priait :"
+      "contenu": "- Rukû : la flexion du corps en avant les mains sur les genoux ; cette flexion est suivie du redressement ; il faut garder le corps droit avec calme et sérénité. Attention de bien s’appliquer ! Le Prophète (PSL) a dit un jour à quelqu’un qui priait :"
     },
     {
       "type": "texte",
@@ -83,19 +83,11 @@
     },
     {
       "type": "texte",
-      "contenu": "-La prononciation de la formule : «assalamu alaykum» à voix haute"
+      "contenu": "-La prononciation de la formule : «assalamu alaykum» à voix haute et en position assise. Attention, cette position assise dure seulement le temps de dire « assalamualaykum ». Avant de prononcer cette formule, vous êtes en position assise pour réciter la tahiyya ; mais la position assise de la tahiyya n’est pas une obligation divine ;c’est simplement une sunna forte."
     },
     {
       "type": "texte",
-      "contenu": "et en position assise. Attention, cette position assise dure seulement le temps de dire « assalamualaykum ». Avant de prononcer cette formule, vous êtes en position assise pour réciter la tahiyya ; mais la position assise de la tahiyya n’est pas une obligation divine ; c’est simplement une sunna forte."
-    },
-    {
-      "type": "texte",
-      "contenu": "- L’observation stricte de l’ordre précité. C’est une obligation, car vous"
-    },
-    {
-      "type": "texte",
-      "contenu": "ne devez pas bouleverser l’ordre établi sous peine d’annuler votre prière !"
+      "contenu": "- L’observation stricte de l’ordre précité. C’est une obligation, car vous ne devez pas bouleverser l’ordre établi sous peine d’annuler votre prière !"
     },
     {
       "type": "texte",
@@ -127,7 +119,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Par contre, si vous vous rendez compte avoir oublié une obligation divine avant la fin de la raka, vous devez revenir alors en arrière pour accomplir ce que vous avez oublié."
+      "contenu": "1.2 Par contre, si vous vous rendez compte avoir oublié une obligation divine avant la fin de la raka, vous devez revenir alors en arrière pour accomplir ce que vous avez oublié."
     },
     {
       "type": "texte",
@@ -139,7 +131,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Une obligation divine a été omise et le fidèle ne s’en est souvenu qu’à la raka suivante ou peu avant le salut final, la raka concernée par l’oubli est annulée."
+      "contenu": "a) Une obligation divine a été omise et le fidèle ne s’en est souvenu qu’à la raka suivante ou peu avant le salut final, la raka concernée par l’oubli est annulée."
     },
     {
       "type": "texte",
@@ -155,7 +147,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Par contre, si vous vous rendez compte avoir oublié une obligation divine avant la fin de la raka, vous devez revenir alors en arrière pour accomplir ce que vous avez oublié."
+      "contenu": "b) Par contre, si vous vous rendez compte avoir oublié une obligation divine avant la fin de la raka, vous devez revenir alors en arrière pour accomplir ce que vous avez oublié."
     },
     {
       "type": "texte",
@@ -167,7 +159,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Applications pratiques"
+      "contenu": "1.3 Applications pratiques"
     },
     {
       "type": "texte",
@@ -221,7 +213,7 @@
         [
           "",
           "Oubli de la 2ème sujûd",
-          "Souvenance de l’oubli"
+          "Fatiha\nPas de sourate"
         ]
       ]
     },
@@ -231,37 +223,30 @@
     },
     {
       "type": "texte",
-      "contenu": "Devient"
+      "contenu": " RAKA 3 ---->Devient----> RAKA 2"
     },
     {
       "type": "texte",
-      "contenu": "Il continue sa prière en terminant sa nouvelle raka 2 par la"
-    },
-    {
-      "type": "texte",
-      "contenu": "tahiyya. Ensuite il se lève et prie la nouvelle 3ème raka et prononce le salut final s’il s’agit de la prière du Maghreb."
+      "contenu": "Il continue sa prière en terminant sa nouvelle raka 2 par la tahiyya. Ensuite il se lève et prie la nouvelle 3ème raka et prononce le salut final s’il s’agit de la prière du Maghreb."
     },
     {
       "type": "tableau",
       "contenu": [
         [
-          "Raka1",
-          "Raka2 annulée",
-          "Nille R2",
-          "R3",
-          ""
+          "Raka 1    ",
+          "Raka 2 annulée    ",
+          "Nouvelle Raka 2    ",
+          "Raka 3    "
         ],
         [
           "Fatiha",
           "Fatiha",
           "Fatiha",
-          "Fatiha",
-          ""
+          "Fatiha"
         ],
         [
           "Surate",
           "manque surate",
-          "",
           "",
           ""
         ]
@@ -282,54 +267,6 @@
     {
       "type": "texte",
       "contenu": "En conséquence, la «diminution» l’emporte sur « l’augmentation », le fidèle fait donc sujûd habla salam."
-    },
-    {
-      "type": "texte",
-      "contenu": "Testez vos connaissances :"
-    },
-    {
-      "type": "texte",
-      "contenu": "Comment réparer l’omission d’une obligation divine ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "Un fidèle oublie de faire le takbiratul ihrâm et commence à réciter la Fatiha avant de se rendre compte de son erreur ; que doit-il faire ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "Un fidèle a oublié de réciter la Fatiha et s’en souvient pendant le rukû. Que doit-il faire ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "Peu avant le salut final, un fidèle s’aperçoit avoir oublié la Fatiha à la 2ème raka. Comment corrige-t-il sa faute ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "Un fidèle oublie de faire le salut final et commence son zikr ; que doit-il faire ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "Après le salut final, vous avez des doutes sur une partie de votre prière. Avez-vous une réparation à faire ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "Après deux rakas, un fidèle fait le salut final par erreur ; doit-il recommencer sa prière ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "En voulant sauver un enfant qui était derrière lui et qui allait vers un danger, un fidèle se retourne complètement. Peut-il continuer sa prière ou doit-il la recommencer ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "Vous avez répété la Fatiha par erreur au cours d’une rakka. Avez-vous une réparation à faire ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "Un fidèle oublie le rukû et s’en souvient pendant la sujûd, comment répare –t-il sa prière ?"
-    },
-    {
-      "type": "texte",
-      "contenu": "Un fidèle a oublié une sujûd et s’en souvient après s’être relevée pour la raka suivante ; que doit-il faire ?"
     }
   ]
 }

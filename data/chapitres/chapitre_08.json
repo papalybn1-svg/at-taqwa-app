@@ -2,12 +2,8 @@
   "chapitre": "CHAPITRE I",
   "contenu": [
     {
-      "type": "texte",
-      "contenu": "LA PRIERE DERRIERE L’IMAM"
-    },
-    {
-      "type": "texte",
-      "contenu": "DITE PRIERE EN COMMUN"
+      "type": "titre",
+      "contenu": "LA PRIERE DERRIERE L’IMAM DITE PRIERE EN COMMUN"
     },
     {
       "type": "texte",
@@ -43,7 +39,7 @@
     },
     {
       "type": "texte",
-      "contenu": "La prière en commun a un très grand mérite. Selon le Prophète (SPL), « une prière exécutée en commun est 27 fois supérieure en mérite à celle faite isolément (Bukhary)."
+      "contenu": "La prière en commun a un très grand mérite. Selon le Prophète (PSL), « une prière exécutée en commun est 27 fois supérieure en mérite à celle faite isolément (Bukhary)."
     },
     {
       "type": "texte",

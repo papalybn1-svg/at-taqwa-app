@@ -2,12 +2,8 @@
   "chapitre": "CHAPITRE IV",
   "contenu": [
     {
-      "type": "texte",
-      "contenu": "REPARATION DES ERREURS DANS"
-    },
-    {
-      "type": "texte",
-      "contenu": "LA PRIERE SUREROGATOIRE « nafila »"
+      "type": "titre",
+      "contenu": "REPARATION DES ERREURS DANSLA PRIERE SUREROGATOIRE « nafila »"
     },
     {
       "type": "texte",
@@ -19,7 +15,7 @@
     },
     {
       "type": "texte",
-      "contenu": "La prière surérogatoire comble les défaillances survenues au cours des prières obligatoires. Selon Abu Daud, le Prophète (SPL) a dit :"
+      "contenu": "La prière surérogatoire comble les défaillances survenues au cours des prières obligatoires. Selon Abu Daud, le Prophète (PSL) a dit :"
     },
     {
       "type": "texte",
@@ -51,7 +47,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Le Prophète (SPL) a recommandé de terminer les prières surérogatoires de nuit par un witr, mais de ne jamais faire deux witr dans une seule nuit."
+      "contenu": "Le Prophète (PSL) a recommandé de terminer les prières surérogatoires de nuit par un witr, mais de ne jamais faire deux witr dans une seule nuit."
     },
     {
       "type": "texte",
@@ -113,6 +109,5 @@
       "type": "texte",
       "contenu": "Dans ce cas, vous considérez que vous êtes à la 2ème raka du Chafa. Après le salut final, vous ferez bahda salam ; vous vous levez ensuite pour accomplir la prière du witr."
     }
-    
   ]
 }

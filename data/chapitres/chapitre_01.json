@@ -2,7 +2,7 @@
   "chapitre": "CHAPITRE I :",
   "contenu": [
     {
-      "type": "texte",
+      "type": "titre",
       "contenu": "SIGNIFICATION ET SOURCES DE LA PRIERE"
     },
     {
@@ -31,11 +31,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Si un non musulman veut devenir musulman, il doit prononcer la Shahada. C’est la porte d’entrée dans l’Islam. Elle est répétée plusieurs fois par le musulman à diverses occasions, comme l’ablution, l’iqama et la tahiyya par exemple."
-    },
-    {
-      "type": "texte",
-      "contenu": "La Zakat manifeste « l’amour qu’on porte à Allah ; en effet « en nourrissant un démuni ou en lui donnant discrètement une aide, on manifeste son amour envers Allah le Créateur et Seigneur de tous les êtres vivants. »"
+      "contenu": "Si un non musulman veut devenir musulman, il doit prononcer la Shahada. C’est la porte d’entrée dans l’Islam. Elle est répétée plusieurs fois par le musulman à diverses occasions, comme l’ablution, l’iqama et la tahiyya par exemple:La Zakat manifeste « l’amour qu’on porte à Allah ; en effet « en nourrissant un démuni ou en lui donnant discrètement une aide, on manifeste son amour envers Allah le Créateur et Seigneur de tous les êtres vivants. »"
     },
     {
       "type": "texte",
@@ -47,19 +43,11 @@
     },
     {
       "type": "texte",
-      "contenu": "La Salât (prière), traduit le désir « d’être constamment en présence d’Allah »."
+      "contenu": "La Salât (prière), traduit le désir « d’être constamment en présence d’Allah ». Alors que le Hajj est obligatoire une fois dans sa vie, la Zakat et le Siyyam (jeûne) se font une fois par an, « la Salât quant à elle, doit être accomplie 5 fois par jour. C’est donc un acte constant et permanent, un acte d’adoration, de soumission et de recours à Allah. »"
     },
     {
       "type": "texte",
-      "contenu": "Alors que le Hajj est obligatoire une fois dans sa vie, la Zakat et le Siyyam (jeûne) se font une fois par an, « la Salât quant à elle, doit être accomplie 5 fois par jour. C’est donc un acte constant et permanent, un acte d’adoration, de soumission et de recours à Allah. »"
-    },
-    {
-      "type": "texte",
-      "contenu": "L’adoration, la soumission et le recours à Allah ont un caractère permanent"
-    },
-    {
-      "type": "texte",
-      "contenu": "« C’est Toi seul que nous adorons et de Toi seul que nous implorons le secours ! »"
+      "contenu": "L’adoration, la soumission et le recours à Allah ont un caractère permanent C’est Toi seul que nous adorons et de Toi seul que nous implorons le secours ! »"
     },
     {
       "type": "texte",
@@ -86,7 +74,11 @@
       "contenu": "Certains la perçoivent « comme une charge considérable », mais le Noble Coran précise « sauf pour les humbles » !"
     },
     {
-      "type": "texte",
+      "type": "arabe",
+      "contenu": "سَيَقُولُ السُّفَهَاءُ مِنَ النَّاسِ مَا وَلَّاهُمْ عَنْ قِبْلَتِهِمُ الَّتِي كَانُوا عَلَيْهَا ۚ قُلْ لِلَّهِ الْمَشْرِقُ وَالْمَغْرِبُ ۚ يَهْدِي مَنْ يَشَاءُ إِلَىٰ صِرَاطٍ مُسْتَقِيمٍ"
+    },
+    {
+      "type": "explication",
       "contenu": "Allah, ne nous a-t-il pas invités à « chercher du secours dans la patience et la prière ? Allah est avec les endurants » : S2, v 142"
     },
     {
@@ -106,20 +98,24 @@
       "contenu": "Dans la surate Qaf révélée à la Mecque, les versets 39 et 40 sont les premiers à nous indiquer le nombre de prières quotidiennes :"
     },
     {
-      "type": "texte",
-      "contenu": "« Endure donc ce qu’ils disent et célèbre la louange de ton Seigneur avant le lever du soleil et avant son coucher » (prières du Subh et de l’Asr)."
+      "type": "arabe",
+      "contenu": "«فَاصْبِرْ عَلَىٰ مَا يَقُولُونَ وَسَبِّحْ بِحَمْدِ رَبِّكَ قَبْلَ طُلُوعِ الشَّمْسِ وَقَبْلَ الْغُرُوبِ » .«وَمِنَ اللَّيْلِ فَسَبِّحْهُ وَأَدْبَارَ السُّجُودِ»"
     },
     {
-      "type": "texte",
-      "contenu": "« Et célèbre Sa gloire, une partie de la nuit et à la suite des prosternations » (prière de l’Ichâa)."
+      "type": "explication",
+      "contenu": "« Endure donc ce qu’ils disent et célèbre la louange de ton Seigneur avant le lever du soleil et avant son coucher » (prières du Subh et de l’Asr).« Et célèbre Sa gloire, une partie de la nuit et à la suite des prosternations » (prière de l’Ichâa).>>"
     },
     {
       "type": "texte",
       "contenu": "Ce sont là les 3 premières prières canoniques fixées au début de la Révélation : Subh, Asr et Ichâa. A cette époque, la prière consistait simplement en invocations (doua) et en prosternations (sujûd)."
     },
     {
-      "type": "texte",
-      "contenu": "Au cours du voyage nocturne du Prophète (SPL), Allah a complété le nombre de prières quotidiennes à cinq. En effet, les versets 78 et 79 de la Surate Isra nous éclairent : « Accomplis la Salât au déclin du soleil jusqu’à l’obscurité de la nuit et fais aussi la lecture à l’Aube, car la lecture à l’aube à des témoins »."
+      "type": "arabe",
+      "contenu": "أَقِمِ الصَّلَاةَ لِدُلُوكِ الشَّمْسِ إِلَىٰ غَسَقِ اللَّيْلِ وَقُرْآنَ الْفَجْرِ ۖ إِنَّ قُرْآنَ الْفَجْرِ كَانَ مَشْهُودًا وَمِنَ اللَّيْلِ فَتَهَجَّدْ بِهِ نَافِلَةً لَكَ عَسَىٰ أَنْ يَبْعَثَكَ رَبُّكَ مَقَامًا مَحْمُودًا"
+    },
+    {
+      "type": "explication",
+      "contenu": "Au cours du voyage nocturne du Prophète (SPL), Allah a complété le nombre de prières quotidiennes à cinq. En effet, les versets 78 et 79 de la Sourate Isra nous éclairent : « En effet, les versets 78 et 79 de la Sourate Isra nous éclairent. »"
     },
     {
       "type": "texte",
@@ -127,7 +123,7 @@
     },
     {
       "type": "texte",
-      "contenu": "« Quelle est la prière la plus méritoire après celles prescrites ? », avait-on demandé au Messager d’Allah (SPL), il répondit :"
+      "contenu": "« Quelle est la prière la plus méritoire après celles prescrites ? », avait-on demandé au Messager d’Allah (PSL), il répondit :"
     },
     {
       "type": "texte",
@@ -138,12 +134,12 @@
       "contenu": "Cette réponse du Prophète est confirmée par le Coran :"
     },
     {
-      "type": "texte",
-      "contenu": "« Et de la nuit, consacrer une partie (avant l’aube) pour des prières"
+      "type": "arabe",
+      "contenu": "وَقُلْ جَاءَ الْحَقُّ وَزَهَقَ الْبَاطِلُ ۚ إِنَّ الْبَاطِلَ كَانَ زَهُوقًا (s17, v81)."
     },
     {
-      "type": "texte",
-      "contenu": "Surérogatoires afin que ton Seigneur te ressuscite en une position de gloire ». (s17, v81)."
+      "type": "explication",
+      "contenu": "« Et de la nuit, consacrer une partie (avant l’aube) pour des prières Surérogatoires afin que ton Seigneur te ressuscite en une position de gloire ». (s17, v81)."
     },
     {
       "type": "texte",
@@ -155,11 +151,7 @@
     },
     {
       "type": "texte",
-      "contenu": "« Accomplis la prière aux deux extrémités du jour et à certaines"
-    },
-    {
-      "type": "texte",
-      "contenu": "heures de la nuit : les bonnes œuvres dissipent les mauvaises. Cela est une exhortation pour ceux qui réfléchissent »."
+      "contenu": "« Accomplis la prière aux deux extrémités du jour et à certaines heures de la nuit : les bonnes œuvres dissipent les mauvaises. Cela est une exhortation pour ceux qui réfléchissent »."
     },
     {
       "type": "texte",
@@ -167,11 +159,7 @@
     },
     {
       "type": "texte",
-      "contenu": "« Glorifiez Allah donc, soir et matin ! A Lui toute louange dans les"
-    },
-    {
-      "type": "texte",
-      "contenu": "cieux et la terre, dans l’après-midi et au milieu de la journée »."
+      "contenu": "« Glorifiez Allah donc, soir et matin ! A Lui toute louange dans les cieux et la terre, dans l’après-midi et au milieu de la journée »."
     },
     {
       "type": "texte",
@@ -191,11 +179,7 @@
     },
     {
       "type": "texte",
-      "contenu": "« Les cinq prières furent prescrites durant l’Ascension nocturne et que"
-    },
-    {
-      "type": "texte",
-      "contenu": "le Prophète ne cessait de les recommander en même temps que la loyauté et la réserve »."
+      "contenu": "« Les cinq prières furent prescrites durant l’Ascension nocturne et que le Prophète ne cessait de les recommander en même temps que la loyauté et la réserve »."
     },
     {
       "type": "texte",
@@ -211,22 +195,22 @@
     },
     {
       "type": "texte",
-      "contenu": "Voilà rappelées quelques sources coraniques et traditionnelles qui ne laissent"
+      "contenu": "Voilà rappelées quelques sources coraniques et traditionnelles qui ne laissent aucun doute sur la primauté de la prière dans le culte musulman. Cette primauté est renforcée par d’incommensurables vertus."
     },
     {
       "type": "texte",
-      "contenu": "aucun doute sur la primauté de la prière dans le culte musulman. Cette primauté est renforcée par d’incommensurables vertus."
-    },
-    {
-      "type": "texte",
-      "contenu": "IV Les vertus de la prière"
+      "contenu": "IV.Les vertus de la prière"
     },
     {
       "type": "texte",
       "contenu": "Chaque geste et chaque attitude dans la prière prescrite, depuis l’appel jusqu’au salut final, renferme des vertus. Cependant,"
     },
     {
-      "type": "texte",
+      "type": "arabe",
+      "contenu": "«فَإِذَا قَضَيْتُمُ الصَّلَاةَ فَاذْكُرُوا اللَّهَ قِيَامًا وَقُعُودًا وَعَلَىٰ جُنُوبِكُمْ ۚ فَإِذَا اطْمَأْنَنْتُمْ فَأَقِيمُوا الصَّلَاةَ ۚ إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَوْقُوتًا « (S.4, V 103)."
+    },
+    {
+      "type": "explication",
       "contenu": "« La salât demeure pour les croyants, une prescription à des temps déterminés « (S.4, V 103)."
     },
     {
@@ -247,11 +231,7 @@
     },
     {
       "type": "texte",
-      "contenu": "« Supposez qu’une rivière passe devant la porte de l’un d’entre vous"
-    },
-    {
-      "type": "texte",
-      "contenu": "et que celui-ci s’y lave cinq fois par jour. Pensez-vous qu’après cela il lui resterait la moindre crasse ? Non assurément, répondirent-ils. Eh ! bien, ajouta-t-il, il en est de même des cinq prières, c’est par elles qu’Allah efface les péchés »."
+      "contenu": "« Supposez qu’une rivière passe devant la porte de l’un d’entre vous et que celui-ci s’y lave cinq fois par jour. Pensez-vous qu’après cela il lui resterait la moindre crasse ? Non assurément, répondirent-ils. Eh ! bien, ajouta-t-il, il en est de même des cinq prières, c’est par elles qu’Allah efface les péchés »."
     },
     {
       "type": "texte",

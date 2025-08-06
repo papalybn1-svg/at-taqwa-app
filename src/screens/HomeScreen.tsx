@@ -7,6 +7,20 @@ import React from "react";
 import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
+const chapterFiles: { [key: string]: any } = {
+  "1": require('../../data/chapitres/chapitre_01.json'),
+  "2": require('../../data/chapitres/chapitre_02.json'),
+  "3": require('../../data/chapitres/chapitre_03.json'),
+  "4": require('../../data/chapitres/chapitre_04.json'),
+  "5": require('../../data/chapitres/chapitre_05.json'),
+  "6": require('../../data/chapitres/chapitre_06.json'),
+  "7": require('../../data/chapitres/chapitre_07.json'),
+  "8": require('../../data/chapitres/chapitre_08.json'),
+  "9": require('../../data/chapitres/chapitre_09.json'),
+  "10": require('../../data/chapitres/chapitre_10.json'),
+  "11": require('../../data/chapitres/chapitre_11.json'),
+  "12": require('../../data/chapitres/chapitre_12.json'),
+};
 import colors from "../theme/colors";
 import { AuthContext } from './LoginScreen';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
@@ -98,6 +112,70 @@ Le vendredi est un jour béni dans l'Islam, un moment de rassemblement et de ren
 
 Le raccourcissement et la combinaison des prières sont permis au voyageur pour faciliter son adoration. Ces facilités témoignent de la sagesse divine qui tient compte des circonstances de la vie humaine.`
 };
+
+// Fonction pour calculer le nombre de pages d'un chapitre
+const getChapterPages = (chapterImage: string) => {
+  try {
+    const chapterData = chapterFiles[chapterImage];
+    if (chapterData && chapterData.contenu) {
+      const sections = splitIntroAndSections(chapterData.contenu);
+      return sections.sections.length;
+    }
+    return 0;
+  } catch (error) {
+    console.log('Erreur lors du calcul des pages:', error);
+    return 0;
+  }
+};
+
+// Fonction utilitaire pour découper l'intro et les sections (copiée de ChapterScreen)
+function splitIntroAndSections(contenu: any[]) {
+  const sections: { title: string, items: any[] }[] = [];
+  let currentSection: { title: string, items: any[] } | null = null;
+
+  contenu.forEach((item) => {
+    // Si c'est un titre de section (I., II., III., etc.)
+    if (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/^\s*[IVXLCDM]+[\.-]/)) {
+      // Sauvegarder la section précédente si elle existe
+      if (currentSection) {
+        sections.push(currentSection);
+      }
+      // Créer une nouvelle section avec ce titre
+      currentSection = { title: item.contenu, items: [] };
+    } else {
+      // Si on a une section en cours, ajouter l'item à cette section
+      if (currentSection) {
+        currentSection.items.push(item);
+      } else {
+        // Si on n'a pas encore de section (début du chapitre), créer une première section sans titre
+        if (sections.length === 0) {
+          sections.push({ title: "", items: [item] });
+        } else {
+          // Ajouter à la première section existante
+          sections[0].items.push(item);
+        }
+      }
+    }
+  });
+  
+  // Ajouter la dernière section si elle existe
+  if (currentSection) {
+    sections.push(currentSection);
+  }
+  
+  // Garder toutes les sections non vides, même celles qui n'ont que le titre principal
+  const filteredSections = sections.filter(section => {
+    // Vérifier si la section a des items
+    if (!section.items || section.items.length === 0) {
+      return false;
+    }
+    
+    // Garder toutes les sections qui ont des items
+    return true;
+  });
+  
+  return { sections: filteredSections };
+}
 
 const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; onPress: () => void }) => (
   <TouchableOpacity style={styles.categoryButton} onPress={onPress}>
@@ -487,16 +565,21 @@ export default function HomeScreen() {
                       />
                     </View>
                     <View style={styles.bookCardContentModern}>
-                      <Text style={styles.bookCardTitleModern} numberOfLines={2}>{item.title || 'Titre du chapitre'}</Text>
-                      <Text style={styles.bookCardSubtitleModern} numberOfLines={1}>{item.partie || 'Partie'}</Text>
+                      <View>
+                        <Text style={styles.bookCardTitleModern} numberOfLines={3}>
+                          {item.title ? item.title.replace(/\.\s*$/, ':') : 'Chapitre'}
+                        </Text>
+                        <Text style={styles.bookCardTitleModern} numberOfLines={4}>
+                          {item.desc || 'Titre du chapitre'}
+                        </Text>
+                      </View>
+                                              <Text style={styles.bookCardSubtitleModern} numberOfLines={3}>{item.partie || 'Partie'}</Text>
                       <View style={styles.bookCardFooterModern}>
-                        <View style={styles.readTimeModern}>
-                          <MaterialCommunityIcons name="clock-outline" size={12} color={colors.gray} />
-                          <Text style={styles.readTimeTextModern}>~15 min</Text>
-                        </View>
                         <View style={styles.pagesCountModern}>
                           <MaterialCommunityIcons name="book-open-page-variant" size={12} color={colors.gray} />
-                          <Text style={styles.pagesCountTextModern}>~3 pages</Text>
+                          <Text style={styles.pagesCountTextModern}>
+                            {getChapterPages(item.image)} page{getChapterPages(item.image) > 1 ? 's' : ''}
+                          </Text>
                         </View>
                       </View>
                     </View>
@@ -696,7 +779,7 @@ const styles = StyleSheet.create({
   },
   bookCardModern: {
     width: 180,
-    height: 260,
+    height: 240,
     backgroundColor: colors.white,
     borderRadius: 18,
     elevation: 6,
@@ -709,7 +792,7 @@ const styles = StyleSheet.create({
   },
   bookImageContainer: {
     width: '100%',
-    height: 120,
+    height: 100,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     overflow: 'hidden',
@@ -727,28 +810,30 @@ const styles = StyleSheet.create({
   },
   bookCardContentModern: {
     flex: 1,
-    padding: 14,
+    padding: 8,
     justifyContent: 'space-between',
   },
   bookCardTitleModern: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 1,
     textAlign: 'center',
+    lineHeight: 16,
   },
   bookCardSubtitleModern: {
     fontSize: 12,
     color: colors.primary,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
+    lineHeight: 14,
   },
   bookCardFooterModern: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   readTimeModern: {
     flexDirection: 'row',

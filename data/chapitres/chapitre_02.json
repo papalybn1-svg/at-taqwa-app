@@ -2,7 +2,7 @@
   "chapitre": "CHAPITRE II",
   "contenu": [
     {
-      "type": "texte",
+      "type": "titre",
       "contenu": "LES DIFFERENTES FORMES DE PURIFICATION"
     },
     {
@@ -18,8 +18,12 @@
       "contenu": "Que dit le Coran ?"
     },
     {
-      "type": "texte",
-      "contenu": "«  Et si vous êtes pollués, alors purifiez par un bain…»   (SV, v6)"
+      "type": "arabe",
+      "contenu": "«وَإِنْ كُنْتُمْ جُنُبًا فَاطَّهَّرُوا ۚ وَإِنْ كُنْتُمْ مَرْضَىٰ أَوْ عَلَىٰ سَفَرٍ أَوْ جَاءَ أَحَدٌ مِنْكُمْ مِنَ الْغَائِطِ أَوْ لَامَسْتُمُ النِّسَاءَ فَلَمْ تَجِدُوا مَاءً فَتَيَمَّمُوا صَعِيدًا طَيِّبًا فَامْسَحُوا بِوُجُوهِكُمْ وَأَيْدِيكُمْ مِنْهُ ۚ مَا يُرِيدُ اللَّهُ لِيَجْعَلَ عَلَيْكُمْ مِنْ حَرَجٍ وَلَٰكِنْ يُرِيدُ لِيُطَهِّرَكُمْ وَلِيُتِمَّ نِعْمَتَهُ عَلَيْكُمْ لَعَلَّكُمْ تَشْكُرُونَ»   (S5, v6)"
+    },
+    {
+      "type": "explication",
+      "contenu": "«  Et si vous êtes pollués, alors purifiez par un bain…»   (S5, v6)"
     },
     {
       "type": "texte",
@@ -123,7 +127,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Il s’agit de pratiques ajoutées par le Prophète (SPL) de façon si constante qu’elles sont fortement recommandées par lui ; ces pratiques sont quasi obligatoires :"
+      "contenu": "Il s’agit de pratiques ajoutées par le Prophète (PSL) de façon si constante qu’elles sont fortement recommandées par lui ; ces pratiques sont quasi obligatoires :"
     },
     {
       "type": "texte",
@@ -234,7 +238,11 @@
       "contenu": "Que dit le Coran ?"
     },
     {
-      "type": "texte",
+      "type": "arabe",
+      "contenu": "«يَا أَيُّهَا الَّذِينَ آمَنُوا إِذَا قُمْتُمْ إِلَى الصَّلَاةِ فَاغْسِلُوا وُجُوهَكُمْ وَأَيْدِيَكُمْ إِلَى الْمَرَافِقِ وَامْسَحُوا بِرُءُوسِكُمْ وَأَرْجُلَكُمْ إِلَى الْكَعْبَيْن ». (SV, v6)."
+    },
+    {
+      "type": "explication",
       "contenu": "«Ô les croyants ! Lorsque vous vous levez pour la Salât, lavez vos visages et vos mains jusqu’aux coudes ; passez les mains mouillées sur vos têtes ; et lavez-vous les pieds jusqu’aux chevilles ». (SV, v6)."
     },
     {
@@ -251,7 +259,7 @@
     },
     {
       "type": "texte",
-      "contenu": "2.2.\tQu’est-ce qui peut annuler la petite ablution ?"
+      "contenu": "2.2. Qu’est-ce qui peut annuler la petite ablution ?"
     },
     {
       "type": "texte",
@@ -259,15 +267,11 @@
     },
     {
       "type": "texte",
-      "contenu": "après les selles, après avoir fait du vent et après toute sortie"
+      "contenu": "-après les selles, après avoir fait du vent et après toute sortie de liquide par les parties sexuelles"
     },
     {
       "type": "texte",
-      "contenu": "de liquide par les parties sexuelles ;"
-    },
-    {
-      "type": "texte",
-      "contenu": "après un sommeil profond, un évanouissement, l’attouchement d’une femme, le toucher de ses parties sexuelles."
+      "contenu": "-après un sommeil profond, un évanouissement, l’attouchement d’une femme, le toucher de ses parties sexuelles."
     },
     {
       "type": "texte",
@@ -275,7 +279,7 @@
     },
     {
       "type": "texte",
-      "contenu": "2.3.\tComment faire les ablutions ?"
+      "contenu": "2.3. Comment faire les ablutions ?"
     },
     {
       "type": "texte",
@@ -283,7 +287,7 @@
     },
     {
       "type": "texte",
-      "contenu": "1. Commencer par dire « aonzubillahi mina chaytâni rajîmi,"
+      "contenu": "a) Commencer par dire « aonzubillahi mina chaytâni rajîmi,"
     },
     {
       "type": "texte",
@@ -291,51 +295,47 @@
     },
     {
       "type": "texte",
-      "contenu": "2. Laver les deux mains (3 fois)."
+      "contenu": "b) Laver les deux mains (3 fois)."
     },
     {
       "type": "texte",
-      "contenu": "3. Rincer la bouche (3 fois en une seule prise)."
+      "contenu": "c) Rincer la bouche (3 fois en une seule prise)."
     },
     {
       "type": "texte",
-      "contenu": "4. Rincer les dents."
+      "contenu": "d) Rincer les dents."
     },
     {
       "type": "texte",
-      "contenu": "5. Laver les narines."
+      "contenu": "e) Laver les narines."
     },
     {
       "type": "texte",
-      "contenu": "6. Formuler l’intention au début du lavage du visage."
+      "contenu": "f) Formuler l’intention au début du lavage du visage."
     },
     {
       "type": "texte",
-      "contenu": "7. Laver le visage 3 fois, à partir du front, jusqu’à l’extrémité du menton."
+      "contenu": "g Laver le visage 3 fois, à partir du front, jusqu’à l’extrémité du menton."
     },
     {
       "type": "texte",
-      "contenu": "8. Laver les mains jusqu’aux coudes, 3 fois :"
+      "contenu": "h) Laver les mains jusqu’aux coudes, 3 fois :"
     },
     {
       "type": "texte",
-      "contenu": "9. Laver l’avant-bras droit jusqu’au coude trois fois en frottant avec sa"
+      "contenu": "i) Laver l’avant-bras droit jusqu’au coude trois fois en frottant avec sa main gauche. Ensuite, procéder de même pour le lavage de l’avant-bras gauche jusqu’au coude (3 fois)."
     },
     {
       "type": "texte",
-      "contenu": "main gauche. Ensuite, procéder de même pour le lavage de l’avant-bras gauche jusqu’au coude (3 fois)."
+      "contenu": "j) Passer les deux mains sur la tête, d’avant en arrière, en commençant par le dessus front, depuis les cheveux jusqu’à la nuque. Joindre les extrémités des doigts sur sa tête et mettre ses pouces sur ses tempes. La femme passera les mains sur la tête et sur les oreilles de la même façon mais pas obligatoirement sur le cuir chevelu."
     },
     {
       "type": "texte",
-      "contenu": "10. Passer les deux mains sur la tête, d’avant en arrière, en commençant par le dessus front, depuis les cheveux jusqu’à la nuque. Joindre les extrémités des doigts sur sa tête et mettre ses pouces sur ses tempes. La femme passera les mains sur la tête et sur les oreilles de la même façon mais pas obligatoirement sur le cuir chevelu."
+      "contenu": "k) Laver les oreilles, 3 fois."
     },
     {
       "type": "texte",
-      "contenu": "11. Laver les oreilles, 3 fois."
-    },
-    {
-      "type": "texte",
-      "contenu": "12. Laver les pieds jusqu’aux chevilles 3 fois. Laver le pied droit en le frottant complètement, et ce, trois fois. Laver le pied gauche de la même façon que pour le pied droit."
+      "contenu": "l) Laver les pieds jusqu’aux chevilles 3 fois. Laver le pied droit en le frottant complètement, et ce, trois fois. Laver le pied gauche de la même façon que pour le pied droit."
     },
     {
       "type": "texte",
@@ -355,7 +355,7 @@
     },
     {
       "type": "texte",
-      "contenu": "L’Envoyé d’Allah (SPL) a dit :"
+      "contenu": "L’Envoyé d’Allah (PSL) a dit :"
     },
     {
       "type": "texte",
@@ -448,7 +448,7 @@
     {
       "type": "texte",
       "contenu": "Suivre l’ordre prescrit pour les obligations traditionnelles."
-    } ,
+    },
     {
       "type": "texte",
       "contenu": "III- Le tayammom"
@@ -458,12 +458,16 @@
       "contenu": "Que dit le Coran ?"
     },
     {
-      "type": "texte",
+      "type": "arabe",
+      "contenu": "« فَلَمْ تَجِدُوا مَاءً فَتَيَمَّمُوا صَعِيدًا طَيِّبًا فَامْسَحُوا بِوُجُوهِكُمْ وَأَيْدِيكُمْ مِنْهُ» (s5, v6)."
+    },
+    {
+      "type": "explication",
       "contenu": "« Si vous ne trouvez pas d’eau, alors recourez à la terre pure, passez-en sur vos visages et vos mains jusqu’aux coudes » (s5, v6)."
     },
     {
       "type": "texte",
-      "contenu": "Ce verset a été révélé lors d’une expédition au cours de laquelle Aicha avait perdu son bracelet. Le temps mis à rechercher le bracelet ayant été trop long, l’heure de la prière surprit la troupe alors que celle-ci n’avait plus d’eau pour faire l’ablution. Alors le Prophète (SPL) lut aux compagnons le verset qui venait juste d’être révélé."
+      "contenu": "Ce verset a été révélé lors d’une expédition au cours de laquelle Aicha avait perdu son bracelet. Le temps mis à rechercher le bracelet ayant été trop long, l’heure de la prière surprit la troupe alors que celle-ci n’avait plus d’eau pour faire l’ablution. Alors le Prophète (PSL) lut aux compagnons le verset qui venait juste d’être révélé."
     },
     {
       "type": "texte",

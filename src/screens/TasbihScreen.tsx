@@ -34,7 +34,7 @@ export default function TasbihScreen() {
   const [newZikr, setNewZikr] = useState({
     text: '',
     description: '',
-    max: 33
+    max: 0
   });
   const db = getFirestore();
   const navigation = useNavigation();
@@ -209,7 +209,7 @@ export default function TasbihScreen() {
           category: data.category || 'Général',
           text: data.text || 'Zikr',
           description: data.description || 'Louange à Allah',
-          max: data.count || 33 
+          max: data.count || 0 
         });
       });
       
@@ -233,14 +233,14 @@ export default function TasbihScreen() {
           category: 'Dhikr du matin',
           text: 'سُبْحَانَ اللَّهِ',
           description: 'Subhan Allah (Gloire à Allah)',
-          max: 33 
+          max: 0 
         },
         { 
           id: 'default2', 
           category: 'Dhikr du soir',
           text: 'الْحَمْدُ لِلَّهِ',
           description: 'Alhamdulillah (Louange à Allah)',
-        max: 33 
+                  max: 0 
         },
         { 
           id: 'default3', 
@@ -363,7 +363,7 @@ export default function TasbihScreen() {
       >
         {/* Contenu de l'onglet actif */}
         {activeTab === 'custom' ? (
-          <View style={styles.section}>
+        <View style={styles.section}>
             {customZikrs.length === 0 ? (
               <View style={styles.emptyStateContainer}>
                 <MaterialCommunityIcons name="heart-outline" size={64} color={colors.gray} />
@@ -371,7 +371,7 @@ export default function TasbihScreen() {
                 <Text style={styles.emptyStateText}>
                   Créez vos propres zikrs en appuyant sur le bouton + ci-dessus.
                 </Text>
-              </View>
+          </View>
             ) : (
               <View style={styles.zikrsList}>
                 {customZikrs.map((item, index) => {
@@ -469,96 +469,96 @@ export default function TasbihScreen() {
         ) : (
           <View style={styles.section}>
             {systemZikrs.length === 0 ? (
-              <View style={styles.emptyStateContainer}>
-                <MaterialCommunityIcons name="book-open-variant" size={64} color={colors.gray} />
-                <Text style={styles.emptyStateTitle}>Aucun zikr disponible</Text>
-                <Text style={styles.emptyStateText}>
-                  Ajoutez des zikrs depuis le panneau administrateur pour commencer à pratiquer le dhikr.
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.zikrsList}>
+            <View style={styles.emptyStateContainer}>
+              <MaterialCommunityIcons name="book-open-variant" size={64} color={colors.gray} />
+              <Text style={styles.emptyStateTitle}>Aucun zikr disponible</Text>
+              <Text style={styles.emptyStateText}>
+                Ajoutez des zikrs depuis le panneau administrateur pour commencer à pratiquer le dhikr.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.zikrsList}>
                 {systemZikrs.map((item, index) => {
-                  const count = zikrProgress[item.id] || 0;
-                  const progressPercentage = (count / item.max) * 100;
-                  const isCompleted = count >= item.max;
-                  
-                  return (
-                    <TouchableOpacity 
-                      key={item.id} 
-                      style={[
-                        styles.zikrCard,
-                        isCompleted && styles.zikrCardCompleted
-                      ]}
-                      onPress={() => handleOpenTasbih(item)}
-                      activeOpacity={0.7}
-                    >
-                      {/* Header de la carte */}
-                      <View style={styles.zikrCardHeader}>
-                        <View style={styles.categoryBadge}>
-                          <Text style={styles.categoryText}>{item.category}</Text>
+            const count = zikrProgress[item.id] || 0;
+                const progressPercentage = (count / item.max) * 100;
+                const isCompleted = count >= item.max;
+                
+            return (
+                  <TouchableOpacity 
+                    key={item.id} 
+                    style={[
+                      styles.zikrCard,
+                      isCompleted && styles.zikrCardCompleted
+                    ]}
+                    onPress={() => handleOpenTasbih(item)}
+                    activeOpacity={0.7}
+                  >
+                    {/* Header de la carte */}
+                    <View style={styles.zikrCardHeader}>
+                      <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryText}>{item.category}</Text>
+                      </View>
+                      {isCompleted && (
+                        <View style={styles.completedBadge}>
+                          <MaterialCommunityIcons name="check-circle" size={16} color="#fff" />
                         </View>
-                        {isCompleted && (
-                          <View style={styles.completedBadge}>
-                            <MaterialCommunityIcons name="check-circle" size={16} color="#fff" />
+                      )}
+                    </View>
+
+                    {/* Contenu principal */}
+                    <View style={styles.zikrCardContent}>
+                      <Text style={styles.zikrTextArabic}>{item.text}</Text>
+                    <Text style={styles.zikrDescription}>{item.description}</Text>
+                    </View>
+
+                    {/* Progress et actions */}
+                    <View style={styles.zikrCardFooter}>
+                      <View style={styles.progressInfo}>
+                        <Text style={styles.progressCount}>
+                          {count} / {item.max}
+                        </Text>
+                        <View style={styles.progressBarContainer}>
+                    <View style={styles.progressBarBg}>
+                            <View 
+                              style={[
+                                styles.progressBarFill,
+                                { 
+                                  width: `${progressPercentage}%`,
+                                  backgroundColor: colors.secondary
+                                }
+                              ]} 
+                            />
                           </View>
-                        )}
-                      </View>
+                    </View>
+                  </View>
 
-                      {/* Contenu principal */}
-                      <View style={styles.zikrCardContent}>
-                        <Text style={styles.zikrTextArabic}>{item.text}</Text>
-                        <Text style={styles.zikrDescription}>{item.description}</Text>
-                      </View>
-
-                      {/* Progress et actions */}
-                      <View style={styles.zikrCardFooter}>
-                        <View style={styles.progressInfo}>
-                          <Text style={styles.progressCount}>
-                            {count} / {item.max}
-                          </Text>
-                          <View style={styles.progressBarContainer}>
-                            <View style={styles.progressBarBg}>
-                              <View 
-                                style={[
-                                  styles.progressBarFill,
-                                  { 
-                                    width: `${progressPercentage}%`,
-                                    backgroundColor: colors.secondary
-                                  }
-                                ]} 
-                              />
-                            </View>
-                          </View>
-                        </View>
-
-                        <View style={styles.cardActions}>
-                          <TouchableOpacity 
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              increment(item.id);
-                            }} 
-                            style={[styles.actionButton, styles.incrementButton]}
-                          >
-                            <MaterialCommunityIcons name="plus" size={18} color="#fff" />
-                          </TouchableOpacity>
-                          <TouchableOpacity 
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              reset(item.id);
-                            }} 
-                            style={[styles.actionButton, styles.resetButton]}
-                          >
-                            <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
+                      <View style={styles.cardActions}>
+                        <TouchableOpacity 
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            increment(item.id);
+                          }} 
+                          style={[styles.actionButton, styles.incrementButton]}
+                        >
+                          <MaterialCommunityIcons name="plus" size={18} color="#fff" />
                     </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-          </View>
+                        <TouchableOpacity 
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            reset(item.id);
+                          }} 
+                          style={[styles.actionButton, styles.resetButton]}
+                        >
+                          <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+              })}
+            </View>
+          )}
+        </View>
         )}
 
         {/* Section statistiques */}
@@ -729,11 +729,11 @@ export default function TasbihScreen() {
                 <Text style={styles.inputLabel}>Nombre maximum</Text>
                 <TextInput
                   style={styles.adminInput}
-                  placeholder="33"
+                  placeholder="Entrez le nombre maximum"
                   value={String(newZikr.max)}
                   onChangeText={(text) => {
-                    const max = parseInt(text) || 33;
-                    setNewZikr(prev => ({ ...prev, max: Math.max(1, Math.min(999, max)) }));
+                    const max = parseInt(text) || 0;
+                    setNewZikr(prev => ({ ...prev, max: max }));
                   }}
                   keyboardType="numeric"
                   placeholderTextColor={colors.gray}
@@ -744,7 +744,7 @@ export default function TasbihScreen() {
                 <TouchableOpacity 
                   style={[styles.adminModalButton, styles.cancelAdminButton]}
                   onPress={() => {
-                    setNewZikr({ text: '', description: '', max: 33 });
+                    setNewZikr({ text: '', description: '', max: 0 });
                     setShowCreateModal(false);
                   }}
                 >

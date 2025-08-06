@@ -2,35 +2,35 @@
   "chapitre": "CHAPITRE V",
   "contenu": [
     {
-      "type": "texte",
+      "type": "titre",
       "contenu": "LA PRIERE DU VENDREDI (SALATUL JUMU’A)"
     },
     {
       "type": "texte",
-      "contenu": "Un jour, le Prophète (SPL) était entrain de prononcer son sermon (qutba) du vendredi, quand fut annoncée l’arrivée d’une caravane. Presque tous les fidèles coururent à sa rencontre, laissant le Prophète seul avec 12 fidèles. Alors Dieu révéla ce verset :"
+      "contenu": "Un jour, le Prophète (PSL) était entrain de prononcer son sermon (qutba) du vendredi, quand fut annoncée l’arrivée d’une caravane. Presque tous les fidèles coururent à sa rencontre, laissant le Prophète seul avec 12 fidèles. Alors Dieu révéla ce verset :"
     },
     {
       "type": "texte",
       "contenu": "Que dit le Coran ?"
     },
     {
-      "type": "texte",
-      "contenu": "(Ô vous qui croyez ! Quand on appelle à la Salât du jour du vendredi, accourez à l’invocation d’Allah et laissez tout négoce."
+      "type": "arabe",
+      "contenu": " يَا أَيُّهَا الَّذِينَ آمَنُوا إِذَا نُودِيَ لِلصَّلَاةِ مِن يَوْمِ الْجُمُعَةِ فَاسْعَوْا إِلَىٰ ذِكْرِ اللَّهِ وَذَرُوا الْبَيْعَ ۚ ذَٰلِكُمْ خَيْرٌ لَّكُمْ إِن كُنتُمْ تَعْلَمُونَ"
     },
     {
-      "type": "texte",
-      "contenu": "Cela est bien meilleur pour vous, si vous saviez) !"
+      "type": "explication",
+      "contenu": "(Ô vous qui croyez ! Quand on appelle à la Salât du jour du vendredi, accourez à l’invocation d’Allah et laissez tout négoce. Cela est bien meilleur pour vous, si vous saviez)"
     },
     {
       "type": "texte",
       "contenu": "Que dit la Tradition ?"
     },
     {
-      "type": "texte",
+      "type": "explication",
       "contenu": "« Que ceux qui négligent la prière du vendredi cessent de le faire, sinon Allah apposera le scellé sur leurs cœurs et ils finiront par être distraits de Sa pensée » (Moslim)."
     },
     {
-      "type": "texte",
+      "type": "explication",
       "contenu": "« La prière du vendredi est une obligation à tout musulman, hormis trois personnes qui sont : la femme, l’enfant et le malade »."
     },
     {
@@ -92,14 +92,6 @@
     {
       "type": "texte",
       "contenu": "A la fin de la tahiyya, l’imam prononce le salut final."
-    },
-    {
-      "type": "texte",
-      "contenu": "Réparation des oublis (sous forme de cas pratiques)"
-    },
-    {
-      "type": "texte",
-      "contenu": "Quelles solutions faudrait-il apporter aux cas pratiques suivants, pouvant se produire durant la prière du vendredi ?"
     }
   ]
 }

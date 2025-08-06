@@ -22,6 +22,12 @@ export default function ParametresScreen() {
   const [modalPwd, setModalPwd] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 
 
@@ -171,6 +177,86 @@ export default function ParametresScreen() {
           errorMessage = 'Session expirée. Veuillez vous reconnecter.';
         } else if (e.message.includes('getIdToken')) {
           errorMessage = 'Erreur d\'authentification. Veuillez vous reconnecter.';
+        }
+      }
+      
+      Alert.alert('Erreur', errorMessage);
+    }
+    setLoading(false);
+  };
+
+  const handleChangePassword = async () => {
+    setLoading(true);
+    try {
+      // Vérifications
+      if (!currentPassword.trim()) {
+        Alert.alert('Erreur', 'Veuillez saisir votre mot de passe actuel.');
+        setLoading(false);
+        return;
+      }
+      
+      if (!newPassword.trim()) {
+        Alert.alert('Erreur', 'Veuillez saisir un nouveau mot de passe.');
+        setLoading(false);
+        return;
+      }
+      
+      if (newPassword.length < 6) {
+        Alert.alert('Erreur', 'Le nouveau mot de passe doit contenir au moins 6 caractères.');
+        setLoading(false);
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        Alert.alert('Erreur', 'Les mots de passe ne correspondent pas.');
+        setLoading(false);
+        return;
+      }
+      
+      if (!firebaseUser?.email) {
+        Alert.alert('Erreur', 'Utilisateur non connecté.');
+        setLoading(false);
+        return;
+      }
+      
+      // Réauthentifier l'utilisateur avec le mot de passe actuel
+      const credential = require('firebase/auth').EmailAuthProvider.credential(
+        firebaseUser.email,
+        currentPassword
+      );
+      
+      await require('firebase/auth').reauthenticateWithCredential(firebaseUser, credential);
+      
+      // Changer le mot de passe
+      await require('firebase/auth').updatePassword(firebaseUser, newPassword);
+      
+      console.log('✅ Mot de passe changé avec succès');
+      
+      // Réinitialiser les champs
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setModalPwd(false);
+      
+      Alert.alert(
+        'Succès !', 
+        'Votre mot de passe a été changé avec succès.',
+        [{ text: 'OK' }]
+      );
+      
+    } catch (e) {
+      console.error('❌ Erreur changement mot de passe:', e);
+      let errorMessage = 'Impossible de changer le mot de passe. Veuillez réessayer.';
+      
+      if (e instanceof Error) {
+        if (e.message.includes('auth/wrong-password')) {
+          errorMessage = 'Mot de passe actuel incorrect.';
+        } else if (e.message.includes('auth/weak-password')) {
+          errorMessage = 'Le nouveau mot de passe est trop faible.';
+        } else if (e.message.includes('auth/requires-recent-login')) {
+          errorMessage = 'Session expirée. Veuillez vous reconnecter.';
+        } else if (e.message.includes('auth/network-request-failed')) {
+          errorMessage = 'Erreur de réseau. Vérifiez votre connexion internet.';
         }
       }
       
@@ -366,7 +452,7 @@ export default function ParametresScreen() {
                 disabled={loading || !editName.trim()}
               >
                 <Text style={[styles.modalButtonText, styles.saveButtonText]}>
-                  {loading ? 'Enregistrement...' : 'Enregistrer'}
+                  {loading ? 'Envoi...' : 'Envoyer'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -380,25 +466,102 @@ export default function ParametresScreen() {
           <View style={styles.modalContent}>
             <MaterialCommunityIcons name="lock-reset" size={48} color={colors.primary} style={{ marginBottom: 16 }} />
             <Text style={styles.modalTitle}>Changer le mot de passe</Text>
-            <Text style={styles.modalSubtitle}>
-              Un email de réinitialisation sera envoyé à{'\n'}
-              <Text style={{ fontWeight: 'bold', color: colors.primary }}>{contextUser?.email}</Text>
-            </Text>
+            
+            {/* Mot de passe actuel */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Mot de passe actuel</Text>
+              <View style={styles.passwordInputContainer}>
+                <TextInput 
+                  style={styles.passwordInput} 
+                  placeholder="Entrez votre mot de passe actuel" 
+                  value={currentPassword} 
+                  onChangeText={setCurrentPassword} 
+                  placeholderTextColor={colors.placeholder}
+                  secureTextEntry={!showCurrentPassword}
+                />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  <MaterialCommunityIcons 
+                    name={showCurrentPassword ? "eye-off" : "eye"} 
+                    size={20} 
+                    color={colors.primary} 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Nouveau mot de passe */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Nouveau mot de passe</Text>
+              <View style={styles.passwordInputContainer}>
+                <TextInput 
+                  style={styles.passwordInput} 
+                  placeholder="Entrez le nouveau mot de passe" 
+                  value={newPassword} 
+                  onChangeText={setNewPassword} 
+                  placeholderTextColor={colors.placeholder}
+                  secureTextEntry={!showNewPassword}
+                />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <MaterialCommunityIcons 
+                    name={showNewPassword ? "eye-off" : "eye"} 
+                    size={20} 
+                    color={colors.primary} 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Confirmation du nouveau mot de passe */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Confirmer le nouveau mot de passe</Text>
+              <View style={styles.passwordInputContainer}>
+                <TextInput 
+                  style={styles.passwordInput} 
+                  placeholder="Confirmez le nouveau mot de passe" 
+                  value={confirmPassword} 
+                  onChangeText={setConfirmPassword} 
+                  placeholderTextColor={colors.placeholder}
+                  secureTextEntry={!showConfirmPassword}
+                />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <MaterialCommunityIcons 
+                    name={showConfirmPassword ? "eye-off" : "eye"} 
+                    size={20} 
+                    color={colors.primary} 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
+            <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelButton]} 
-                onPress={() => setModalPwd(false)}
-                disabled={loading}
-              >
+                onPress={() => {
+                  setModalPwd(false);
+                  setCurrentPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }}
+              disabled={loading}
+            >
                 <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Annuler</Text>
               </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.modalButton, styles.saveButton]} 
-              onPress={handleResetPassword} 
-              disabled={loading || !firebaseUser?.email}
-            >
-              <Text style={[styles.modalButtonText, styles.saveButtonText]}>
-                {loading ? 'Envoi...' : "Envoyer l'email"}
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveButton]} 
+                onPress={handleChangePassword} 
+                disabled={loading || !currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()}
+              >
+                <Text style={[styles.modalButtonText, styles.saveButtonText]}>
+                  {loading ? 'Changement...' : "Changer"}
               </Text>
             </TouchableOpacity>
             </View>
@@ -439,7 +602,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.primary, marginBottom: 20, textAlign: 'center' },
   input: { backgroundColor: colors.background, borderRadius: 12, padding: 14, width: '100%', fontSize: 16, borderWidth: 1, borderColor: colors.border },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20 },
-  modalButton: { borderRadius: 18, paddingVertical: 12, paddingHorizontal: 24, flex: 1, marginHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
+  modalButton: { borderRadius: 16, paddingVertical: 10, paddingHorizontal: 20, flex: 1, marginHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
   cancelButton: { backgroundColor: '#DC3545' },
   saveButton: { backgroundColor: colors.secondary },
   modalButtonText: { fontWeight: 'bold', fontSize: 13 },
@@ -458,4 +621,23 @@ const styles = StyleSheet.create({
   loadingContainer: { marginTop: 8, alignItems: 'center' },
   saveButtonText: { color: colors.primary },
   cancelButtonText: { color: colors.white },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 16,
+    color: colors.text,
+  },
+  eyeButton: {
+    padding: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 }); 

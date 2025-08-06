@@ -28,24 +28,50 @@ const chapterFiles: { [key: string]: any } = {
 // Fonction utilitaire pour découper l'intro et les sections
 function splitIntroAndSections(contenu: any[]) {
   const sections: { title: string, items: any[] }[] = [];
-  let intro: any[] = [];
   let currentSection: { title: string, items: any[] } | null = null;
 
   contenu.forEach((item) => {
-    if (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/^[IVXLCDM]+\./)) {
-      // Nouvelle section
-      if (currentSection) sections.push(currentSection);
+    // Si c'est un titre de section (I., II., III., etc.)
+    if (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/^\s*[IVXLCDM]+[\.-]/)) {
+      // Sauvegarder la section précédente si elle existe
+      if (currentSection) {
+        sections.push(currentSection);
+      }
+      // Créer une nouvelle section avec ce titre
       currentSection = { title: item.contenu, items: [] };
     } else {
+      // Si on a une section en cours, ajouter l'item à cette section
       if (currentSection) {
         currentSection.items.push(item);
       } else {
-        intro.push(item);
+        // Si on n'a pas encore de section (début du chapitre), créer une première section sans titre
+        if (sections.length === 0) {
+          sections.push({ title: "", items: [item] });
+        } else {
+          // Ajouter à la première section existante
+          sections[0].items.push(item);
+        }
       }
     }
   });
-  if (currentSection) sections.push(currentSection);
-  return { intro, sections };
+  
+  // Ajouter la dernière section si elle existe
+  if (currentSection) {
+    sections.push(currentSection);
+  }
+  
+  // Garder toutes les sections non vides, même celles qui n'ont que le titre principal
+  const filteredSections = sections.filter(section => {
+    // Vérifier si la section a des items
+    if (!section.items || section.items.length === 0) {
+      return false;
+    }
+    
+    // Garder toutes les sections qui ont des items
+    return true;
+  });
+  
+  return { sections: filteredSections };
 }
 
 function getAllChapters() {
@@ -67,7 +93,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const scrollViewRef = useRef<ScrollView>(null);
   const { chapter } = route.params;
   const [chapterContent, setChapterContent] = useState<any>(null);
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // 0 = intro
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // 0 = première section
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [isFavorite, setIsFavorite] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
@@ -77,7 +103,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   // useEffect pour charger le contenu du chapitre
   useEffect(() => {
     if (chapter && chapter.image && chapterFiles[chapter.image]) {
-      setChapterContent(chapterFiles[chapter.image]);
+      const content = chapterFiles[chapter.image];
+      setChapterContent(content);
+      
+      // Récupérer le titre principal du chapitre depuis le contenu JSON
+      const mainTitle = content.contenu?.find((item: any) => item.type === "titre")?.contenu || chapter.desc;
+      
       // Démarrer à la section spécifiée si on vient des favoris
       const initialSection = route.params.initialSection || 0;
       setCurrentSectionIndex(initialSection);
@@ -117,8 +148,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       updateChapterProgress();
       
       // Marquer comme complètement lu si on est à la dernière section
-      const { intro, sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-      const totalSections = 1 + sections.length;
+      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      const totalSections = sections.length;
       if (currentSectionIndex === totalSections - 1) {
         markChapterAsComplete();
       }
@@ -165,8 +196,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
     
     // Récupérer le titre de la section actuelle
-    const { intro, sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-    let sectionTitle = "Introduction";
+          const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      let sectionTitle = sections[currentSectionIndex]?.title || "";
     if (currentSectionIndex > 0) {
       sectionTitle = sections[currentSectionIndex - 1]?.title || `Section ${currentSectionIndex}`;
     }
@@ -215,8 +246,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       if (!currentChapterData) return;
       
       // Calculer la progression basée sur la section actuelle
-      const { intro, sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-      const totalSections = 1 + sections.length; // 1 pour l'intro
+      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      const totalSections = sections.length;
       const currentProgress = Math.round(((currentSectionIndex + 1) / totalSections) * 100);
       
       // Créer la clé de progression
@@ -309,9 +340,29 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     );
   }
 
-  // Découpage intro/sections
-  const { intro, sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-  const totalSections = 1 + sections.length; // 1 pour l'intro
+      // Découpage sections
+    const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+    const totalSections = sections.length;
+    
+    // Vérifier si la section actuelle est vide et passer à la suivante si nécessaire
+    const currentSection = sections[currentSectionIndex];
+    const hasVisibleContent = currentSection && currentSection.items && 
+      currentSection.items.some(item => {
+        // Ignorer les items qui ne sont pas affichés
+        if (item.type === "titre" || 
+            (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/^[IVXLCDM]+\./))) {
+          return false;
+        }
+        // Vérifier si l'item a du contenu visible
+        return item.contenu && 
+               typeof item.contenu === 'string' && 
+               item.contenu.trim() !== '';
+      });
+    
+    // Si la section actuelle est vide et qu'il y a une section suivante, passer à la suivante
+    if (!hasVisibleContent && currentSectionIndex < totalSections - 1) {
+      setCurrentSectionIndex(currentSectionIndex + 1);
+    }
 
   // Liste plate de tous les chapitres
   const allChapters = getAllChapters();
@@ -324,12 +375,17 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   // Rendu du contenu d'une section
   const renderContent = (items: any[]) => (
     items.map((item, idx) => {
+      // 1. Gestion des tableaux
       if (item.type === "tableau" && Array.isArray(item.contenu)) {
-        // Affichage simple du tableau
         return (
           <View key={idx} style={{ marginVertical: 18, borderWidth: 1, borderColor: '#174C3C', borderRadius: 8, overflow: 'hidden' }}>
             {item.contenu.map((row: string[], rIdx: number) => (
-              <View key={rIdx} style={{ flexDirection: 'row', backgroundColor: rIdx === 0 ? '#E8F5E8' : '#fff' }}>
+              <View key={rIdx} style={{ 
+                flexDirection: 'row', 
+                backgroundColor: rIdx === 0 ? '#E8F5E8' : '#fff',
+                borderBottomWidth: rIdx < item.contenu.length - 1 ? 1 : 0,
+                borderBottomColor: '#174C3C'
+              }}>
                 {row.map((cell, cIdx) => (
                   <Text
                     key={cIdx}
@@ -352,26 +408,19 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           </View>
         );
       }
-      // Style pour les titres principaux (I., II., etc.)
-      if (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/^[IVXLCDM]+\./)) {
-        return null; // On n'affiche pas le titre de section ici (déjà dans l'indicateur)
+
+      // 2. Gestion des titres principaux (I., II., etc.) - On les ignore complètement
+      if (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/^\s*[IVXLCDM]+[\.-]/)) {
+        return null; // On ignore complètement les titres de section
       }
-      // Style pour les sous-titres
-      if (item.contenu === item.contenu.toUpperCase() && item.contenu.length < 50) {
-        return (
-          <Text 
-            key={idx} 
-            style={[
-              styles.subtitle,
-              { fontSize: textSize + 2 }
-            ]}
-          >
-            {item.contenu}
-          </Text>
-        );
+
+      // 3. Gestion des titres (type "titre") - On ne les affiche pas dans le contenu
+      if (item.type === "titre") {
+        return null; // On ignore les titres principaux dans le contenu
       }
-      // Style pour les citations en arabe
-      if (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/[ء-ي]/)) {
+
+      // 4. Gestion des textes arabes (JAUNE)
+      if (item.type === "arabe") {
         return (
           <View key={idx} style={styles.arabicContainer}>
             <Text style={[styles.arabicText, { fontSize: textSize + 4 }]}> 
@@ -380,17 +429,44 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           </View>
         );
       }
-      // Style pour les versets coraniques
-      if (item.contenu && typeof item.contenu === 'string' && item.contenu.includes('S') && item.contenu.includes('v')) {
+
+      // 5. Gestion des explications (type "explication") - VERT
+      if (item.type === "explication") {
         return (
-          <View key={idx} style={styles.verseContainer}>
-            <Text style={[styles.verseText, { fontSize: textSize }]}> 
+          <View key={idx} style={styles.explanationContainer}>
+            <Text style={[styles.explanationText, { fontSize: textSize }]}> 
               {item.contenu}
             </Text>
           </View>
         );
       }
-      // Style par défaut pour le texte normal
+
+      // 6. Tout le reste (NOIR)
+      // Vérifier si le contenu commence par "." ou par un numéro suivi d'un point
+      const content = item.contenu;
+      const startsWithDot = content && typeof content === 'string' && content.trim().startsWith('.');
+      const startsWithNumber = content && typeof content === 'string' && content.trim().match(/^\d+\./);
+      
+      // Vérifier si c'est un exercice ou un corrigé
+      const isExercise = content && typeof content === 'string' && (
+        content.toLowerCase().includes('exercice') || 
+        content.toLowerCase().includes('révision') ||
+        content.toLowerCase().includes('comment réparer')
+      );
+      
+      // Détecter les corrigés par leur structure : numéro + réponse
+      const isCorrection = content && typeof content === 'string' && (
+        content.toLowerCase().includes('corrigé des exercices') ||
+        (content.match(/^\d+\)/) && (
+          content.toLowerCase().includes('sujûd avant') ||
+          content.toLowerCase().includes('sujûd après') ||
+          content.toLowerCase().includes('sujûd ba') ||
+          content.toLowerCase().includes('ba\'da salam') ||
+          content.toLowerCase().includes('habla salam') ||
+          content.toLowerCase().includes('hâbla salam')
+        ))
+      );
+      
       return (
         <Text 
           key={idx} 
@@ -398,21 +474,42 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             styles.paragraph, 
             { 
               fontSize: textSize,
-              lineHeight: textSize * 1.5,
-              marginBottom: 16
+              lineHeight: textSize * 1.6,
+              marginBottom: 16,
+              fontWeight: (startsWithDot || startsWithNumber) ? 'bold' : 'normal',
+              color: isExercise ? '#174C3C' : isCorrection ? '#2E7D32' : '#333',
+              backgroundColor: isExercise ? '#E8F5E8' : isCorrection ? '#F1F8E9' : 'transparent',
+              padding: (isExercise || isCorrection) ? 12 : 0,
+              borderRadius: (isExercise || isCorrection) ? 8 : 0,
+              borderLeftWidth: isExercise ? 4 : isCorrection ? 4 : 0,
+              borderLeftColor: isExercise ? '#174C3C' : isCorrection ? '#2E7D32' : 'transparent'
             }
           ]}
         >
-          {item.contenu}
+          {startsWithDot ? content.trim().substring(1) : content}
         </Text>
       );
     })
   );
 
   // Indicateur de section
-  let sectionIndicator = "Introduction";
-  if (currentSectionIndex > 0) {
-    sectionIndicator = sections[currentSectionIndex - 1]?.title || "";
+  let sectionIndicator = "";
+  if (currentSectionIndex === 0) {
+    // Si la première section a un titre (comme "I. La Qibla"), l'afficher directement
+    if (sections[0]?.title && sections[0].title.trim() !== "") {
+      sectionIndicator = sections[0].title.trim();
+    } else {
+      // Vérifier s'il y a du contenu dans la première section (introduction)
+      const hasIntroContent = sections[0]?.items && sections[0].items.some(item => 
+        item.type !== "titre" && 
+        item.contenu && 
+        typeof item.contenu === 'string' && 
+        item.contenu.trim() !== ''
+      );
+      sectionIndicator = hasIntroContent ? "Introduction" : sections[0]?.title?.trim() || "";
+    }
+  } else {
+    sectionIndicator = sections[currentSectionIndex]?.title?.trim() || "";
   }
 
   return (
@@ -435,50 +532,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.0)']}
           style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 120, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}
         />
-        {/* Bouton retour */}
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={{
-            position: 'absolute',
-            top: 45,
-            left: 16,
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            borderRadius: 22,
-            padding: 10,
-            elevation: 4,
-            shadowColor: '#000',
-            shadowOpacity: 0.25,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 3 },
-          }}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
-        </TouchableOpacity>
-        {/* Bouton zoom */}
-        <TouchableOpacity 
-          onPress={nextTextSize}
-          style={{
-            position: 'absolute',
-            top: 45,
-            right: 16,
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            borderRadius: 22,
-            padding: 10,
-            elevation: 4,
-            shadowColor: '#000',
-            shadowOpacity: 0.25,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 3 },
-          }}
-        >
-          <MaterialCommunityIcons name="magnify-plus" size={24} color="#174C3C" />
-        </TouchableOpacity>
         {/* Carte titre - descendue pour mieux montrer l'image */}
         <View style={{ position: 'absolute', left: 20, right: 20, bottom: -40, zIndex: 10 }}>
           <View style={{ 
             backgroundColor: '#fff', 
             borderRadius: 20, 
-            paddingVertical: 20, 
+            paddingVertical: 24, 
             paddingHorizontal: 24, 
             shadowColor: '#000', 
             shadowOpacity: 0.15, 
@@ -486,31 +545,99 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             elevation: 10, 
             alignItems: 'center'
           }}>
-            {/* Affichage de la partie */}
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#666', textAlign: 'center', letterSpacing: 0.3, marginBottom: 6 }}>
-              {allChapters[currentChapterIndex]?.partieTitre}
+            {/* Numéro du chapitre */}
+            <Text style={{ 
+              fontSize: 20, 
+              fontWeight: 'bold', 
+              color: '#D4AF37', 
+              textAlign: 'center', 
+              letterSpacing: 0.5, 
+              marginBottom: 4 
+            }}>
+              {chapter.title.replace(/\.\s*$/, ':')}
             </Text>
-            {/* Titre du chapitre */}
-            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#174C3C', textAlign: 'center', lineHeight: 28 }}>
-              {chapter.title}
+            {/* Nom du chapitre */}
+            <Text style={{ 
+              fontSize: 20, 
+              fontWeight: 'bold', 
+              color: '#174C3C', 
+              textAlign: 'center', 
+              lineHeight: 26,
+              marginBottom: 8
+            }}>
+              {chapterContent?.contenu?.find((item: any) => item.type === "titre")?.contenu || chapter.desc}
+            </Text>
+            {/* Affichage de la partie */}
+            <Text style={{ 
+              fontSize: 14, 
+              fontWeight: '500', 
+              color: '#666', 
+              textAlign: 'center', 
+              letterSpacing: 0.3 
+            }}>
+              {allChapters[currentChapterIndex]?.partieTitre}
             </Text>
           </View>
         </View>
       </View>
+      
+      {/* Boutons en premier plan */}
+      {/* Bouton retour */}
+      <TouchableOpacity 
+        onPress={() => navigation.goBack()}
+        style={{
+          position: 'absolute',
+          top: 45,
+          left: 16,
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderRadius: 22,
+          padding: 10,
+          elevation: 10,
+          shadowColor: '#000',
+          shadowOpacity: 0.25,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
+          zIndex: 1000,
+        }}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
+      </TouchableOpacity>
+      {/* Bouton zoom */}
+      <TouchableOpacity 
+        onPress={nextTextSize}
+        style={{
+          position: 'absolute',
+          top: 45,
+          right: 16,
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderRadius: 22,
+          padding: 10,
+          elevation: 10,
+          shadowColor: '#000',
+          shadowOpacity: 0.25,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
+          zIndex: 1000,
+        }}
+      >
+        <MaterialCommunityIcons name="magnify-plus" size={24} color="#174C3C" />
+      </TouchableOpacity>
 
-      {/* Indicateur de section */}
-      <View style={{ alignItems: 'center', paddingHorizontal: 24, marginTop: 60, marginBottom: 16 }}>
-        <View style={{
-          backgroundColor: '#E8F5E8',
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: '#174C3C20'
-        }}>
-          <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>{sectionIndicator}</Text>
-      </View>
-      </View>
+      {/* Indicateur de section - seulement si il y a un titre */}
+      {sectionIndicator && (
+        <View style={{ alignItems: 'center', paddingHorizontal: 24, marginTop: 60, marginBottom: (sectionIndicator === "Introduction" || sectionIndicator.match(/^[IVXLCDM]+\./)) ? 0 : 16 }}>
+          <View style={{
+            backgroundColor: '#E8F5E8',
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: '#174C3C20'
+          }}>
+            <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>{sectionIndicator}</Text>
+          </View>
+        </View>
+      )}
 
       {/* Contenu animé */}
       <View style={{ flex: 1 }}>
@@ -518,7 +645,13 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1, width: '100%' }}
-          contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 18, paddingBottom: 90, maxWidth: 420, alignSelf: 'center' }}
+          contentContainerStyle={{ 
+            paddingHorizontal: 18, 
+            paddingTop: currentSectionIndex === 0 ? 20 : 18, 
+            paddingBottom: 90, 
+            maxWidth: 420, 
+            alignSelf: 'center' 
+          }}
           showsVerticalScrollIndicator={false}
             onScroll={e => {
               const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
@@ -533,9 +666,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             }}
             scrollEventThrottle={16}
         >
-          {currentSectionIndex === 0
-            ? renderContent(intro)
-            : renderContent(sections[currentSectionIndex - 1]?.items || [])}
+          {renderContent(sections[currentSectionIndex]?.items || [])}
     </ScrollView>
           {/* Barre de progression verticale */}
           {isScrollable && (
@@ -624,6 +755,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'left',
   },
+  mainTitle: {
+    fontWeight: 'bold',
+    color: '#174C3C',
+    marginTop: 20,
+    marginBottom: 10,
+    textAlign: 'left',
+  },
   subtitle: {
     fontWeight: 'bold',
     color: '#174C3C',
@@ -636,30 +774,59 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   arabicContainer: {
-    backgroundColor: '#E8F5E8',
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 12,
+    backgroundColor: '#FFF9E6',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 16,
     borderRightWidth: 4,
-    borderRightColor: '#174C3C',
+    borderRightColor: '#D4AF37',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   arabicText: {
-    fontFamily: 'Traditional Arabic',
+    fontFamily: 'System',
     textAlign: 'right',
     color: '#174C3C',
+    direction: 'rtl',
+    lineHeight: 28,
   },
   verseContainer: {
-    backgroundColor: '#FFF9E6',
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 12,
+    backgroundColor: '#F0F8FF',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#D4AF37',
+    borderLeftColor: '#174C3C',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   verseText: {
     fontStyle: 'italic',
     color: '#174C3C',
     textAlign: 'left',
+    lineHeight: 24,
+  },
+  explanationContainer: {
+    backgroundColor: '#E8F5E8',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#174C3C',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  explanationText: {
+    color: '#174C3C',
+    textAlign: 'left',
+    lineHeight: 24,
+    fontWeight: '500',
   },
   favoriteButton: {
     flexDirection: 'row',

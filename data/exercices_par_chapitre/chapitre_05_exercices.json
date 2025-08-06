@@ -1,142 +1,48 @@
 [
+  
   {
     "numero": 1,
-    "question": "1)  En accomplissant la prière du subh, le fidèle a récité le Coran à voix basse à sa première raka ; il s’en est rendu compte à la 2ème raka. Comment doit-il réparer sa prière ?",
-    "reponse": "1 : Lorsque vous constatez avoir oublié quelque chose avant le rukû, vous devez reprendre ce qui a été oublié. Donc le fidèle doit reprendre la Fatiha et la sourate à voix basse puisqu’il s’agit de la prière de Zohr. Après le salut final, il fait sujud ba’da salam pour réparer ce qu’il a ajouté à tort dans la prière."
+    "question": "1) Un fidèle prie la 1ère raka de Zohr. Il récite à voix haute la Fatiha et la sourate. Mais il s’en rend compte avant le rukû. Comment doit-il corriger sa prière ?",
+    "reponse": "Lorsque vous constatez avoir oublié quelque chose avant le rukû, vous devez reprendre ce qui a été oublié. Donc le fidèle doit reprendre la Fatiha et la sourate à voix basse puisqu’il s’agit de la prière de Zohr. Après le salut final, il fait sujud ba’da salam pour réparer ce qu’il a ajouté à tort dans la prière."
   },
   {
     "numero": 2,
-    "question": "2)  Par contre un autre fidèle a récité à haute voix alors qu’il prie Zohr ; que doit-il faire ?",
-    "reponse": "2 : Lorsqu’on a oublié une sunna, on ne revient pas après le rukû pour la réparer. On note qu’on a oublié quelque chose, puis on continue la prière. Donc, le fidèle doit continuer sa prière et avant le salut final, il fait hâbla salam pour réparer ce qu’il a oublié."
+    "question": "2) Un fidèle a fait la même erreur que le précédent. Mais il s’en est rendu compte après rukû. Comment doit-il corriger sa prière ?",
+    "reponse": "Lorsqu’on a oublié une sunna, on ne revient pas après le rukû pour la réparer. On note qu’on a oublié quelque chose, puis on continue la prière. Donc, le fidèle doit continuer sa prière et avant le salut final, il fait hâbla salam pour réparer ce qu’il a oublié."
   },
   {
     "numero": 3,
-    "question": "3)  Vous vous trompez d’un mot au cours de la récitation d’une sourate. Avez-vous quelque chose à réparer ?",
-    "reponse": "3 : En répétant la Fatiha vous avez parlé en trop ; vous avez ajouté quelque chose à la prière. Après le salut final, ba’da salam."
+    "question": "3) Vous avez répété la Fatiha à la 1ère raka. Que faire ?",
+    "reponse": "En répétant la Fatiha vous avez parlé en trop ; vous avez ajouté quelque chose à la prière. Après le salut final, ba’da salam."
   },
   {
     "numero": 4,
-    "question": "4)  A la 1ère raka de sa prière du Maghreb, un fidèle a oublié de réciter une sourate après la Fatiha : comment doit-il réparer sa prière ?",
-    "reponse": "4 : Il n’a rien à faire, car la Salatul Ibrahim n’est qu’un acte méritoire. Cela ne demande pas une réparation."
+    "question": "4) Un fidèle a oublié de dire la Salatul Ibrahim à la fin de sa 2ème tahiyya. Il s’en rend compte après le salut final. Que doit-il faire ?",
+    "reponse": "Il n’a rien à faire, car la Salatul Ibrahim n’est qu’un acte méritoire. Cela ne demande pas une réparation."
   },
   {
     "numero": 5,
-    "question": "5)  Que doit faire celui qui a oublié de dire « sami allahu limane hamida » ?",
-    "reponse": "5 : Il continue sa prière et ne doit aucune réparation, car malgré son importance, « Qunut » n’est qu’un acte méritoire. Son oubli ne demande pas de réparation."
+    "question": "5) Le fidèle a oublié de réciter « Qunut » à la 2ème raka de la prière du subh. Il s’en souvient pendant le rukû. Que doit-il faire ?",
+    "reponse": "Il continue sa prière et ne doit aucune réparation, car malgré son importance, « Qunut » n’est qu’un acte méritoire. Son oubli ne demande pas de réparation."
   },
   {
     "numero": 6,
-    "question": "6)  A la 2ème raka de la prière de l’Asr, un fidèle récite la sourate à haute voix et s’en souvient avant le rukû. Que doit-il faire ?",
-    "reponse": "6 : Il la fera dès qu’il s’en souviendra, même un an après."
+    "question": "6) Que fait celui qui oublie la prosternation réparatrice après le salut final ?",
+    "reponse": "Il la fera dès qu’il s’en souviendra, même un an après. "
   },
   {
     "numero": 7,
-    "question": "7)  Vous accomplissez la prière de l’Asr. A la 1ère raka, vous récitez la Fatiha à haute voix et vous en souvenez avant le rukû. Que devez-vous faire ?",
-    "reponse": "7 : - peu après la prière, faire la prosternation immédiatement ;"
+    "question": "7) Que fait celui qui oublie la prosternation réparatrice avant le salut final ?",
+    "reponse": "peu après la prière, faire la prosternation immédiatement ; longtemps après, la prosternation et la prière ne sont plus valables, si l’oubli porte sur 2 sunnas, sinon la prière est valable."
   },
   {
     "numero": 8,
-    "question": "8) Vous vous arrêtez pendant la récitation de la Fatiha, faute de mémoire. Comment continuer la prière ?",
-    "reponse": "-longtemps après, la prosternation et la prière ne sont plus valables, si l’oubli porte sur 2 sunnas, sinon la prière est valable."
+    "question": "8) Que fait celui qui fait un mouvement le conduisant à tourner le dos à la Kaaba ?",
+    "reponse": "Prière à recommencer."
   },
   {
     "numero": 9,
-    "question": "9)  Au lieu de s’asseoir après la 2ème raka, le fidèle s’est levé directement et a commencé la 3ème raka. Il se rend alors compte qu’il aurait dû s’asseoir après la 2ème raka. Que doit-il faire ?",
-    "reponse": "8 : Prière à recommencer."
-  },
-  {
-    "numero": 10,
-    "question": "1) Sujûd avant salut final : habla salam",
-    "reponse": "9 : Prière valable, sauf si le délai est long ou s’il a tourné le dos à la Kaaba."
-  },
-  {
-    "numero": 11,
-    "question": "2) Sujûd après salut final : ba’da salam",
-    "reponse": ""
-  },
-  {
-    "numero": 12,
-    "question": "3) Si le mot n’est pas dans le Coran, Sujûd après salut final. Si le mot est dans le Coran, il n’y a pas de réparation à faire.",
-    "reponse": ""
-  },
-  {
-    "numero": 13,
-    "question": "4) Sujûd avant salut final : hâbla salam",
-    "reponse": ""
-  },
-  {
-    "numero": 14,
-    "question": "5) Sujûd avant salut final : hâbla salam. Cependant, une tolérance est accordée.",
-    "reponse": ""
-  },
-  {
-    "numero": 15,
-    "question": "6) Il s’en souvient avant rukû donc il récite à nouveau, à voix basse. Puisque la nouvelle faute porte sur la double récitation de la sourate, il y a tolérance, d’où pas de sujûd ba’da.",
-    "reponse": ""
-  },
-  {
-    "numero": 16,
-    "question": "7) Souvenance avant le rukû, vous récitez à nouveau. La faute portant sur la Fatiha, sujûd après salut final (ba’da salam).",
-    "reponse": ""
-  },
-  {
-    "numero": 17,
-    "question": "8) Si l’omission porte sur un seul verset ; sujûd avant salut final ; s’il s’agit de 2 versets ou plus, la raka n’est pas valable.",
-    "reponse": ""
-  },
-  {
-    "numero": 18,
-    "question": "9) Sujûd avant salut final (hâbla salam).",
-    "reponse": ""
-  },
-  {
-    "numero": 19,
-    "question": "Comment réparer quelques fautes fréquentes ?",
-    "reponse": ""
-  },
-  {
-    "numero": 20,
-    "question": "1) Un fidèle prie la 1ère raka de Zohr. Il récite à voix haute la Fatiha et la sourate. Mais il s’en rend compte avant le rukû. Comment doit-il corriger sa prière ?",
-    "reponse": ""
-  },
-  {
-    "numero": 21,
-    "question": "2) Un fidèle a fait la même erreur que le précédent. Mais il s’en est rendu compte après rukû. Comment doit-il corriger sa prière ?",
-    "reponse": ""
-  },
-  {
-    "numero": 22,
-    "question": "3) Vous avez répété la Fatiha à la 1ère raka. Que faire ?",
-    "reponse": ""
-  },
-  {
-    "numero": 23,
-    "question": "4) Un fidèle a oublié de dire la Salatul Ibrahim à la fin de sa 2ème tahiyya. Il s’en rend compte après le salut final. Que doit-il faire ?",
-    "reponse": ""
-  },
-  {
-    "numero": 24,
-    "question": "5) Le fidèle a oublié de réciter « Qunut » à la 2ème raka de la prière du subh. Il s’en souvient pendant le rukû. Que doit-il faire ?",
-    "reponse": ""
-  },
-  {
-    "numero": 25,
-    "question": "6) Que fait celui qui oublie la prosternation réparatrice après le salut final ?",
-    "reponse": ""
-  },
-  {
-    "numero": 26,
-    "question": "7) Que fait celui qui oublie la prosternation réparatrice avant le salut final ?",
-    "reponse": ""
-  },
-  {
-    "numero": 27,
-    "question": "8) Que fait celui qui fait un mouvement le conduisant à tourner le dos à la Kaaba ?",
-    "reponse": ""
-  },
-  {
-    "numero": 28,
     "question": "9) Que fait celui qui voit un danger (un enfant qui se dirige vers du feu) et l’évite ?",
-    "reponse": ""
+    "reponse": "Prière valable, sauf si le délai est long ou s’il a tourné le dos à la Kaaba."
   }
 ]

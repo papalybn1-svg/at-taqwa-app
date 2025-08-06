@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Image as RNImage, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AuthUser } from '../hooks/useAuth';
@@ -40,7 +40,7 @@ const STORAGE_KEYS = {
 };
 
 export default function LoginScreen({ navigation }: any) {
-  const [screen, setScreen] = useState<'intro' | 'login' | 'register'>('intro');
+  const [screen, setScreen] = useState<'intro' | 'login' | 'register' | 'forgot'>('intro');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [prenom, setPrenom] = useState('');
@@ -48,11 +48,107 @@ export default function LoginScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [forgotPrenom, setForgotPrenom] = useState('');
+  const [forgotNom, setForgotNom] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'verify' | 'new-password'>('verify');
   const { user, setUser } = useContext(AuthContext);
   const [toast, setToast] = useState<{ visible: boolean, message: string, type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ visible: true, message, type });
+  };
+
+  const handleForgotPassword = async () => {
+    setLoading(true);
+    setErrorMessage('');
+    
+    try {
+      // Vérifier si l'utilisateur existe
+      const userDoc = await getDoc(doc(db, 'users', forgotEmail));
+      const userData = userDoc.data();
+      
+      if (!userData) {
+        setErrorMessage('Aucun compte trouvé avec ces informations.');
+        setLoading(false);
+        return;
+      }
+      
+      // Vérifier si le nom et prénom correspondent
+      const expectedName = `${forgotPrenom} ${forgotNom}`.trim();
+      const actualName = userData.displayName || '';
+      
+      if (expectedName.toLowerCase() !== actualName.toLowerCase()) {
+        setErrorMessage('Aucun compte trouvé avec ces informations.');
+        setLoading(false);
+        return;
+      }
+      
+      // Si tout est correct, passer à l'étape du nouveau mot de passe
+      setForgotStep('new-password');
+      setLoading(false);
+      
+    } catch (error) {
+      console.error('Erreur vérification mot de passe oublié:', error);
+      setErrorMessage('Une erreur est survenue. Veuillez réessayer.');
+      setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setLoading(true);
+    setErrorMessage('');
+    
+    try {
+      if (newPassword.length < 6) {
+        setErrorMessage('Le mot de passe doit contenir au moins 6 caractères.');
+        setLoading(false);
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        setErrorMessage('Les mots de passe ne correspondent pas.');
+        setLoading(false);
+        return;
+      }
+      
+      // Trouver l'utilisateur par email
+      const userDoc = await getDoc(doc(db, 'users', forgotEmail));
+      const userData = userDoc.data();
+      
+      if (!userData) {
+        setErrorMessage('Utilisateur non trouvé.');
+        setLoading(false);
+        return;
+      }
+      
+      // Mettre à jour le mot de passe dans Firestore (pour l'instant)
+      // En production, vous devriez utiliser Firebase Auth pour changer le mot de passe
+      await updateDoc(doc(db, 'users', forgotEmail), {
+        password: newPassword, // Note: ceci n'est pas sécurisé, à remplacer par Firebase Auth
+        updatedAt: new Date()
+      });
+      
+      showToast('Mot de passe changé avec succès !', 'success');
+      
+      // Réinitialiser et retourner à la connexion
+      setForgotPrenom('');
+      setForgotNom('');
+      setForgotEmail('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setForgotStep('verify');
+      setScreen('login');
+      
+    } catch (error) {
+      console.error('Erreur changement mot de passe:', error);
+      setErrorMessage('Une erreur est survenue. Veuillez réessayer.');
+      setLoading(false);
+    }
   };
 
   const handleAuth = async () => {
@@ -327,6 +423,207 @@ export default function LoginScreen({ navigation }: any) {
     );
   }
 
+  // Ecran de mot de passe oublié
+  if (screen === 'forgot') {
+    return (
+      <View style={styles.loginContainer}>
+        {/* Section principale du formulaire */}
+        <View style={styles.loginMainSection}>
+          {/* Etoile en haut à droite */}
+          <View style={styles.loginStarContainer}>
+            <RNImage source={require('../../assets/etoile.png')} style={styles.loginStar} />
+          </View>
+          
+          {/* Titre */}
+          <Text style={styles.loginTitle}>Mot de passe oublié</Text>
+          
+          {forgotStep === 'verify' ? (
+            <>
+              {/* Champs de vérification */}
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="account-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput 
+                  style={[styles.loginInput, styles.loginInputWithIcon]} 
+                  placeholder="Prénom" 
+                  placeholderTextColor="#174C3C"
+                  value={forgotPrenom} 
+                  onChangeText={(text) => {
+                    setForgotPrenom(text);
+                    setErrorMessage('');
+                  }}
+                  editable={!loading}
+                />
+              </View>
+              
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="account-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput 
+                  style={[styles.loginInput, styles.loginInputWithIcon]} 
+                  placeholder="Nom" 
+                  placeholderTextColor="#174C3C"
+                  value={forgotNom} 
+                  onChangeText={(text) => {
+                    setForgotNom(text);
+                    setErrorMessage('');
+                  }}
+                  editable={!loading}
+                />
+              </View>
+              
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="email-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput 
+                  style={[styles.loginInput, styles.loginInputWithIcon]} 
+                  placeholder="Email" 
+                  placeholderTextColor="#174C3C"
+                  value={forgotEmail} 
+                  onChangeText={(text) => {
+                    setForgotEmail(text);
+                    setErrorMessage('');
+                  }}
+                  autoCapitalize="none" 
+                  keyboardType="email-address" 
+                  editable={!loading}
+                />
+              </View>
+              
+              {/* Message d'erreur */}
+              {errorMessage ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
+              
+              {/* Bouton Vérifier */}
+              <TouchableOpacity 
+                style={styles.loginButton} 
+                onPress={handleForgotPassword} 
+                disabled={loading || !forgotPrenom.trim() || !forgotNom.trim() || !forgotEmail.trim()}
+              >
+                {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Vérifier</Text>}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              {/* Champs du nouveau mot de passe */}
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="lock-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput
+                  style={[styles.loginInput, styles.loginInputWithIcon]}
+                  placeholder="Nouveau mot de passe"
+                  placeholderTextColor="#174C3C"
+                  value={newPassword}
+                  onChangeText={(text) => {
+                    setNewPassword(text);
+                    setErrorMessage('');
+                  }}
+                  secureTextEntry={!showNewPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity 
+                  style={styles.loginEyeButton} 
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <MaterialCommunityIcons 
+                    name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} 
+                    size={20} 
+                    color="#174C3C" 
+                  />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="lock-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput
+                  style={[styles.loginInput, styles.loginInputWithIcon]}
+                  placeholder="Confirmer le mot de passe"
+                  placeholderTextColor="#174C3C"
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    setErrorMessage('');
+                  }}
+                  secureTextEntry={!showConfirmPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity 
+                  style={styles.loginEyeButton} 
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <MaterialCommunityIcons 
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
+                    size={20} 
+                    color="#174C3C" 
+                  />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Message d'erreur */}
+              {errorMessage ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
+              
+              {/* Bouton Changer le mot de passe */}
+              <TouchableOpacity 
+                style={styles.loginButton} 
+                onPress={handleChangePassword} 
+                disabled={loading || !newPassword.trim() || !confirmPassword.trim()}
+              >
+                {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Changer le mot de passe</Text>}
+              </TouchableOpacity>
+            </>
+          )}
+          
+          {/* Lien retour */}
+          <TouchableOpacity 
+            onPress={() => {
+              setScreen('login');
+              setForgotPrenom('');
+              setForgotNom('');
+              setForgotEmail('');
+              setNewPassword('');
+              setConfirmPassword('');
+              setForgotStep('verify');
+              setErrorMessage('');
+            }}
+            style={styles.registerLinkContainer}
+          >
+            <Text style={styles.registerLinkText}>Retour à la connexion</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
+      </View>
+    );
+  }
+
   // Ecran de connexion
   return (
     <View style={styles.loginContainer}>
@@ -404,7 +701,10 @@ export default function LoginScreen({ navigation }: any) {
         </TouchableOpacity>
         
         {/* Mot de passe oublié */}
-        <TouchableOpacity style={styles.forgotPasswordContainer}>
+        <TouchableOpacity 
+          style={styles.forgotPasswordContainer}
+          onPress={() => setScreen('forgot')}
+        >
           <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>
         </TouchableOpacity>
         
@@ -423,7 +723,202 @@ export default function LoginScreen({ navigation }: any) {
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
     </View>
   );
-}
+      <View style={styles.loginContainer}>
+        {/* Section principale du formulaire */}
+        <View style={styles.loginMainSection}>
+          {/* Etoile en haut à droite */}
+          <View style={styles.loginStarContainer}>
+            <RNImage source={require('../../assets/etoile.png')} style={styles.loginStar} />
+          </View>
+          
+          {/* Titre */}
+          <Text style={styles.loginTitle}>Mot de passe oublié</Text>
+          
+          {forgotStep === 'verify' ? (
+            <>
+              {/* Champs de vérification */}
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="account-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput 
+                  style={[styles.loginInput, styles.loginInputWithIcon]} 
+                  placeholder="Prénom" 
+                  placeholderTextColor="#174C3C"
+                  value={forgotPrenom} 
+                  onChangeText={(text) => {
+                    setForgotPrenom(text);
+                    setErrorMessage('');
+                  }}
+                  editable={!loading}
+                />
+              </View>
+              
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="account-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput 
+                  style={[styles.loginInput, styles.loginInputWithIcon]} 
+                  placeholder="Nom" 
+                  placeholderTextColor="#174C3C"
+                  value={forgotNom} 
+                  onChangeText={(text) => {
+                    setForgotNom(text);
+                    setErrorMessage('');
+                  }}
+                  editable={!loading}
+                />
+              </View>
+              
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="email-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput 
+                  style={[styles.loginInput, styles.loginInputWithIcon]} 
+                  placeholder="Email" 
+                  placeholderTextColor="#174C3C"
+                  value={forgotEmail} 
+                  onChangeText={(text) => {
+                    setForgotEmail(text);
+                    setErrorMessage('');
+                  }}
+                  autoCapitalize="none" 
+                  keyboardType="email-address" 
+                  editable={!loading}
+                />
+              </View>
+              
+              {/* Message d'erreur */}
+              {errorMessage ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
+              
+              {/* Bouton Vérifier */}
+              <TouchableOpacity 
+                style={styles.loginButton} 
+                onPress={handleForgotPassword} 
+                disabled={loading || !forgotPrenom.trim() || !forgotNom.trim() || !forgotEmail.trim()}
+              >
+                {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Vérifier</Text>}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              {/* Champs du nouveau mot de passe */}
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="lock-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput
+                  style={[styles.loginInput, styles.loginInputWithIcon]}
+                  placeholder="Nouveau mot de passe"
+                  placeholderTextColor="#174C3C"
+                  value={newPassword}
+                  onChangeText={(text) => {
+                    setNewPassword(text);
+                    setErrorMessage('');
+                  }}
+                  secureTextEntry={!showNewPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity 
+                  style={styles.loginEyeButton} 
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <MaterialCommunityIcons 
+                    name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} 
+                    size={20} 
+                    color="#174C3C" 
+                  />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons 
+                  name="lock-outline" 
+                  size={20} 
+                  color="#174C3C" 
+                  style={styles.loginInputIcon}
+                />
+                <TextInput
+                  style={[styles.loginInput, styles.loginInputWithIcon]}
+                  placeholder="Confirmer le mot de passe"
+                  placeholderTextColor="#174C3C"
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    setErrorMessage('');
+                  }}
+                  secureTextEntry={!showConfirmPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity 
+                  style={styles.loginEyeButton} 
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <MaterialCommunityIcons 
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
+                    size={20} 
+                    color="#174C3C" 
+                  />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Message d'erreur */}
+              {errorMessage ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
+              
+              {/* Bouton Changer le mot de passe */}
+              <TouchableOpacity 
+                style={styles.loginButton} 
+                onPress={handleChangePassword} 
+                disabled={loading || !newPassword.trim() || !confirmPassword.trim()}
+              >
+                {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Changer le mot de passe</Text>}
+              </TouchableOpacity>
+            </>
+          )}
+          
+          {/* Lien retour */}
+          <TouchableOpacity 
+            onPress={() => {
+              setScreen('login');
+              setForgotPrenom('');
+              setForgotNom('');
+              setForgotEmail('');
+              setNewPassword('');
+              setConfirmPassword('');
+              setForgotStep('verify');
+              setErrorMessage('');
+            }}
+            style={styles.registerLinkContainer}
+          >
+            <Text style={styles.registerLinkText}>Retour à la connexion</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
+      </View>
+    );
 
 const styles = StyleSheet.create({
   introContainer: { flex: 1, backgroundColor: '#174C3C' },

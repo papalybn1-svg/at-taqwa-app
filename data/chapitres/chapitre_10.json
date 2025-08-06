@@ -2,7 +2,7 @@
   "chapitre": "CHAPITRE III :",
   "contenu": [
     {
-      "type": "texte",
+      "type": "titre",
       "contenu": "LES ERREURS COMMISES PAR L’IMAM"
     },
     {
@@ -15,11 +15,7 @@
     },
     {
       "type": "texte",
-      "contenu": "1.1 Si au cours de la prière l’imam s’assoit dans la première ou dans"
-    },
-    {
-      "type": "texte",
-      "contenu": "la troisième rakâ (sauf Maghreb), alors que vous êtes sûr qu’il s’est trompé, que devez-vous faire ?"
+      "contenu": "1.1 Si au cours de la prière l’imam s’assoit dans la première ou dans la troisième rakâ (sauf Maghreb), alors que vous êtes sûr qu’il s’est trompé, que devez-vous faire ?"
     },
     {
       "type": "texte",
@@ -35,11 +31,7 @@
     },
     {
       "type": "texte",
-      "contenu": "- Si l’Imam se rend compte de son erreur, il se lève en"
-    },
-    {
-      "type": "texte",
-      "contenu": "disant « allahu akbar » et la prière continue. Moi je n’ai pas commis d’erreur, c’est l’imam qui en a commise ; en effet, il s’est assis à tort. Il devra donc réparer sa prière en faisant un bahda salam, car il a ajouté à tort quelque chose à la prière. Quant à moi, en principe, je ne devrais pas être concerné par cette réparation !"
+      "contenu": "- Si l’Imam se rend compte de son erreur, il se lève en disant « allahu akbar » et la prière continue. Moi je n’ai pas commis d’erreur, c’est l’imam qui en a commise ; en effet, il s’est assis à tort. Il devra donc réparer sa prière en faisant un bahda salam, car il a ajouté à tort quelque chose à la prière. Quant à moi, en principe, je ne devrais pas être concerné par cette réparation !"
     },
     {
       "type": "texte",
@@ -75,7 +67,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Dans ce cas, vous devez dire « subhanallah » et vous le suivez en vous     levant."
+      "contenu": "Dans ce cas, vous devez dire « subhanallah » et vous le suivez en vous  levant."
     },
     {
       "type": "texte",
@@ -127,11 +119,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Parce qu’étant donné que j’ai annulé la raka de l’oubli, la 2ème"
-    },
-    {
-      "type": "texte",
-      "contenu": "raka de l’imam devient la 1ère et sa 4ème devient la 3ème ; or nous avons déjà vu qu’on ne doit jamais s’asseoir à la 1ère ou à la 3ème raka (sauf pour la prière du Maghreb) ; donc si l’imam s’assoit à la 2ème raka (1ère réelle) ou sa 4ème raka (3ème réelle), moi, je reste debout et je l’attends."
+      "contenu": "Parce qu’étant donné que j’ai annulé la raka de l’oubli, la 2ème raka de l’imam devient la 1ère et sa 4ème devient la 3ème ; or nous avons déjà vu qu’on ne doit jamais s’asseoir à la 1ère ou à la 3ème raka (sauf pour la prière du Maghreb) ; donc si l’imam s’assoit à la 2ème raka (1ère réelle) ou sa 4ème raka (3ème réelle), moi, je reste debout et je l’attends."
     },
     {
       "type": "texte",
@@ -175,11 +163,7 @@
     },
     {
       "type": "texte",
-      "contenu": ".     Je le suis en considérant que c’est la 3ème raka, puisque"
-    },
-    {
-      "type": "texte",
-      "contenu": "la raka qu’il vient d’achever est annulée."
+      "contenu": ". Je le suis en considérant que c’est la 3ème raka, puisque la raka qu’il vient d’achever est annulée."
     },
     {
       "type": "texte",
@@ -187,7 +171,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Je me lève car on ne doit pas s’asseoir à la 3ème raka et il s’agit bien de la 3ème raka car la raka précédente est annulée."
+      "contenu": ". Je me lève car on ne doit pas s’asseoir à la 3ème raka et il s’agit bien de la 3ème raka car la raka précédente est annulée."
     },
     {
       "type": "texte",
@@ -245,10 +229,10 @@
       "type": "tableau",
       "contenu": [
         [
-          "Raka n°1",
-          "Raka n°2",
-          "Raka n°3",
-          "Raka n°4"
+          "Raka n°1  ",
+          "Raka n°2  ",
+          "Raka n°3  ",
+          "Raka n°4  "
         ],
         [
           "Fatiha\n\nSourate",
@@ -272,17 +256,11 @@
       "type": "tableau",
       "contenu": [
         [
-          "Ancienne",
-          "Nouvelle",
-          "",
-          ""
-        ],
-        [
-          "Raka 1",
-          "Raka 2",
-          "Raka2",
-          "Raka 3",
-          "Raka 4"
+          "Raka 1  ",
+          "Ancienne Raka 2         ",
+          "Nouvelle Raka 2         ",
+          "Raka 3 ",
+          "Raka 4 "
         ],
         [
           "Fatiha\n\nSurate",
@@ -299,19 +277,11 @@
     },
     {
       "type": "texte",
-      "contenu": "Mais il manque la position assise, la tahiyya et la surate à ma"
+      "contenu": "Mais il manque la position assise, la tahiyya et la surate à ma nouvelle raka 2, donc j’ai omis des sunnas."
     },
     {
       "type": "texte",
-      "contenu": "nouvelle raka 2, donc j’ai omis des sunnas."
-    },
-    {
-      "type": "texte",
-      "contenu": "Conclusion : si dans une même prière j’ai fait une omission et"
-    },
-    {
-      "type": "texte",
-      "contenu": "une addition, je ne prends en compte que l’omission lors de la réparation, en conséquence, je fais sujûd habla salam."
+      "contenu": "Conclusion : si dans une même prière j’ai fait une omission et une addition, je ne prends en compte que l’omission lors de la réparation, en conséquence, je fais sujûd habla salam."
     },
     {
       "type": "texte",
@@ -319,11 +289,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Si l’imam prononce le salut final avant d’avoir terminé sa prière,"
-    },
-    {
-      "type": "texte",
-      "contenu": "vous devez lui dire « subhanallah »."
+      "contenu": "Si l’imam prononce le salut final avant d’avoir terminé sa prière,vous devez lui dire « subhanallah »."
     },
     {
       "type": "texte",
@@ -331,43 +297,23 @@
     },
     {
       "type": "texte",
-      "contenu": "Même si vous n’aviez pas prononcé le salut final en même temps"
+      "contenu": "Même si vous n’aviez pas prononcé le salut final en même temps que lui, vous devriez néanmoins faire sujûd bahda salam, car vous avez déjà prié au moins une raka complète avec l’imam."
     },
     {
       "type": "texte",
-      "contenu": "que lui, vous devriez néanmoins faire sujûd bahda salam, car vous avez déjà prié au moins une raka complète avec l’imam."
+      "contenu": "Si l’imam n’est pas d’accord avec votre appel, il devrait s’informer auprès de deux « adjoints » (nayibs) dignes de foi pour savoir s’il a fait une faute ou non. Dans ce cas, les nayibs en question ont le droit de parler et de faire comprendre à l’imam son erreur"
     },
     {
       "type": "texte",
-      "contenu": "Si l’imam n’est pas d’accord avec votre appel, il devrait s’informer"
+      "contenu": "Si l’imam est convaincu par eux, il devrait achever sa prière comme précédemment et faire bahda salam"
     },
     {
       "type": "texte",
-      "contenu": "auprès de deux « adjoints » (nayibs) dignes de foi pour savoir s’il a fait une faute ou non. Dans ce cas, les nayibs en question ont le droit de parler et de faire comprendre à l’imam son erreur."
+      "contenu": "Si l’imam n’est toujours pas convaincu malgré l’avis des 2 nayibs, il pourrait agir selon sa conviction et mettre fin à sa prière. Dans ce cas, vous vous levez et continuez votre prière normalement."
     },
     {
       "type": "texte",
-      "contenu": "Si l’imam est convaincu par eux, il devrait achever sa prière comme"
-    },
-    {
-      "type": "texte",
-      "contenu": "précédemment et faire bahda salam"
-    },
-    {
-      "type": "texte",
-      "contenu": "Si l’imam n’est toujours pas convaincu malgré l’avis des 2 nayibs,"
-    },
-    {
-      "type": "texte",
-      "contenu": "il pourrait agir selon sa conviction et mettre fin à sa prière. Dans ce cas, vous vous levez et continuez votre prière normalement."
-    },
-    {
-      "type": "texte",
-      "contenu": "Mais, si les nayibs sont plus nombreux, s’ils sont 3 ou plus à"
-    },
-    {
-      "type": "texte",
-      "contenu": "confirmer à l’imam son erreur, dans ce cas, l’imam devrait obligatoirement s’exécuter. Après le salut final, il devrait faire bahda salam."
+      "contenu": "Mais, si les nayibs sont plus nombreux, s’ils sont 3 ou plus à  confirmer à l’imam son erreur, dans ce cas, l’imam devrait obligatoirement s’exécuter. Après le salut final, il devrait faire bahda salam."
     },
     {
       "type": "texte",
@@ -375,11 +321,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Si l’imam ajoute une raka supplémentaire à la prière, vous ne le"
-    },
-    {
-      "type": "texte",
-      "contenu": "suivez pas. Restez assis si vous êtes sûr que l’imam a commis une erreur."
+      "contenu": "Si l’imam ajoute une raka supplémentaire à la prière, vous ne le suivez pas. Restez assis si vous êtes sûr que l’imam a commis une erreur."
     },
     {
       "type": "texte",

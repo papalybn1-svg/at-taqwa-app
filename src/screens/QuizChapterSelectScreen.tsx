@@ -194,7 +194,7 @@ export default function QuizChapterSelectScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <PanGestureHandler onHandlerStateChange={onGestureEvent}>
-        <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 40}}>
+    <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 40}}>
       <Text style={styles.title}>Choisissez un chapitre pour le quiz</Text>
       <View style={styles.list}>
                 {allChapters.map((chapter, idx) => {
@@ -314,7 +314,7 @@ export default function QuizChapterSelectScreen() {
           </View>
         </View>
       </Modal>
-        </ScrollView>
+    </ScrollView>
       </PanGestureHandler>
     </GestureHandlerRootView>
   );

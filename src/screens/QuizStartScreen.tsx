@@ -56,7 +56,7 @@ export default function QuizStartScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <PanGestureHandler onHandlerStateChange={onGestureEvent}>
-        <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Bouton retour */}
       <TouchableOpacity 
         style={styles.backButton} 
@@ -91,7 +91,7 @@ export default function QuizStartScreen() {
           </TouchableOpacity>
         </View>
       </View>
-        </SafeAreaView>
+    </SafeAreaView>
       </PanGestureHandler>
     </GestureHandlerRootView>
   );

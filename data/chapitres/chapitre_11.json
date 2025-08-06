@@ -2,7 +2,7 @@
   "chapitre": "CHAPITRE IV :",
   "contenu": [
     {
-      "type": "texte",
+      "type": "titre",
       "contenu": "LA PRIERE DU VOYAGE"
     },
     {
@@ -10,7 +10,11 @@
       "contenu": "Que dit le Coran ?"
     },
     {
-      "type": "texte",
+      "type": "arabe",
+      "contenu": "وَإِذَا ضَرَبْتُمْ فِي الْأَرْضِ فَلَيْسَ عَلَيْكُمْ جُنَاحٌ أَنْ تَقْصُرُوا مِنَ الصَّلَاةِ إِنْ خِفْتُمْ أَنْ يَفْتِنَكُمُ الَّذِينَ كَفَرُوا ۚ إِنَّ الْكَافِرِينَ كَانُوا لَكُمْ عَدُوًّا مُبِينًا (s.4, v.101)."
+    },
+    {
+      "type": "explication",
       "contenu": "(Quand vous êtes en voyage, il vous est permis d’écourter la prière) (s.4, v.101). C’est une permission, une autorisation accordée par le Coran et non une obligation."
     },
     {
@@ -27,11 +31,11 @@
     },
     {
       "type": "texte",
-      "contenu": "En effet, le Prophète (SPL) a toujours pratiqué le raccourcissement de la prière en voyage ; de ce fait, ce raccourcissement a acquis un caractère de « sunna » ; d’où la prière du voyage est une obligation traditionnelle. Pourquoi continuer d’abréger la prière aujourd’hui alors que nous ne risquons pas d’être attaqués par les Infidèles ?"
+      "contenu": "En effet, le Prophète (PSL) a toujours pratiqué le raccourcissement de la prière en voyage ; de ce fait, ce raccourcissement a acquis un caractère de « sunna » ; d’où la prière du voyage est une obligation traditionnelle. Pourquoi continuer d’abréger la prière aujourd’hui alors que nous ne risquons pas d’être attaqués par les Infidèles ?"
     },
     {
       "type": "texte",
-      "contenu": "Bukhary et Muslim, rapportant les paroles du Prophète (SPL) répondent :"
+      "contenu": "Bukhary et Muslim, rapportant les paroles du Prophète (PSL) répondent :"
     },
     {
       "type": "texte",
@@ -79,7 +83,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Le Prophète (SPL) avait raccourci la prière pendant 19 jours. Les malikites le justifient en disant qu’il n’était pas sûr de rester dans la même localité durant toute cette période ; toujours est-il qu’il a raccourci la prière pendant 19 jours consécutifs."
+      "contenu": "Le Prophète (PSL) avait raccourci la prière pendant 19 jours. Les malikites le justifient en disant qu’il n’était pas sûr de rester dans la même localité durant toute cette période ; toujours est-il qu’il a raccourci la prière pendant 19 jours consécutifs."
     },
     {
       "type": "texte",
@@ -95,7 +99,7 @@
     },
     {
       "type": "texte",
-      "contenu": "Si un fidèle restant chez lui, accomplit sa prière derrière un imam en voyage qui raccourcit la sienne, que doit-il faire ? Après le salut final de l’imam, le fidèle doit compléter sa prière. Le Prophète (SPL) en voyage a raccourci sa prière alors qu’il dirigeait la prière à la Mecque. Il dit ensuite aux gens de compléter la leur."
+      "contenu": "Si un fidèle restant chez lui, accomplit sa prière derrière un imam en voyage qui raccourcit la sienne, que doit-il faire ? Après le salut final de l’imam, le fidèle doit compléter sa prière. Le Prophète (PSL) en voyage a raccourci sa prière alors qu’il dirigeait la prière à la Mecque. Il dit ensuite aux gens de compléter la leur."
     },
     {
       "type": "texte",
