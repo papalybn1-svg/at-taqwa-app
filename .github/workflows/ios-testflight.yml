@@ -26,8 +26,8 @@ jobs:
     - name: Setup Expo CLI
       run: npm install -g @expo/cli eas-cli
       
-                    - name: Build and submit to TestFlight
-                  run: eas build --platform ios --non-interactive && eas submit -p ios --latest --non-interactive
-                  env:
-                    EXPO_TOKEN: ${{ secrets.ATTAQWAAPP }}
-                  timeout-minutes: 25  # Timeout pour éviter les dépassements 
+    - name: Build and submit to TestFlight
+      run: eas build --platform ios --non-interactive && eas submit -p ios --latest --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.ATTAQWAAPP }}
+      timeout-minutes: 25  # Timeout pour éviter les dépassements 
