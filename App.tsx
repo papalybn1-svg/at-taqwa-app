@@ -38,9 +38,9 @@ function SplashLogo() {
           clearInterval(timer);
           return 100;
         }
-        return prev + 2;
+        return prev + 1.5; // Ralenti de 2 à 1.5 pour une progression plus douce
       });
-    }, 40);
+    }, 50); // Ralenti de 40ms à 50ms pour une progression plus lente
 
     return () => clearInterval(timer);
   }, []);
@@ -99,10 +99,10 @@ export default function App() {
   
   useEffect(() => {
     if (splashStep === 0) {
-      const timer = setTimeout(() => setSplashStep(1), 2000);
+      const timer = setTimeout(() => setSplashStep(1), 3500); // Augmenté de 2s à 3.5s
       return () => clearTimeout(timer);
     } else if (splashStep === 1) {
-      const timer = setTimeout(() => setSplashStep(2), 2000);
+      const timer = setTimeout(() => setSplashStep(2), 4000); // Augmenté de 2s à 4s
       return () => clearTimeout(timer);
     }
   }, [splashStep]);
