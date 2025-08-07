@@ -3,10 +3,12 @@ name: iOS TestFlight Upload
 on:
   push:
     branches: [ main, imam ]
+  workflow_dispatch:  # Permet aussi le déclenchement manuel
 
 jobs:
   build-and-upload:
     runs-on: macos-latest
+    timeout-minutes: 30  # Limite le temps d'exécution
     
     steps:
     - name: Checkout code
@@ -19,7 +21,7 @@ jobs:
         cache: 'npm'
       
     - name: Install dependencies
-      run: npm install
+      run: npm ci  # Plus rapide que npm install
       
     - name: Setup Expo CLI
       run: npm install -g @expo/cli eas-cli
@@ -27,4 +29,5 @@ jobs:
     - name: Build and submit to TestFlight
       run: eas build --platform ios --non-interactive && eas submit -p ios --latest --non-interactive
       env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }} 
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      timeout-minutes: 25  # Timeout pour éviter les dépassements 
