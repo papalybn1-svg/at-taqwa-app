@@ -1,4 +1,4 @@
-name: iOS TestFlight Upload (Optimized)
+name: iOS TestFlight Upload (No Timeout)
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-upload:
     runs-on: macos-latest
-    timeout-minutes: 45  # Augmenté pour la file gratuite
+    # Pas de timeout global - laisse le build prendre le temps qu'il faut
     
     steps:
     - name: Checkout code
@@ -30,10 +30,10 @@ jobs:
       run: eas build --platform ios --non-interactive --clear-cache
       env:
         EXPO_TOKEN: ${{ secrets.ATTAQWAAPP }}
-      timeout-minutes: 40  # Plus de temps pour la file gratuite
+      # Pas de timeout - laisse le build prendre le temps qu'il faut
       
     - name: Submit to TestFlight
       run: eas submit -p ios --latest --non-interactive
       env:
         EXPO_TOKEN: ${{ secrets.ATTAQWAAPP }}
-      timeout-minutes: 10 
+      # Pas de timeout pour le submit non plus 
