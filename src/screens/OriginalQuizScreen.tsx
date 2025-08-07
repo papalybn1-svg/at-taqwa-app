@@ -1,13 +1,13 @@
 // src/screens/QuizScreen.tsx
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { StackActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import chapitre02 from '../../data/exercices_par_chapitre/chapitre_02_exercices.json';
 import chapitre03 from '../../data/exercices_par_chapitre/chapitre_03_exercices.json';
 import chapitre05 from '../../data/exercices_par_chapitre/chapitre_05_exercices.json';
@@ -17,15 +17,6 @@ import chapitre09 from '../../data/exercices_par_chapitre/chapitre_09_exercices.
 import chapitre10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
 import chapitre12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
 import chapitre01 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
-import {
-    getResponsiveBorderRadius,
-    getResponsiveFontSize,
-    getResponsivePadding,
-    getResponsiveSpacing,
-    hp,
-    screenDimensions,
-    wp
-} from '../utils/responsive';
 import { db } from './firebaseConfig';
 import { AuthContext } from './LoginScreen';
 
@@ -637,127 +628,129 @@ export default function OriginalQuizScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1, 
-    backgroundColor: '#174C3C',
+    backgroundColor: '#174C3C', // Vert principal de l'application
   },
   backButton: { 
     position: 'absolute',
-    top: screenDimensions.isSmallDevice ? 40 : 50,
-    left: getResponsivePadding(),
+    top: 50,
+    left: 20,
     zIndex: 100,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: getResponsiveBorderRadius(20),
-    padding: getResponsiveSpacing(8),
+    borderRadius: 20,
+    padding: 8,
   },
   characterSection: {
     position: 'absolute',
-    top: screenDimensions.isSmallDevice ? 15 : 25,
+    top: 25, // Réduit de 40 à 25 pour faire monter l'image un peu
     left: 0,
     right: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 50,
+    zIndex: 50, // Augmenté de 15 à 50 pour mettre l'image en premier plan
   },
   characterImage: {
-    width: wp(80),
-    height: hp(25),
-    maxWidth: screenDimensions.isSmallDevice ? 300 : 400,
-    maxHeight: screenDimensions.isSmallDevice ? 250 : 350,
-    resizeMode: 'contain',
-    zIndex: 51,
+    width: screenWidth * 0.8, // Réduit de 1.4 à 0.8
+    height: screenHeight * 0.25, // Réduit de 0.45 à 0.25
+    maxWidth: 400, // Réduit de 650 à 400
+    maxHeight: 350, // Réduit de 600 à 350
+    resizeMode: 'contain', // Ajouté pour maintenir les proportions
+    zIndex: 51, // Augmenté de 16 à 51 pour mettre l'image en premier plan
   },
   quizCardContainer: {
-    flex: 1,
+    flex: 1, // Prend tout l'espace disponible
     justifyContent: 'center',
     alignItems: 'center', 
-    paddingHorizontal: getResponsivePadding(),
-    paddingBottom: getResponsiveSpacing(30),
+    paddingHorizontal: 8, // Réduit de 16 à 8 pour plus d'espace
+    paddingBottom: 30,
     position: 'relative',
     paddingTop: 0,
   },
+
   questionText: { 
-    fontSize: getResponsiveFontSize(17),
+    fontSize: 17,
     color: '#333',
     fontWeight: '600', 
     textAlign: 'center', 
-    marginBottom: getResponsiveSpacing(15),
-    lineHeight: getResponsiveFontSize(17) * 1.4,
-    marginTop: getResponsiveSpacing(20),
-    paddingHorizontal: getResponsivePadding(),
+    marginBottom: 15, // Réduit de 22 à 15
+    lineHeight: 24,
+    marginTop: 20, // Réduit de 30 à 20
   },
   optionsContainer: { 
-    marginBottom: getResponsiveSpacing(8),
-    marginTop: getResponsiveSpacing(15),
-    width: '100%',
-    maxHeight: screenDimensions.isSmallDevice ? '60%' : '70%',
-    overflow: 'hidden',
+    marginBottom: 8, // Réduit de 12 à 8
+    marginTop: 15, // Réduit de 30 à 15
+    width: '100%', // Assure que le conteneur prend toute la largeur
+    maxHeight: '70%', // Limite la hauteur pour éviter le débordement
+    overflow: 'hidden', // Cache le contenu qui déborde
   },
+
   optionContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   verifyButton: {
     backgroundColor: '#BB9B4E',
-    padding: getResponsiveSpacing(10),
-    borderRadius: getResponsiveBorderRadius(10),
+    padding: 10,
+    borderRadius: 10,
     alignItems: 'center',
-    marginTop: getResponsiveSpacing(6),
-    width: '100%',
-    maxWidth: '95%',
+    marginTop: 6,
+    width: '100%', // Assure que le bouton prend toute la largeur disponible
+    maxWidth: '95%', // Limite la largeur pour rester dans le cadre
   },
   disabledButton: { 
     backgroundColor: '#CCCCCC',
   },
   verifyButtonText: {
-    fontSize: getResponsiveFontSize(14),
+    fontSize: 14,
     color: 'white',
     fontWeight: 'bold',
   },
   answerSection: {
-    marginTop: getResponsiveSpacing(4),
+    marginTop: 4, // Réduit de 6 à 4
   },
   correctAnswerBanner: {
     backgroundColor: '#174C3C',
-    padding: getResponsiveSpacing(8),
-    borderRadius: getResponsiveBorderRadius(10),
+    padding: 8, // Réduit de 10 à 8
+    borderRadius: 10,
     alignItems: 'center',
-    marginBottom: getResponsiveSpacing(6),
-    minHeight: screenDimensions.isSmallDevice ? 35 : 40,
+    marginBottom: 6, // Réduit de 8 à 6
+    minHeight: 40, // Réduit de 44 à 40
   },
   correctAnswerText: {
     color: 'white',
-    fontSize: getResponsiveFontSize(13),
+    fontSize: 13, // Réduit de 14 à 13
     fontWeight: 'bold',
   },
   nextButton: {
     backgroundColor: '#BB9B4E',
-    padding: getResponsiveSpacing(10),
-    borderRadius: getResponsiveBorderRadius(10),
+    padding: 10,
+    borderRadius: 10,
     alignItems: 'center', 
-    minHeight: screenDimensions.isSmallDevice ? 40 : 44,
+    minHeight: 44,
   },
   nextButtonText: {
-    fontSize: getResponsiveFontSize(14),
+    fontSize: 14,
     color: 'white',
     fontWeight: 'bold',
   },
   resultsTitle: { 
-    fontSize: getResponsiveFontSize(26),
+    fontSize: 26,
     fontWeight: 'bold', 
     color: '#174C3C',
     textAlign: 'center',
-    marginTop: getResponsiveSpacing(20),
-    marginBottom: getResponsiveSpacing(22),
+    marginTop: 20, // Ajouté pour descendre le texte
+    marginBottom: 22,
   },
   scoreText: { 
-    fontSize: getResponsiveFontSize(19),
+    fontSize: 19,
     color: '#333',
     textAlign: 'center',
-    marginBottom: getResponsiveSpacing(32),
+    marginBottom: 32,
   },
   restartButton: { 
     backgroundColor: '#BB9B4E',
-    padding: getResponsiveSpacing(16),
-    borderRadius: getResponsiveBorderRadius(12),
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
     zIndex: 20,
     elevation: 10,
@@ -770,14 +763,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   restartButtonText: { 
-    fontSize: getResponsiveFontSize(16),
+    fontSize: 16,
     color: 'white',
     fontWeight: 'bold',
   },
   backCard: {
     backgroundColor: '#0F3A2E',
-    borderRadius: getResponsiveBorderRadius(30),
-    height: screenDimensions.isSmallDevice ? hp(50) : hp(55),
+    borderRadius: 30,
+    height: screenHeight * 0.55,
     width: '98%',
     position: 'absolute',
     bottom: 3,
@@ -795,8 +788,8 @@ const styles = StyleSheet.create({
   },
   middleCard: {
     backgroundColor: '#BB9B4E',
-    borderRadius: getResponsiveBorderRadius(30),
-    height: screenDimensions.isSmallDevice ? hp(48) : hp(53.5),
+    borderRadius: 30,
+    height: screenHeight * 0.535,
     width: '95%',
     position: 'absolute',
     bottom: 10,
@@ -814,10 +807,10 @@ const styles = StyleSheet.create({
   },
   whiteCard: {
     backgroundColor: 'white',
-    borderRadius: getResponsiveBorderRadius(30),
-    paddingHorizontal: getResponsivePadding(),
-    paddingTop: getResponsiveSpacing(25),
-    paddingBottom: getResponsiveSpacing(20),
+    borderRadius: 30,
+    paddingHorizontal: 20,
+    paddingTop: 25,
+    paddingBottom: 20,
     alignItems: 'center',
     justifyContent: 'flex-start',
     shadowColor: '#000',
@@ -831,22 +824,23 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#F0F0F0',
     width: '92%',
-    height: screenDimensions.isSmallDevice ? hp(47) : hp(52.5),
+    height: screenHeight * 0.525,
     position: 'absolute',
     bottom: 15,
     zIndex: 15,
     overflow: 'hidden',
   },
+
   spacer: {
     flex: 1,
-    minHeight: screenDimensions.isSmallDevice ? 80 : 100,
+    minHeight: 100,
   },
   answerButton: {
     backgroundColor: '#BB9B4E',
-    padding: getResponsiveSpacing(16),
-    borderRadius: getResponsiveBorderRadius(12),
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: getResponsiveSpacing(20),
+    marginTop: 20,
     zIndex: 20,
     elevation: 10,
     shadowColor: '#000',
@@ -858,13 +852,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   answerButtonText: {
-    fontSize: getResponsiveFontSize(16),
+    fontSize: 16,
     color: 'white',
     fontWeight: 'bold',
   },
+
   buttonSection: {
-    marginTop: getResponsiveSpacing(8),
-    minHeight: screenDimensions.isSmallDevice ? 40 : 45,
+    marginTop: 8,
+    minHeight: 45,
   },
   // Styles pour le modal
   modalOverlay: {
@@ -937,7 +932,7 @@ const styles = StyleSheet.create({
   modalBackCard: {
     backgroundColor: '#0F3A2E',
     borderRadius: 30,
-    height: screenDimensions.isSmallDevice ? hp(50) : hp(55),
+    height: screenHeight * 0.55,
     width: '92%',
     position: 'absolute',
     bottom: 35,
@@ -953,7 +948,7 @@ const styles = StyleSheet.create({
   modalMiddleCard: {
     backgroundColor: '#BB9B4E',
     borderRadius: 30,
-    height: screenDimensions.isSmallDevice ? hp(48) : hp(53.5),
+    height: screenHeight * 0.535,
     width: '89%',
     position: 'absolute',
     bottom: 42,
@@ -982,7 +977,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#F0F0F0',
     width: '86%',
-    height: screenDimensions.isSmallDevice ? hp(47) : hp(52.5),
+    height: screenHeight * 0.525,
     position: 'absolute',
     bottom: 47,
     zIndex: 15,
