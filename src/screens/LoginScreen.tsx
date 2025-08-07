@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Image as RNImage, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -53,6 +53,35 @@ export default function LoginScreen({ navigation }: any) {
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ visible: true, message, type });
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      showToast('Veuillez saisir votre adresse email d\'abord.', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      showToast('Email de réinitialisation envoyé ! Vérifiez votre boîte de réception.', 'success');
+      console.log('✅ Email de réinitialisation envoyé à:', email);
+    } catch (error: any) {
+      console.error('❌ Erreur envoi email réinitialisation:', error);
+      let errorMessage = 'Erreur lors de l\'envoi de l\'email de réinitialisation.';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'Aucun compte trouvé avec cette adresse email.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Adresse email invalide.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Trop de tentatives. Réessayez plus tard.';
+      }
+      
+      showToast(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAuth = async () => {
@@ -404,7 +433,11 @@ export default function LoginScreen({ navigation }: any) {
         </TouchableOpacity>
         
         {/* Mot de passe oublié */}
-        <TouchableOpacity style={styles.forgotPasswordContainer}>
+        <TouchableOpacity 
+          style={styles.forgotPasswordContainer}
+          onPress={handleForgotPassword}
+          disabled={loading}
+        >
           <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>
         </TouchableOpacity>
         
