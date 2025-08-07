@@ -1,4 +1,4 @@
-name: iOS TestFlight Upload
+name: iOS TestFlight Upload (Optimized)
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-upload:
     runs-on: macos-latest
-    timeout-minutes: 30  # Limite le temps d'exécution
+    timeout-minutes: 45  # Augmenté pour la file gratuite
     
     steps:
     - name: Checkout code
@@ -26,8 +26,14 @@ jobs:
     - name: Setup Expo CLI
       run: npm install -g @expo/cli eas-cli
       
-    - name: Build and submit to TestFlight
-      run: eas build --platform ios --non-interactive && eas submit -p ios --latest --non-interactive
+    - name: Build iOS App
+      run: eas build --platform ios --non-interactive --clear-cache
       env:
         EXPO_TOKEN: ${{ secrets.ATTAQWAAPP }}
-      timeout-minutes: 25  # Timeout pour éviter les dépassements 
+      timeout-minutes: 40  # Plus de temps pour la file gratuite
+      
+    - name: Submit to TestFlight
+      run: eas submit -p ios --latest --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.ATTAQWAAPP }}
+      timeout-minutes: 10 
