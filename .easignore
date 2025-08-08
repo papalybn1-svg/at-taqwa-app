@@ -1,0 +1,11 @@
+# Exclusions EAS
+*.apk
+*.aab
+*.ipa
+.expo
+.expo-shared
+dist/
+build/
+coverage/
+.git
+.gitignore
