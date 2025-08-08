@@ -1,6 +1,8 @@
 // src/firebaseConfig.ts
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initializeAuth } from 'firebase/auth';
+import { getReactNativePersistence } from 'firebase/auth/react-native';
 import { collection, disableNetwork, enableNetwork, getDocs, initializeFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
@@ -17,58 +19,36 @@ const firebaseConfig = {
 // Initialisation unique pour Expo
 export const app = initializeApp(firebaseConfig);
 
-// Configuration Firebase Auth avec persistance automatique
-export const auth = getAuth(app);
-
-// Configuration de la persistance Firebase Auth
-// En production, Firebase Auth gère automatiquement la persistance
-// Cette configuration assure que la persistance fonctionne correctement
-auth.useDeviceLanguage();
-
-// Configuration de la persistance pour les builds natifs
-// Cette configuration force Firebase Auth à utiliser la persistance native
-auth.settings.appVerificationDisabledForTesting = false;
-
-// Configuration pour améliorer la persistance en production
-if (__DEV__) {
-  console.log('🔧 Mode développement - Persistance AsyncStorage activée');
-} else {
-  console.log('🚀 Mode production - Persistance Firebase native activée');
-  // En production, Firebase Auth gère automatiquement la persistance
-  // Pas besoin de configuration supplémentaire
-}
-
-// Configuration de la persistance pour différents environnements
-// En production, la persistance est automatique
-// En développement (Expo Go), on utilise AsyncStorage comme fallback
-
-// Configuration Firestore optimisée pour Expo
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true, // Force le polling long pour Expo
+// Firebase Auth avec persistance native React Native (corrige la déconnexion à chaque ouverture)
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
 });
 
-// Configuration Firebase Functions
-export const functions = getFunctions(app);
+// Langue de l'auth
+auth.useDeviceLanguage();
 
-// Configuration Firebase Storage
+// Firestore optimisé pour Expo
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+});
+
+// Firebase Functions & Storage
+export const functions = getFunctions(app);
 export const storage = getStorage(app);
 
-// Configuration pour un meilleur débogage
-console.log('🔥 Firebase config initialisée avec persistance Auth automatique');
+// Logs debug
+console.log('🔥 Firebase initialisé');
 console.log('📱 Project ID:', firebaseConfig.projectId);
-console.log('🔧 Configuration Firestore optimisée pour Expo');
-console.log('💾 Persistance Auth native Firebase activée');
+console.log('💾 Persistance Auth: ReactNative AsyncStorage');
 
 // Test de connexion Firestore
 export const testFirestoreConnection = async () => {
   try {
     console.log('🔍 Test de connexion Firestore...');
-    
-    // Forcer la connexion réseau
+
     await enableNetwork(db);
     console.log('✅ Réseau activé');
-    
-    // Test simple de lecture
+
     const testQuery = await getDocs(collection(db, 'notifications'));
     console.log(`✅ Connexion Firestore réussie - ${testQuery.docs.length} notifications trouvées`);
     return true;
@@ -79,20 +59,19 @@ export const testFirestoreConnection = async () => {
   }
 };
 
-// Fonction pour forcer la reconnexion
+// Reconnexion Firestore
 export const reconnectFirestore = async () => {
   try {
     console.log('🔄 Tentative de reconnexion Firestore...');
-    
-    // Désactiver puis réactiver le réseau
+
     await disableNetwork(db);
     console.log('📴 Réseau désactivé');
-    
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Attendre 1 seconde
-    
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     await enableNetwork(db);
     console.log('📡 Réseau réactivé');
-    
+
     return true;
   } catch (error) {
     console.error('❌ Erreur de reconnexion:', error);
@@ -100,7 +79,7 @@ export const reconnectFirestore = async () => {
   }
 };
 
-// Fonction pour vérifier l'état de la connexion
+// État Firestore
 export const checkFirestoreStatus = async () => {
   try {
     const testQuery = await getDocs(collection(db, 'notifications'));
@@ -116,7 +95,7 @@ export const checkFirestoreStatus = async () => {
   }
 };
 
-// Fonction pour vérifier l'état d'authentification
+// État Auth
 export const checkAuthStatus = () => {
   const currentUser = auth.currentUser;
   console.log('🔐 Auth Status:', {
