@@ -1,13 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
+import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { useContext, useState } from 'react';
 import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
-import { auth, db, storage } from './firebaseConfig';
+import { auth, db } from './firebaseConfig';
 import { AuthContext } from './LoginScreen';
 
 export default function ParametresScreen() {
@@ -20,7 +19,7 @@ export default function ParametresScreen() {
   const [editPhoto, setEditPhoto] = useState(firebaseUser?.photoURL || '');
   const [profileModal, setProfileModal] = useState(false);
   const [modalPwd, setModalPwd] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -265,53 +264,7 @@ export default function ParametresScreen() {
     setLoading(false);
   };
 
-  const handleResetPassword = async () => {
-    setLoading(true);
-    try {
-      if (firebaseUser?.email) {
-        console.log('📧 Envoi email réinitialisation à:', firebaseUser.email);
-        
-        // Utiliser Firebase Auth par défaut (solution stable)
-        await sendPasswordResetEmail(auth, firebaseUser.email);
-        console.log('✅ Email de réinitialisation envoyé avec succès');
-        
-        setEmailSent(true);
-        setModalPwd(false);
-        
-        // Masquer le toast après 3 secondes
-        setTimeout(() => {
-          setEmailSent(false);
-        }, 3000);
-        
-        // Afficher un message informatif
-        Alert.alert(
-          'Email envoyé !', 
-          'Un email de réinitialisation a été envoyé à votre adresse. Vérifiez votre boîte de réception et le dossier spam.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        throw new Error('Email utilisateur non disponible');
-      }
-    } catch (e) {
-      console.error('❌ Erreur reset password:', e);
-      let errorMessage = 'Impossible d\'envoyer l\'email de réinitialisation. Veuillez réessayer.';
-      
-      if (e instanceof Error) {
-        if (e.message.includes('auth/user-not-found')) {
-          errorMessage = 'Aucun compte trouvé avec cet email.';
-        } else if (e.message.includes('auth/too-many-requests')) {
-          errorMessage = 'Trop de tentatives. Veuillez attendre avant de réessayer.';
-        } else if (e.message.includes('auth/network-request-failed')) {
-          errorMessage = 'Erreur de réseau. Vérifiez votre connexion internet.';
-        } else if (e.message.includes('auth/invalid-email')) {
-          errorMessage = 'Adresse email invalide.';
-        }
-      }
-      
-      Alert.alert('Erreur', errorMessage);
-    }
-    setLoading(false);
-  };
+
 
   const handleLogout = () => {
     Alert.alert(
@@ -569,14 +522,7 @@ export default function ParametresScreen() {
         </View>
       </Modal>
 
-      {/* Toast email envoyé */}
-      {emailSent && (
-        <View style={styles.toastSuccess}>
-          <MaterialCommunityIcons name="check-circle" size={24} color={colors.white} />
-          <Text style={styles.toastText}>Email de réinitialisation envoyé !</Text>
-          <MaterialCommunityIcons name="email-check" size={20} color={colors.white} style={{ marginLeft: 8 }} />
-        </View>
-      )}
+
     </View>
   );
 }
@@ -607,8 +553,7 @@ const styles = StyleSheet.create({
   saveButton: { backgroundColor: colors.secondary },
   modalButtonText: { fontWeight: 'bold', fontSize: 13 },
   modalSubtitle: { color: colors.primary, textAlign: 'center', marginBottom: 20, fontSize: 16, lineHeight: 22 },
-  toastSuccess: { position: 'absolute', bottom: 30, left: 30, right: 30, backgroundColor: colors.primary, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: colors.black, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
-  toastText: { color: colors.white, fontWeight: 'bold', fontSize: 16, marginLeft: 8, marginRight: 8 },
+
   imagePreviewContainer: { alignItems: 'center', marginTop: 16, marginBottom: 12 },
   imagePreview: { width: 100, height: 100, borderRadius: 50, marginBottom: 8, backgroundColor: colors.secondary },
   imagePreviewText: { fontSize: 14, color: colors.primary, fontWeight: '500' },

@@ -1,0 +1,39 @@
+name: Android Build & Download
+
+on:
+  push:
+    branches: [ main, imam ]
+  workflow_dispatch:  # Permet aussi le déclenchement manuel
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45  # Augmenté pour la file gratuite
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+        cache: 'npm'
+      
+    - name: Install dependencies
+      run: npm ci  # Plus rapide que npm install
+      
+    - name: Setup Expo CLI
+      run: npm install -g @expo/cli eas-cli
+      
+    - name: Build Android APK
+      run: eas build --platform android --non-interactive --clear-cache
+      env:
+        EXPO_TOKEN: ${{ secrets.ATTAQWAAPP }}
+      timeout-minutes: 40  # Plus de temps pour la file gratuite
+      
+    - name: Download APK
+      run: eas build:download --platform android --latest
+      env:
+        EXPO_TOKEN: ${{ secrets.ATTAQWAAPP }}
+      timeout-minutes: 10 

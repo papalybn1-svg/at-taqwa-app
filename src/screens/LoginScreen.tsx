@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Image as RNImage, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -63,19 +63,31 @@ export default function LoginScreen({ navigation }: any) {
 
     setLoading(true);
     try {
+      console.log('📧 Envoi email réinitialisation à:', email.trim());
       await sendPasswordResetEmail(auth, email.trim());
-      showToast('Email de réinitialisation envoyé ! Vérifiez votre boîte de réception.', 'success');
-      console.log('✅ Email de réinitialisation envoyé à:', email);
+      console.log('✅ Email de réinitialisation envoyé avec succès');
+      
+      // Message plus détaillé comme dans ParametresScreen
+      showToast('Email envoyé ! Vérifiez votre boîte de réception et le dossier spam.', 'success');
+      
+      // Afficher aussi une alerte pour plus de clarté
+      Alert.alert(
+        'Email envoyé !', 
+        'Un email de réinitialisation a été envoyé à votre adresse. Vérifiez votre boîte de réception et le dossier spam.',
+        [{ text: 'OK' }]
+      );
     } catch (error: any) {
       console.error('❌ Erreur envoi email réinitialisation:', error);
-      let errorMessage = 'Erreur lors de l\'envoi de l\'email de réinitialisation.';
+      let errorMessage = 'Impossible d\'envoyer l\'email de réinitialisation. Veuillez réessayer.';
       
       if (error.code === 'auth/user-not-found') {
         errorMessage = 'Aucun compte trouvé avec cette adresse email.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Adresse email invalide.';
       } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Trop de tentatives. Réessayez plus tard.';
+        errorMessage = 'Trop de tentatives. Veuillez attendre avant de réessayer.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Erreur de réseau. Vérifiez votre connexion internet.';
       }
       
       showToast(errorMessage, 'error');
