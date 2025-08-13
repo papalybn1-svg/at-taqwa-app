@@ -344,22 +344,57 @@ export default function OriginalQuizScreen() {
   const goToNextQuiz = () => {
     console.log('🔄 goToNextQuiz appelé avec exercicesKey:', exercicesKey);
     
-    // Séquence correcte des chapitres disponibles
+    // Récupérer les données des chapitres pour déterminer la partie actuelle
+    const chaptersData = require('../../data/chapitres.json');
+    
+    // Trouver le chapitre actuel et sa partie
+    let currentChapter = null;
+    let currentPartieKey = null;
+    
+    Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
+      partie.chapitres.forEach((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        if (numKey === exercicesKey) {
+          currentChapter = ch;
+          currentPartieKey = partieKey;
+        }
+      });
+    });
+    
+    if (!currentPartieKey) {
+      console.log('❌ Partie non trouvée pour le quiz:', exercicesKey);
+      navigation.navigate('QuizChapterSelect' as never);
+      return;
+    }
+    
+    console.log('📍 Quiz actuel:', exercicesKey, 'dans la partie:', currentPartieKey);
+    
+    // Obtenir tous les chapitres de la partie actuelle qui ont des quiz
     const availableChapters = ['1', '2', '3', '5', '6', '7', '9', '10', '12'];
-    const currentIndex = availableChapters.indexOf(exercicesKey);
+    const partieChapters = chaptersData[currentPartieKey].chapitres
+      .map((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        return numKey;
+      })
+      .filter((numKey: string) => availableChapters.includes(numKey));
     
-    console.log('📍 Index actuel:', currentIndex, 'sur', availableChapters.length, 'chapitres');
+    console.log('📚 Chapitres de la partie avec quiz:', partieChapters);
     
-    if (currentIndex !== -1 && currentIndex < availableChapters.length - 1) {
-      // Il y a un quiz suivant
-      const nextQuizKey = availableChapters[currentIndex + 1];
-      console.log('➡️ Navigation vers le quiz suivant:', nextQuizKey);
+    // Trouver l'index du quiz actuel dans sa partie
+    const currentIndexInPartie = partieChapters.indexOf(exercicesKey);
+    
+    if (currentIndexInPartie !== -1 && currentIndexInPartie < partieChapters.length - 1) {
+      // Il y a un quiz suivant dans la même partie
+      const nextQuizKey = partieChapters[currentIndexInPartie + 1];
+      console.log('➡️ Navigation vers le quiz suivant dans la même partie:', nextQuizKey);
       
       // Utiliser replace pour forcer le rechargement de l'écran
       (navigation as any).replace('OriginalQuiz', { exercicesKey: nextQuizKey });
     } else {
-      // C'était le dernier quiz, retourner à la sélection des chapitres
-      console.log('🏠 Retour à la sélection des chapitres (dernier quiz)');
+      // C'était le dernier quiz de la partie, retourner à la sélection des chapitres
+      console.log('🏠 Retour à la sélection des chapitres (dernier quiz de la partie)');
       navigation.navigate('QuizChapterSelect' as never);
     }
   };
@@ -475,11 +510,16 @@ export default function OriginalQuizScreen() {
           {showQuestionPage ? (
             // PAGE 1: QUESTION SEULEMENT
             <>
+              {/* Conteneur scrollable pour la question */}
+              <ScrollView 
+                style={styles.questionScrollContainer}
+                contentContainerStyle={styles.questionScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
           <Text style={styles.questionText}>{currentQuestion.question}</Text>
+              </ScrollView>
 
-              {/* Espace réservé pour maintenir la hauteur */}
-              <View style={styles.spacer} />
-              
+              {/* Bouton toujours visible en bas */}
               <TouchableOpacity
                 style={styles.answerButton}
                 onPress={goToAnswersPage}
@@ -1071,6 +1111,15 @@ const styles = StyleSheet.create({
   starContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Nouveaux styles pour le scroll de la question
+  questionScrollContainer: {
+    maxHeight: '70%',
+    marginBottom: 20,
+  },
+  questionScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'flex-start',
   },
 
 

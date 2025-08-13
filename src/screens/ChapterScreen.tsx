@@ -29,28 +29,30 @@ const chapterFiles: { [key: string]: any } = {
 function splitIntroAndSections(contenu: any[]) {
   const sections: { title: string, items: any[] }[] = [];
   let currentSection: { title: string, items: any[] } | null = null;
+  let introItems: any[] = [];
 
   contenu.forEach((item) => {
     // Si c'est un titre de section (I., II., III., etc.)
     if (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/^\s*[IVXLCDM]+[\.-]/)) {
-      // Sauvegarder la section précédente si elle existe
-      if (currentSection) {
-        sections.push(currentSection);
+      // Si on a des éléments d'intro et qu'on n'a pas encore de section, créer la première section avec l'intro
+      if (introItems.length > 0 && !currentSection) {
+        currentSection = { title: item.contenu, items: [...introItems, item] };
+        introItems = [];
+      } else {
+        // Sauvegarder la section précédente si elle existe
+        if (currentSection) {
+          sections.push(currentSection);
+        }
+        // Créer une nouvelle section avec ce titre
+        currentSection = { title: item.contenu, items: [item] };
       }
-      // Créer une nouvelle section avec ce titre
-      currentSection = { title: item.contenu, items: [] };
     } else {
       // Si on a une section en cours, ajouter l'item à cette section
       if (currentSection) {
         currentSection.items.push(item);
       } else {
-        // Si on n'a pas encore de section (début du chapitre), créer une première section sans titre
-        if (sections.length === 0) {
-          sections.push({ title: "", items: [item] });
-        } else {
-          // Ajouter à la première section existante
-          sections[0].items.push(item);
-        }
+        // Si on n'a pas encore de section, accumuler les éléments d'intro
+        introItems.push(item);
       }
     }
   });
@@ -60,15 +62,14 @@ function splitIntroAndSections(contenu: any[]) {
     sections.push(currentSection);
   }
   
-  // Garder toutes les sections non vides, même celles qui n'ont que le titre principal
+  // Si on a des éléments d'intro sans section, créer une section d'introduction
+  if (introItems.length > 0) {
+    sections.unshift({ title: "", items: introItems });
+  }
+  
+  // Garder toutes les sections non vides
   const filteredSections = sections.filter(section => {
-    // Vérifier si la section a des items
-    if (!section.items || section.items.length === 0) {
-      return false;
-    }
-    
-    // Garder toutes les sections qui ont des items
-    return true;
+    return section.items && section.items.length > 0;
   });
   
   return { sections: filteredSections };
@@ -84,6 +85,19 @@ function getAllChapters() {
     });
   });
   return result;
+}
+
+function getChaptersInPartie(partieKey: string) {
+  // Retourne seulement les chapitres de la partie spécifiée
+  const partie = chaptersData[partieKey as keyof ChaptersData];
+  if (!partie) return [];
+  
+  return partie.chapitres.map((ch: any, idx: number) => ({
+    ...ch, 
+    partieKey, 
+    partieTitre: partie.titre, 
+    chapitreIndex: idx 
+  }));
 }
 
 const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) => {
@@ -364,13 +378,24 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       setCurrentSectionIndex(currentSectionIndex + 1);
     }
 
-  // Liste plate de tous les chapitres
+  // Trouver la partie actuelle du chapitre
   const allChapters = getAllChapters();
-  // Trouver l'index du chapitre courant
-  const currentChapterIndex = allChapters.findIndex(
+  const currentChapter = allChapters.find(
     (ch) => ch.image === chapter.image && ch.title === chapter.title
   );
-  const nextChapter = allChapters[currentChapterIndex + 1];
+  
+  // Obtenir seulement les chapitres de la partie actuelle
+  const partieChapters = currentChapter ? getChaptersInPartie(currentChapter.partieKey) : [];
+  
+  // Trouver l'index du chapitre courant dans sa partie
+  const currentChapterIndex = partieChapters.findIndex(
+    (ch) => ch.image === chapter.image && ch.title === chapter.title
+  );
+  
+  // Le chapitre suivant sera dans la même partie
+  const nextChapter = partieChapters[currentChapterIndex + 1];
+  // Le chapitre précédent sera dans la même partie
+  const previousChapter = partieChapters[currentChapterIndex - 1];
 
   // Rendu du contenu d'une section
   const renderContent = (items: any[]) => (
@@ -400,7 +425,19 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
                       textAlign: 'center'
                     }}
                   >
-                    {cell}
+                    {(() => {
+                      const parts = cell.split(/(\bAllah\b|\bProphète\b)/gi);
+                      return parts.map((part: string, index: number) => {
+                        if (part.toLowerCase() === 'allah' || part.toLowerCase() === 'prophète') {
+                          return (
+                            <Text key={index} style={{ color: '#19514A', fontWeight: 'bold' }}>
+                              {part}
+                            </Text>
+                          );
+                        }
+                        return part;
+                      });
+                    })()}
                   </Text>
                 ))}
               </View>
@@ -424,7 +461,19 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         return (
           <View key={idx} style={styles.arabicContainer}>
             <Text style={[styles.arabicText, { fontSize: textSize + 4 }]}> 
-              {item.contenu}
+              {(() => {
+                const parts = item.contenu.split(/(\bAllah\b|\bProphète\b)/gi);
+                return parts.map((part: string, index: number) => {
+                  if (part.toLowerCase() === 'allah' || part.toLowerCase() === 'prophète') {
+                    return (
+                      <Text key={index} style={{ color: '#19514A', fontWeight: 'bold' }}>
+                        {part}
+                      </Text>
+                    );
+                  }
+                  return part;
+                });
+              })()}
             </Text>
           </View>
         );
@@ -435,7 +484,19 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         return (
           <View key={idx} style={styles.explanationContainer}>
             <Text style={[styles.explanationText, { fontSize: textSize }]}> 
-              {item.contenu}
+              {(() => {
+                const parts = item.contenu.split(/(\bAllah\b|\bProphète\b)/gi);
+                return parts.map((part: string, index: number) => {
+                  if (part.toLowerCase() === 'allah' || part.toLowerCase() === 'prophète') {
+                    return (
+                      <Text key={index} style={{ color: '#19514A', fontWeight: 'bold' }}>
+                        {part}
+                      </Text>
+                    );
+                  }
+                  return part;
+                });
+              })()}
             </Text>
           </View>
         );
@@ -446,6 +507,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       const content = item.contenu;
       const startsWithDot = content && typeof content === 'string' && content.trim().startsWith('.');
       const startsWithNumber = content && typeof content === 'string' && content.trim().match(/^\d+\./);
+      const startsWithBullet = content && typeof content === 'string' && content.trim().startsWith('•');
       
       // Vérifier si c'est un exercice ou un corrigé
       const isExercise = content && typeof content === 'string' && (
@@ -482,11 +544,26 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               padding: (isExercise || isCorrection) ? 12 : 0,
               borderRadius: (isExercise || isCorrection) ? 8 : 0,
               borderLeftWidth: isExercise ? 4 : isCorrection ? 4 : 0,
-              borderLeftColor: isExercise ? '#174C3C' : isCorrection ? '#2E7D32' : 'transparent'
+              borderLeftColor: isExercise ? '#174C3C' : isCorrection ? '#2E7D32' : 'transparent',
+              marginLeft: startsWithBullet ? 20 : 0,
+              paddingLeft: startsWithBullet ? 10 : 0
             }
           ]}
         >
-          {startsWithDot ? content.trim().substring(1) : content}
+          {(() => {
+            const text = startsWithDot ? content.trim().substring(1) : content;
+            const parts = text.split(/(\bAllah\b|\bProphète\b)/gi);
+            return parts.map((part: string, index: number) => {
+              if (part.toLowerCase() === 'allah' || part.toLowerCase() === 'prophète') {
+                return (
+                  <Text key={index} style={{ color: '#19514A', fontWeight: 'bold' }}>
+                    {part}
+                  </Text>
+                );
+              }
+              return part;
+            });
+          })()}
         </Text>
       );
     })
@@ -575,7 +652,11 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               textAlign: 'center', 
               letterSpacing: 0.3 
             }}>
-              {allChapters[currentChapterIndex]?.partieTitre}
+              {(() => {
+                const allChapters = getAllChapters();
+                const currentChapterIndex = allChapters.findIndex(ch => ch.image === chapter?.image && ch.title === chapter?.title);
+                return allChapters[currentChapterIndex]?.partieTitre || '';
+              })()}
             </Text>
           </View>
         </View>
@@ -707,37 +788,92 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         
         {/* Navigation sections */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12 }}>
-        <TouchableOpacity
-          onPress={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
-          disabled={currentSectionIndex === 0}
-            style={{ opacity: currentSectionIndex === 0 ? 0.4 : 1, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-        >
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
-        </TouchableOpacity>
-        {/* Pagination */}
-        <View style={{ minWidth: 60, alignItems: 'center' }}>
-            <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{currentSectionIndex + 1}/{totalSections}</Text>
-        </View>
-        {currentSectionIndex === totalSections - 1 ? (
-          nextChapter ? (
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
-                style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-            >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre suivant</Text>
-            </TouchableOpacity>
-          ) : (
-              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+        {totalSections === 1 ? (
+          // Navigation compacte pour les chapitres d'une seule page
+          <>
+            {previousChapter ? (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Chapter', { chapter: previousChapter })}
+                style={{ backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre précédent</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre précédent</Text>
+              </View>
+            )}
+            
+            {/* Pagination centrée */}
+            <View style={{ minWidth: 40, alignItems: 'center' }}>
+              <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>1/1</Text>
             </View>
-          )
+            
+            {nextChapter ? (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
+                style={{ backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre suivant</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre suivant</Text>
+              </View>
+            )}
+          </>
         ) : (
-          <TouchableOpacity
-            onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
-              style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
-          </TouchableOpacity>
+          // Navigation normale pour les chapitres multi-pages
+          <>
+            {currentSectionIndex === 0 ? (
+              previousChapter ? (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Chapter', { chapter: previousChapter })}
+                  style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre précédent</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                onPress={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
+                style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
+              </TouchableOpacity>
+            )}
+            
+            {/* Pagination */}
+            <View style={{ minWidth: 60, alignItems: 'center' }}>
+              <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{currentSectionIndex + 1}/{totalSections}</Text>
+            </View>
+            
+            {currentSectionIndex === totalSections - 1 ? (
+              nextChapter ? (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
+                  style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre suivant</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+                </View>
+              )
+            ) : (
+              <TouchableOpacity
+                onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
+                style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
         </View>
       </View>

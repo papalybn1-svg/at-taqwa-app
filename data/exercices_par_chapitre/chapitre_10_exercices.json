@@ -1,47 +1,42 @@
 [
   {
     "numero": 1,
-    "question": "le suivent ont fait leurs ablutions ?",
-    "reponse": "Cela est blâmable. Il est préférable que l’un de ceux qui ont fait les"
+    "question": "L’imam ayant fait le tayammom peut-il diriger la prière si ceux qui le suivent ont fait leurs ablutions ?",
+    "reponse": "Cela est blâmable. Il est préférable que l’un de ceux qui ont fait les ablutions soit choisi comme imam pour diriger la prière."
   },
   {
     "numero": 2,
-    "question": "suivent sont sains et saufs ; peut-il diriger leur prière ?",
-    "reponse": "ablutions soit choisi comme imam pour diriger la prière."
+    "question": "L’imam a des blessures et autres plaies alors que ceux qui le suivent sont sains et saufs ; peut-il diriger leur prière ?",
+    "reponse": "Cela est à éviter. L’imam est un modèle à imiter. Quelqu’un qui est couvert de plaies n’est pas indiqué comme imam."
   },
   {
     "numero": 3,
-    "question": "religieuses ?",
-    "reponse": "Cela est à éviter. L’imam est un modèle à imiter. Quelqu’un qui est"
+    "question": "Peut-on être l’imam des gens qui vous haïssent pour des fins religieuses ?",
+    "reponse": "Jamais ! Vous ne pouvez pas diriger la prière de personnes qui vous haïssent pour des raisons religieuses."
   },
   {
     "numero": 4,
-    "question": "Que faites-vous quand l’imam fait une 3ème sujûd ?",
-    "reponse": "couvert de plaies n’est pas indiqué comme imam."
-  },
-  {
-    "numero": 5,
-    "question": "du dzohr. Que fait le fidèle et comment termine- t-il sa prière ?",
-    "reponse": "Jamais ! Vous ne pouvez pas diriger la prière de personnes qui vous"
-  },
-  {
-    "numero": 6,
-    "question": "A la 2ème raka de la prière du Maghreb, l’imam oublie de s’asseoir ; il se lève immédiatement après la 2ème sujûd et continue sa prière. Vous priez derrière cet imam. Que faites-vous ?",
-    "reponse": "haïssent pour des raisons religieuses."
-  },
-  {
-    "numero": 7,
-    "question": "du Maghreb. Que doit-il faire ?",
+    "question": "Que faites-vous quand l’imam fait une 3ème sujûd ?",
     "reponse": "Je ne le suis pas."
   },
   {
-    "numero": 8,
-    "question": "devez-vous faire ?",
+    "numero": 5,
+    "question": "Un fidèle prie derrière l’imam. Celui-ci s’assoit à tort à la 3ème raka du dzohr. Que fait le fidèle et comment termine-t-il sa prière ?",
     "reponse": "Il reste debout et attend l’Imam pour continuer la prière."
   },
   {
-    "numero": 9,
-    "question": "lui ai adressé ?",
+    "numero": 6,
+    "question": "A la 2ème raka de la prière du Maghreb, l’imam oublie de s’asseoir ; il se lève immédiatement après la 2ème sujûd et continue sa prière. Vous priez derrière cet imam. Que faites-vous ?",
     "reponse": "Je me lève et le suis. Sujûd habla salam."
+  },
+  {
+    "numero": 7,
+    "question": "L’imam prononce le salut final après la 2ème raka du Maghreb. Que devez-vous faire ?",
+    "reponse": "Je dis « subhanallah ». Si l’imam me donne raison, il dit « allahu akbar », se lève en disant encore « allahu akbar » et continue sa prière. Après le salut final, il fera sujûd bahda salam."
+  },
+  {
+    "numero": 8,
+    "question": "Que fait l’imam s’il a des doutes malgré le « subhanallah » que je lui ai adressé ?",
+    "reponse": "L’imam s’informe auprès de 2 autres fidèles dignes de foi. Si après cette consultation, plus de 2 fidèles confirment la faute, l’imam serait obligé de les suivre."
   }
 ]

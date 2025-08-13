@@ -22,8 +22,9 @@ export default function AuthorProfileScreen() {
   return (
     <GestureHandlerRootView style={styles.safeArea}>
       <PanGestureHandler onHandlerStateChange={onGestureEvent}>
-        <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.safeArea}>
+          <SafeAreaView style={styles.safeArea}>
+            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -141,8 +142,9 @@ export default function AuthorProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
-        </SafeAreaView>
+            </ScrollView>
+          </SafeAreaView>
+        </View>
       </PanGestureHandler>
     </GestureHandlerRootView>
   );
@@ -161,7 +163,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingTop: 5,
+    paddingBottom: 10,
   },
   backButton: {
     padding: 8,
@@ -182,7 +185,8 @@ const styles = StyleSheet.create({
   },
   profileSection: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingTop: 15,
+    paddingBottom: 30,
   },
   profileImageContainer: {
     width: 120,
@@ -205,7 +209,7 @@ const styles = StyleSheet.create({
   },
   authorTitle: {
     fontSize: 16,
-    color: colors.primary,
+    color: '#BB9B4E',
     fontWeight: '600',
     marginBottom: 4,
   },

@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from "react";
 import { Animated, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import chaptersData from '../../data/chapitres.json';
 import colors from "../theme/colors";
 import { Chapter, ChaptersData } from '../types/chapters';
@@ -30,6 +31,7 @@ export default function BooksScreen() {
   const [progress, setProgress] = React.useState<{[key:string]:number}>({});
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter|null>(null);
+  const [selectedPart, setSelectedPart] = React.useState<string|null>(null);
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   // Charger la progression utilisateur
@@ -77,6 +79,24 @@ export default function BooksScreen() {
     navigation.navigate('Chapter', { chapter });
   };
 
+  const handlePartPress = (partKey: string) => {
+    setSelectedPart(partKey);
+  };
+
+  // Gestion du swipe gesture
+  const onGestureEvent = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX } = event.nativeEvent;
+      if (translationX > 50) { // Swipe de droite à gauche
+        if (selectedPart) {
+          setSelectedPart(null);
+        } else {
+          navigation.goBack();
+        }
+      }
+    }
+  };
+
   // Animation du header
   const headerHeight = scrollY.interpolate({
     inputRange: [0, 150],
@@ -91,17 +111,22 @@ export default function BooksScreen() {
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAF9' }}>
-             {/* Header simple avec boutons */}
-       <View style={styles.simpleHeader}>
-         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.simpleBackButton}>
-           <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
-         </TouchableOpacity>
-         <View style={{ flex: 1 }} />
-         <TouchableOpacity onPress={openDrawer} style={styles.simpleMenuButton}>
-           <MaterialCommunityIcons name="menu" size={24} color="#174C3C" />
-        </TouchableOpacity>
-       </View>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F8FAF9' }}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+        <View style={{ flex: 1 }}>
+          {/* Header simple avec boutons */}
+          <View style={styles.simpleHeader}>
+            <TouchableOpacity 
+              onPress={selectedPart ? () => setSelectedPart(null) : () => navigation.goBack()} 
+              style={styles.simpleBackButton}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity onPress={openDrawer} style={styles.simpleMenuButton}>
+              <MaterialCommunityIcons name="menu" size={24} color="#174C3C" />
+            </TouchableOpacity>
+          </View>
 
       {/* Contenu scrollable */}
       <ScrollView 
@@ -109,20 +134,18 @@ export default function BooksScreen() {
         contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {Object.keys(data).map((partie, pidx) => (
-          <View key={pidx} style={{ marginBottom: 32 }}>
-                         {/* Titre de section avec ligne décorative */}
-             <View style={styles.sectionHeader}>
-               <View style={styles.sectionTitleContainer}>
-                 <Text style={styles.newSectionTitle}>{data[partie as keyof ChaptersData].titre}</Text>
-                 <View style={styles.sectionLine} />
-               </View>
-             </View>
+        {selectedPart ? (
+          // Affichage des chapitres d'une partie sélectionnée
+          <View>
+            {/* Header de la partie */}
+            <View style={styles.partHeader}>
+              <Text style={styles.partTitle}>{data[selectedPart as keyof ChaptersData].titre}</Text>
+            </View>
             
-            {/* Liste des chapitres */}
+            {/* Liste des chapitres de la partie */}
             <View style={{ paddingHorizontal: 20 }}>
-              {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => {
-                const chapterProgress = progress[`chapter${Object.keys(data)[pidx]}_${idx+1}`] || 0;
+              {data[selectedPart as keyof ChaptersData].chapitres.map((ch, idx) => {
+                const chapterProgress = progress[`chapter${selectedPart}_${idx+1}`] || 0;
                 return (
                   <TouchableOpacity 
                     key={idx} 
@@ -137,21 +160,22 @@ export default function BooksScreen() {
                     onPress={() => handleChapterPress(ch)}
                     activeOpacity={0.95}
                   >
-                                         {/* Image avec overlay de progression */}
-                     <View style={styles.imageContainer}>
-                       <Image 
-                         source={imageMap[ch.image] || require('../../assets/1.png')} 
-                         style={styles.newChapterImage} 
-                       />
-
-                     </View>
+                    {/* Image avec overlay de progression */}
+                    <View style={styles.imageContainer}>
+                      <Image 
+                        source={imageMap[ch.image] || require('../../assets/1.png')} 
+                        style={styles.newChapterImage} 
+                      />
+                    </View>
                     
                     {/* Contenu du chapitre */}
                     <View style={styles.newChapterContent}>
                       <View style={styles.chapterHeader}>
-                        <Text style={styles.newChapterTitle} numberOfLines={4}>
-                          {ch.title ? `${ch.title.replace(/\.\s*$/, ': ')}${ch.desc}` : 'Chapitre'}
-                        </Text>
+                        <View style={styles.chapterTitleContainer}>
+                          <Text style={[styles.newChapterTitle, { color: '#19514A' }]} numberOfLines={1}>
+                            {ch.title ? ch.title.replace(/\.\s*$/, ':') : 'Chapitre'}
+                          </Text>
+                        </View>
                         <View style={[
                           styles.progressBadge, 
                           { backgroundColor: chapterProgress === 100 ? '#D4AF37' : chapterProgress > 0 ? '#FFF3CD' : '#F1F3F4' }
@@ -165,13 +189,18 @@ export default function BooksScreen() {
                         </View>
                       </View>
                       
-                      <Text style={styles.newChapterDesc} numberOfLines={2}>{ch.desc}</Text>
+                      <Text style={[styles.newChapterDesc, { color: '#19514A', fontWeight: 'bold' }]}>{ch.desc}</Text>
+                      
+                      {/* Nom de la partie */}
+                      <Text style={[styles.chapterPartieText, { color: '#666' }]}>
+                        {data[selectedPart as keyof ChaptersData].titre}
+                      </Text>
                       
                       <View style={styles.chapterFooter}>
                         <View style={styles.authorContainer}>
                           <MaterialCommunityIcons name="account-edit" size={14} color="#666" />
                           <Text style={styles.newChapterAuthor}>{ch.author}</Text>
-      </View>
+                        </View>
 
                         {/* Barre de progression moderne */}
                         <View style={styles.progressBarContainer}>
@@ -188,19 +217,48 @@ export default function BooksScreen() {
                           </View>
                         </View>
                       </View>
-          
-                      {/* Flèche de navigation */}
-                      <View style={styles.navArrow}>
-                        <MaterialCommunityIcons name="chevron-right" size={20} color="#174C3C" />
-                      </View>
                     </View>
                   </TouchableOpacity>
                 );
               })}
             </View>
           </View>
-                 ))}
-       </ScrollView>
+        ) : (
+          // Affichage des deux parties
+          <View>
+            {Object.keys(data).map((partie, pidx) => (
+              <View key={pidx} style={{ marginBottom: 16 }}>
+                {/* Carte de partie */}
+                <TouchableOpacity 
+                  style={styles.partCard}
+                  onPress={() => handlePartPress(partie)}
+                  activeOpacity={0.95}
+                >
+                  <View style={styles.partCardContent}>
+                    <View style={styles.partCardHeader}>
+                      <View style={styles.partCardTitleContainer}>
+                        <View style={styles.partCardIcon}>
+                          <MaterialCommunityIcons 
+                            name={pidx === 0 ? "book-open-variant" : "book-multiple"} 
+                            size={24} 
+                            color="#BB9B4E" 
+                          />
+                        </View>
+                        <Text style={styles.partCardTitle}>Partie {pidx + 1}</Text>
+                      </View>
+                      <MaterialCommunityIcons name="chevron-right" size={24} color="#174C3C" />
+                    </View>
+                    <Text style={styles.partCardSubtitle}>{data[partie as keyof ChaptersData].titre}</Text>
+                    <Text style={styles.partCardChapters}>
+                      {data[partie as keyof ChaptersData].chapitres.length} chapitres
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
 
       {/* Drawer latéral redesigné */}
       <Modal visible={drawerVisible} transparent animationType="slide">
@@ -241,9 +299,14 @@ export default function BooksScreen() {
                               color={chapterProgress === 100 ? "#D4AF37" : chapterProgress > 0 ? "#FFF3CD" : "#ffffff80"}
                             />
                           </View>
-                          <Text style={styles.drawerChapterText} numberOfLines={4}>
-                            {ch.title ? `${ch.title.replace(/\.\s*$/, ': ')}${ch.desc}` : 'Chapitre'}
-                          </Text>
+                          <View style={styles.drawerChapterTitleContainer}>
+                            <Text style={styles.drawerChapterText} numberOfLines={1}>
+                              {ch.title ? ch.title.replace(/\.\s*$/, ':') : 'Chapitre'}
+                            </Text>
+                            <Text style={styles.drawerChapterText} numberOfLines={4}>
+                              {ch.desc || 'Titre du chapitre'}
+                            </Text>
+                          </View>
                           <Text style={styles.drawerChapterProgress}>{Math.round(chapterProgress)}%</Text>
                         </TouchableOpacity>
                       );
@@ -256,7 +319,9 @@ export default function BooksScreen() {
           <Pressable style={{ flex: 1 }} onPress={closeDrawer} />
                  </View>
        </Modal>
-    </View>
+         </View>
+       </PanGestureHandler>
+     </GestureHandlerRootView>
   );
 }
 
@@ -293,6 +358,100 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(23, 76, 60, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  
+  // Styles pour les parties
+  partHeader: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#F8FAF9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8F5E8',
+  },
+
+  partTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#174C3C',
+  },
+  partCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(23, 76, 60, 0.1)',
+  },
+  partCardContent: {
+    padding: 24,
+  },
+  partCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  partCardTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  partCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(187, 155, 78, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  partCardTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#174C3C',
+    letterSpacing: 0.5,
+  },
+  partCardSubtitle: {
+    fontSize: 18,
+    color: '#174C3C',
+    marginBottom: 12,
+    fontWeight: '600',
+    lineHeight: 24,
+  },
+  partCardChapters: {
+    fontSize: 15,
+    color: '#BB9B4E',
+    fontWeight: '600',
+    backgroundColor: 'rgba(187, 155, 78, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  
+  // Styles pour le titre de page
+  pageTitleContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#174C3C',
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  pageSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
   },
   
   // Ancien header (gardé pour compatibilité)
@@ -417,30 +576,45 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 8,
   },
-  newChapterTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#174C3C',
+  chapterTitleContainer: {
     flex: 1,
     marginRight: 12,
-    lineHeight: 22,
+  },
+  newChapterTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#174C3C',
+    lineHeight: 20,
   },
   progressBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    minWidth: 45,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    minWidth: 35,
     alignItems: 'center',
   },
   progressText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
+  },
+  progressTextSmall: {
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
   },
   newChapterDesc: {
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+    marginBottom: 8,
+  },
+  chapterPartieText: {
+    fontSize: 12,
+    color: '#174C3C',
+    fontWeight: '600',
     marginBottom: 12,
+    fontStyle: 'italic',
   },
   chapterFooter: {
     flexDirection: 'column',
@@ -540,11 +714,13 @@ const styles = StyleSheet.create({
   drawerChapterIcon: {
     marginRight: 12,
   },
+  drawerChapterTitleContainer: {
+    flex: 1,
+  },
   drawerChapterText: {
     color: 'white',
-    fontSize: 14,
-    flex: 1,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 17,
   },
   drawerChapterProgress: {
     color: 'rgba(255, 255, 255, 0.7)',

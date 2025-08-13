@@ -47,15 +47,15 @@
     },
     {
       "type": "texte",
-      "contenu": "Le trajet doit être supérieur ou égal à 80 km"
+      "contenu": "• Le trajet doit être supérieur ou égal à 80 km"
     },
     {
       "type": "texte",
-      "contenu": "Le voyage doit être licite"
+      "contenu": "• Le voyage doit être licite"
     },
     {
       "type": "texte",
-      "contenu": "Le trajet doit être effectué d’un seul trait"
+      "contenu": "• Le trajet doit être effectué d’un seul trait"
     },
     {
       "type": "texte",

@@ -359,13 +359,95 @@ export default function HomeScreen() {
     }, [firestoreStatus, loadNotifications])
   );
 
+  // Import des fichiers de chapitres (comme dans ChapterScreen)
+  const chapterFiles: { [key: string]: any } = {
+    "1": require('../../data/chapitres/chapitre_01.json'),
+    "2": require('../../data/chapitres/chapitre_02.json'),
+    "3": require('../../data/chapitres/chapitre_03.json'),
+    "4": require('../../data/chapitres/chapitre_04.json'),
+    "5": require('../../data/chapitres/chapitre_05.json'),
+    "6": require('../../data/chapitres/chapitre_06.json'),
+    "7": require('../../data/chapitres/chapitre_07.json'),
+    "8": require('../../data/chapitres/chapitre_08.json'),
+    "9": require('../../data/chapitres/chapitre_09.json'),
+    "10": require('../../data/chapitres/chapitre_10.json'),
+    "11": require('../../data/chapitres/chapitre_11.json'),
+    "12": require('../../data/chapitres/chapitre_12.json'),
+  };
+
+  // Fonction pour diviser le contenu en sections (copiée de ChapterScreen)
+  const splitIntroAndSections = (contenu: any[]) => {
+    const sections: { title: string, items: any[] }[] = [];
+    let currentSection: { title: string, items: any[] } | null = null;
+
+    contenu.forEach((item) => {
+      // Si c'est un titre de section (I., II., III., etc.)
+      if (item.contenu && typeof item.contenu === 'string' && item.contenu.match(/^\s*[IVXLCDM]+[\.-]/)) {
+        // Sauvegarder la section précédente si elle existe
+        if (currentSection) {
+          sections.push(currentSection);
+        }
+        // Créer une nouvelle section avec ce titre
+        currentSection = { title: item.contenu, items: [] };
+      } else {
+        // Si on a une section en cours, ajouter l'item à cette section
+        if (currentSection) {
+          currentSection.items.push(item);
+        } else {
+          // Si on n'a pas encore de section (début du chapitre), créer une première section sans titre
+          if (sections.length === 0) {
+            sections.push({ title: "", items: [item] });
+          } else {
+            // Ajouter à la première section existante
+            sections[0].items.push(item);
+          }
+        }
+      }
+    });
+    
+    // Ajouter la dernière section si elle existe
+    if (currentSection) {
+      sections.push(currentSection);
+    }
+    
+    // Garder toutes les sections non vides
+    const filteredSections = sections.filter(section => {
+      return section.items && section.items.length > 0;
+    });
+    
+    return { sections: filteredSections };
+  };
+
+  // Fonction pour calculer le nombre de pages d'un chapitre
+  const getChapterPages = (chapterImage: string) => {
+    try {
+      const chapterFile = chapterFiles[chapterImage];
+      if (chapterFile && chapterFile.contenu) {
+        const { sections } = splitIntroAndSections(chapterFile.contenu);
+        return sections.length;
+      }
+    } catch (error) {
+      console.log('Erreur lors du calcul des pages pour le chapitre', chapterImage);
+    }
+    return 1; // Valeur par défaut
+  };
+
+
+
   // Correction : tous les chapitres doivent apparaître
+  let globalChapitreIndex = 1;
   const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie]: any, partieIndex: number) =>
-    partie.chapitres.map((ch: any, chapitreIndex: number) => ({
-      ...ch,
-      id: `${partieIndex}-${chapitreIndex}`,
-      partie: partie.titre
-    }))
+    partie.chapitres.map((ch: any, chapitreIndex: number) => {
+      const currentChapitreNumber = globalChapitreIndex++;
+      const pageCount = getChapterPages(ch.image);
+      return {
+        ...ch,
+        id: `${partieIndex}-${chapitreIndex}`,
+        partie: partie.titre,
+        title: `Chapitre ${currentChapitreNumber}.`,
+        pageCount: pageCount
+      };
+    })
   );
 
   return (
@@ -384,7 +466,7 @@ export default function HomeScreen() {
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialCommunityIcons name="bell-outline" size={24} color={colors.text} />
+            <MaterialCommunityIcons name="bell-outline" size={24} color="#174C3C" />
             {newNotificationsCount > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -427,6 +509,7 @@ export default function HomeScreen() {
                 <Text style={styles.hadithText}>
                   {hadithOfTheDay.text || 'Hadith du jour'}
                 </Text>
+                <MaterialCommunityIcons name="format-quote-close" size={24} color={colors.primary} style={{alignSelf: 'flex-end', opacity: 0.5}}/>
                 <Text style={styles.hadithSource}>
                   — {hadithOfTheDay.source || 'Source inconnue'}
                 </Text>
@@ -438,24 +521,24 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Auteur du livre</Text>
           <View style={styles.authorCard}>
-            <View style={styles.authorInfo}>
+            <View style={styles.authorHeader}>
               <View style={styles.authorAvatar}>
                 <MaterialCommunityIcons name="account-circle" size={40} color={colors.primary} />
               </View>
-              <View style={styles.authorDetails}>
-                <Text style={styles.authorName}>Aly Sow</Text>
-                <Text style={styles.authorTitle}>Imam et Érudit Islamique</Text>
-                <Text style={styles.authorBio}>
-                  Plus de 20 ans d'expérience dans l'enseignement de la prière. 
-                  Auteur de plusieurs ouvrages sur la spiritualité musulmane.
-                </Text>
-              </View>
-      </View>
-            <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
-              <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
-              <Text style={styles.authorButtonText}>En savoir plus</Text>
-            </TouchableOpacity>
-      </View>
+              <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
+                <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
+                <Text style={styles.authorButtonText}>En savoir plus</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.authorDetails}>
+              <Text style={styles.authorName}>Aly Sow</Text>
+              <Text style={styles.authorTitle}>Imam et Érudit Islamique</Text>
+              <Text style={styles.authorBio}>
+                Plus de 20 ans d'expérience dans l'enseignement de la prière. 
+                Auteur de plusieurs ouvrages sur la spiritualité musulmane.
+              </Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -496,16 +579,13 @@ export default function HomeScreen() {
                       />
                     </View>
                     <View style={styles.bookCardContentModern}>
-                      <Text style={styles.bookCardTitleModern} numberOfLines={2}>{item.title || 'Titre du chapitre'}</Text>
-                      <Text style={styles.bookCardSubtitleModern} numberOfLines={1}>{item.partie || 'Partie'}</Text>
+                      <Text style={styles.bookCardTitleModern} numberOfLines={1}>{item.title.replace(/\.\s*$/, ':')}</Text>
+                      <Text style={styles.bookCardTitleModern} numberOfLines={3}>{item.desc || 'Titre du chapitre'}</Text>
+                      <Text style={styles.bookCardSubtitleModern} numberOfLines={2}>{item.partie || 'Partie'}</Text>
                       <View style={styles.bookCardFooterModern}>
-                        <View style={styles.readTimeModern}>
-                          <MaterialCommunityIcons name="clock-outline" size={12} color={colors.gray} />
-                          <Text style={styles.readTimeTextModern}>~15 min</Text>
-                        </View>
                         <View style={styles.pagesCountModern}>
                           <MaterialCommunityIcons name="book-open-page-variant" size={12} color={colors.gray} />
-                          <Text style={styles.pagesCountTextModern}>~3 pages</Text>
+                          <Text style={styles.pagesCountTextModern}>{item.pageCount} pages</Text>
                         </View>
                       </View>
                     </View>
@@ -640,14 +720,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   bannerButton: {
-    backgroundColor: colors.white,
+    backgroundColor: '#BB9B4E',
     borderRadius: 18,
     paddingVertical: 8,
     paddingHorizontal: 14,
     alignSelf: 'flex-start',
   },
   bannerButtonText: {
-    color: colors.primary,
+    color: colors.white,
     fontWeight: 'bold',
     fontSize: 13,
   },
@@ -731,28 +811,35 @@ const styles = StyleSheet.create({
   },
   bookCardContentModern: {
     flex: 1,
-    padding: 14,
+    padding: 8,
     justifyContent: 'space-between',
+    minHeight: 125,
   },
   bookCardTitleModern: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: -6,
     textAlign: 'center',
+    lineHeight: 13,
+    paddingHorizontal: 4,
+    height: 39,
   },
   bookCardSubtitleModern: {
-    fontSize: 12,
-    color: colors.primary,
+    fontSize: 9,
+    color: '#174C3C',
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 2,
+    lineHeight: 10,
+    paddingHorizontal: 4,
+    height: 20,
   },
   bookCardFooterModern: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: -2,
   },
   readTimeModern: {
     flexDirection: 'row',
@@ -760,7 +847,7 @@ const styles = StyleSheet.create({
   },
   readTimeTextModern: {
     color: colors.gray,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '500',
     marginLeft: 4,
   },
@@ -770,7 +857,7 @@ const styles = StyleSheet.create({
   },
   pagesCountTextModern: {
     color: colors.gray,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '500',
     marginLeft: 4,
   },
@@ -941,9 +1028,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
   },
-  authorInfo: {
+  authorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 15,
   },
   authorAvatar: {
@@ -953,13 +1041,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
   },
   authorDetails: {
     flex: 1,
   },
   authorName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: 4,
@@ -976,7 +1063,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   authorButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#BB9B4E',
     borderRadius: 20,
     paddingVertical: 10,
     paddingHorizontal: 20,
