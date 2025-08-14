@@ -76,7 +76,7 @@ function HomeStack() {
         name="Books" 
         component={BooksScreen}
         options={{
-          gestureEnabled: true, // Permet le swipe pour revenir à l'accueil
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen 

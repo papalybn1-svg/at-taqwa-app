@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,7 +10,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const { width: screenWidth } = Dimensions.get('window');
 
 // Import des exercices
-import exercicesChap1 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
 import exercicesChap2 from '../../data/exercices_par_chapitre/chapitre_02_exercices.json';
 import exercicesChap3 from '../../data/exercices_par_chapitre/chapitre_03_exercices.json';
 import exercicesChap5 from '../../data/exercices_par_chapitre/chapitre_05_exercices.json';
@@ -19,6 +18,7 @@ import exercicesChap7 from '../../data/exercices_par_chapitre/chapitre_07_exerci
 import exercicesChap9 from '../../data/exercices_par_chapitre/chapitre_09_exercices.json';
 import exercicesChap10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
 import exercicesChap12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
+import exercicesChap1 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
 
 
 
@@ -191,7 +191,14 @@ export default function QuizGameScreen() {
       </View>
 
       {/* Question */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        contentContainerStyle={{ padding: 16, paddingBottom: 60, flexGrow: 1 }}
+      >
         <View style={styles.questionCard}>
           <Text style={styles.questionNumber}>
             Question {currentQuestionIndex + 1}

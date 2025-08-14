@@ -1,12 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// Stockage local scoping par utilisateur
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
+import { useAuth } from '../hooks/useAuth';
 import { ChaptersData } from '../types/chapters';
+import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
 const chaptersData = chaptersDataRaw as ChaptersData;
 
@@ -102,6 +104,7 @@ function getChaptersInPartie(partieKey: string) {
 
 const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) => {
   // TOUS LES HOOKS EN PREMIER
+  const { user } = useAuth();
   const [textSize, setTextSize] = useState(16);
   const screenWidth = Dimensions.get('window').width;
   const scrollViewRef = useRef<ScrollView>(null);
@@ -123,14 +126,36 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       // Récupérer le titre principal du chapitre depuis le contenu JSON
       const mainTitle = content.contenu?.find((item: any) => item.type === "titre")?.contenu || chapter.desc;
       
-      // Démarrer à la section spécifiée si on vient des favoris
-      const initialSection = route.params.initialSection || 0;
-      setCurrentSectionIndex(initialSection);
-      
-      // Initialiser la progression si c'est la première fois qu'on lit ce chapitre
-      initializeChapterProgress();
+      // Migration désactivée pour éviter de copier les anciennes données globales d'un autre compte
+
+      // Démarrer à la section spécifiée si on vient des favoris, sinon reprendre dernière section lue
+      const loadInitialSection = async () => {
+        const initialFromParams = route.params.initialSection;
+        if (typeof initialFromParams === 'number') {
+          setCurrentSectionIndex(initialFromParams);
+        } else {
+          // Reprise précise
+          const allChapters = getAllChapters();
+          const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+          if (currentChapterData) {
+            const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+            const saved = await readUserStorage<ChapterState>(user?.uid, 'chapterProgress');
+            const last = saved && saved[progressKey]?.lastSection;
+            if (typeof last === 'number') {
+              setCurrentSectionIndex(last);
+            } else {
+              setCurrentSectionIndex(0);
+            }
+          } else {
+            setCurrentSectionIndex(0);
+          }
+        }
+        // Initialiser la progression si c'est la première fois qu'on lit ce chapitre
+        initializeChapterProgress();
+      };
+      loadInitialSection();
     }
-  }, [chapter, route.params.initialSection]);
+  }, [chapter, route.params.initialSection, user?.uid]);
 
   // useEffect pour charger les favoris
   useEffect(() => {
@@ -179,10 +204,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   // Fonctions de gestion des favoris
   const loadFavorites = async () => {
     try {
-      const storedFavorites = await AsyncStorage.getItem('favorites');
-      if (storedFavorites) {
-        setFavorites(JSON.parse(storedFavorites));
-      }
+      const storedFavorites = await readUserStorage<any[]>(user?.uid, 'favorites');
+      if (storedFavorites) setFavorites(storedFavorites);
     } catch (error) {
       console.error('Erreur lors du chargement des favoris:', error);
     }
@@ -191,7 +214,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const saveFavorites = async (newFavorites: any[]) => {
     try {
       console.log('Sauvegarde des favoris:', newFavorites);
-      await AsyncStorage.setItem('favorites', JSON.stringify(newFavorites));
+      await writeUserStorage(user?.uid, 'favorites', newFavorites);
       setFavorites(newFavorites);
       console.log('Favoris sauvegardés avec succès');
     } catch (error) {
@@ -249,9 +272,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     if (!chapter || !chapterContent) return;
     
     try {
-      // Charger la progression existante
-      const storedProgress = await AsyncStorage.getItem('chapterProgress');
-      const progress = storedProgress ? JSON.parse(storedProgress) : {};
+      // Charger la progression existante (scopée utilisateur)
+      const saved = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
       
       // Trouver l'index du chapitre dans sa partie
       const allChapters = getAllChapters();
@@ -267,12 +289,17 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       // Créer la clé de progression
       const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
       
-      // Mettre à jour seulement si la progression est plus élevée
-      if (!progress[progressKey] || currentProgress > progress[progressKey]) {
-        progress[progressKey] = currentProgress;
-        await AsyncStorage.setItem('chapterProgress', JSON.stringify(progress));
-        console.log(`Progression mise à jour: ${progressKey} = ${currentProgress}%`);
-      }
+      const previous = saved[progressKey]?.percent ?? 0;
+      const updated: ChapterState = {
+        ...saved,
+        [progressKey]: {
+          percent: currentProgress > previous ? currentProgress : previous,
+          lastSection: currentSectionIndex,
+          updatedAt: Date.now(),
+        },
+      };
+      await writeUserStorage(user?.uid, 'chapterProgress', updated);
+      console.log(`Progression mise à jour: ${progressKey} = ${updated[progressKey].percent}% (section ${currentSectionIndex})`);
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la progression:', error);
     }
@@ -284,8 +311,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     
     try {
       // Charger la progression existante
-      const storedProgress = await AsyncStorage.getItem('chapterProgress');
-      const progress = storedProgress ? JSON.parse(storedProgress) : {};
+      const saved = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
       
       // Trouver l'index du chapitre dans sa partie
       const allChapters = getAllChapters();
@@ -296,9 +322,17 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       // Créer la clé de progression
       const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
       
-      // Marquer comme 100% lu
-      progress[progressKey] = 100;
-      await AsyncStorage.setItem('chapterProgress', JSON.stringify(progress));
+      // Marquer comme 100% lu et dernière section
+      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      const updated: ChapterState = {
+        ...saved,
+        [progressKey]: {
+          percent: 100,
+          lastSection: Math.max(0, sections.length - 1),
+          updatedAt: Date.now(),
+        },
+      };
+      await writeUserStorage(user?.uid, 'chapterProgress', updated);
       console.log(`Chapitre marqué comme complètement lu: ${progressKey}`);
     } catch (error) {
       console.error('Erreur lors du marquage du chapitre comme lu:', error);
@@ -321,8 +355,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     
     try {
       // Charger la progression existante
-      const storedProgress = await AsyncStorage.getItem('chapterProgress');
-      const progress = storedProgress ? JSON.parse(storedProgress) : {};
+      const saved = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
       
       // Trouver l'index du chapitre dans sa partie
       const allChapters = getAllChapters();
@@ -333,10 +366,13 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       // Créer la clé de progression
       const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
       
-      // Initialiser à 0% si pas encore de progression
-      if (!progress[progressKey]) {
-        progress[progressKey] = 0;
-        await AsyncStorage.setItem('chapterProgress', JSON.stringify(progress));
+      // Initialiser si pas encore de progression
+      if (!saved[progressKey]) {
+        const updated: ChapterState = {
+          ...saved,
+          [progressKey]: { percent: 0, lastSection: 0, updatedAt: Date.now() },
+        };
+        await writeUserStorage(user?.uid, 'chapterProgress', updated);
         console.log(`Progression initialisée: ${progressKey} = 0%`);
       }
     } catch (error) {
@@ -591,7 +627,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
-      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+      <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
         <View style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
       {/* Header avec image et titre */}
       <View style={{ position: 'relative', overflow: 'visible' }}>
@@ -727,13 +763,17 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           ref={scrollViewRef}
           style={{ flex: 1, width: '100%' }}
           contentContainerStyle={{ 
-            paddingHorizontal: 18, 
-            paddingTop: currentSectionIndex === 0 ? 20 : 18, 
-            paddingBottom: 90, 
+            paddingHorizontal: 16, 
+            paddingTop: currentSectionIndex === 0 ? 20 : 16, 
+            paddingBottom: 120, 
             maxWidth: 420, 
-            alignSelf: 'center' 
+            alignSelf: 'center',
+            flexGrow: 1,
           }}
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
             onScroll={e => {
               const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
               const totalScrollable = contentSize.height - layoutMeasurement.height;

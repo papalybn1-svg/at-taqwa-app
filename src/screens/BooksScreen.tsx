@@ -1,15 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NavigationProp, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from "react";
-import { Animated, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Animated, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import chaptersData from '../../data/chapitres.json';
-import colors from "../theme/colors";
-import { Chapter, ChaptersData } from '../types/chapters';
 import imageMap from '../../assets/chapterImages';
+import chaptersData from '../../data/chapitres.json';
+import { useAuth } from '../hooks/useAuth';
+import { Chapter, ChaptersData } from '../types/chapters';
+import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -28,6 +27,7 @@ function paginateBlocks(blocks: { type: string; contenu: string }[], maxPages = 
 export default function BooksScreen() {
   const navigation = useNavigation<NavigationProp<any>>();
   const data = chaptersData as ChaptersData;
+  const { user } = useAuth();
   const [progress, setProgress] = React.useState<{[key:string]:number}>({});
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter|null>(null);
@@ -37,10 +37,18 @@ export default function BooksScreen() {
   // Charger la progression utilisateur
   const loadProgress = async () => {
     try {
-      const data = await AsyncStorage.getItem('chapterProgress');
-      if (data) {
-        const parsedProgress = JSON.parse(data);
-        setProgress(parsedProgress);
+      // Migration désactivée pour éviter d'importer d'anciennes progressions globales
+
+      const saved = await readUserStorage<ChapterState>(user?.uid, 'chapterProgress');
+      if (saved) {
+        // Convertir en map pour l'affichage (clé -> percent)
+        const display: {[key:string]:number} = {};
+        Object.entries(saved).forEach(([k, v]) => {
+          display[k] = v.percent;
+        });
+        setProgress(display);
+      } else {
+        setProgress({});
       }
     } catch (error) {
       console.error('Erreur lors du chargement de la progression:', error);
@@ -60,9 +68,17 @@ export default function BooksScreen() {
   );
 
   // Sauvegarder la progression
-  const saveProgress = (newProgress: {[key:string]:number}) => {
+  const saveProgress = async (newProgress: {[key:string]:number}) => {
     setProgress(newProgress);
-    AsyncStorage.setItem('chapterProgress', JSON.stringify(newProgress));
+    // Ecrire dans ChapterState
+    const existing = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
+    const updated: ChapterState = { ...existing };
+    Object.entries(newProgress).forEach(([k, percent]) => {
+      const prev = existing[k]?.percent ?? 0;
+      const lastSection = existing[k]?.lastSection ?? 0;
+      updated[k] = { percent: Math.max(prev, percent), lastSection, updatedAt: Date.now() };
+    });
+    await writeUserStorage(user?.uid, 'chapterProgress', updated);
   };
 
   // Ouvrir le drawer latéral
@@ -70,13 +86,30 @@ export default function BooksScreen() {
   const closeDrawer = () => setDrawerVisible(false);
 
   // Marquer un chapitre comme lu à 100%
-  const completeChapter = (idx: number) => {
-    const newProgress = { ...progress, [`chapter${idx+1}`]: 100 };
-    saveProgress(newProgress);
+  const completeChapter = async (idx: number) => {
+    if (!selectedPart) return;
+    const key = `chapter${selectedPart}_${idx+1}`;
+    const newProgress = { ...progress, [key]: 100 };
+    await saveProgress(newProgress);
   };
 
-  const handleChapterPress = (chapter: Chapter) => {
-    navigation.navigate('Chapter', { chapter });
+  const handleChapterPress = async (chapter: Chapter) => {
+    // Trouver partie et index du chapitre
+    let partieKey: string | null = null;
+    let chapitreIndex = 0;
+    Object.keys(data).forEach((pk) => {
+      if (partieKey) return;
+      const idx = (data as any)[pk].chapitres.findIndex((ch: any) => ch.title === (chapter as any).title && ch.image === (chapter as any).image);
+      if (idx >= 0) { partieKey = pk; chapitreIndex = idx; }
+    });
+    let initialSection = 0;
+    if (partieKey) {
+      const progressKey = `chapter${partieKey}_${chapitreIndex + 1}`;
+      const saved = await readUserStorage<ChapterState>(user?.uid, 'chapterProgress');
+      const last = saved && saved[progressKey]?.lastSection;
+      if (typeof last === 'number') initialSection = last;
+    }
+    (navigation as any).navigate('Chapter', { chapter, initialSection });
   };
 
   const handlePartPress = (partKey: string) => {
@@ -112,7 +145,7 @@ export default function BooksScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F8FAF9' }}>
-      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+      <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
         <View style={{ flex: 1 }}>
           {/* Header simple avec boutons */}
           <View style={styles.simpleHeader}>
@@ -133,6 +166,9 @@ export default function BooksScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {selectedPart ? (
           // Affichage des chapitres d'une partie sélectionnée

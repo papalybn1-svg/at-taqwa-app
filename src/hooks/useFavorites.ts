@@ -1,5 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
+import { useAuth } from './useAuth';
 
 export interface FavoriteItem {
   id: string;
@@ -38,6 +39,7 @@ export const useFavorites = () => {
 export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadFavorites();
@@ -45,10 +47,9 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
 
   const loadFavorites = async () => {
     try {
-      const storedFavorites = await AsyncStorage.getItem('favorites');
-      if (storedFavorites) {
-        setFavorites(JSON.parse(storedFavorites));
-      }
+      // Migration désactivée volontairement
+      const storedFavorites = await readUserStorage<FavoriteItem[]>(user?.uid, 'favorites');
+      if (storedFavorites) setFavorites(storedFavorites);
     } catch (error) {
       console.error('Erreur lors du chargement des favoris:', error);
     } finally {
@@ -58,7 +59,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
 
   const saveFavorites = async (newFavorites: FavoriteItem[]) => {
     try {
-      await AsyncStorage.setItem('favorites', JSON.stringify(newFavorites));
+      await writeUserStorage(user?.uid, 'favorites', newFavorites);
       setFavorites(newFavorites);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des favoris:', error);
@@ -94,4 +95,4 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
   );
 };
 
-export { FavoritesContext }; 
+export { FavoritesContext };

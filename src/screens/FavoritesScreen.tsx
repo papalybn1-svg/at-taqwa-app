@@ -1,13 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React from 'react';
-import { Animated, Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { Animated, Dimensions, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
-import colors from '../theme/colors';
 import { useAuth } from '../hooks/useAuth';
+import colors from '../theme/colors';
+import { read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -20,22 +19,15 @@ export default function FavoritesScreen() {
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const scaleAnim = React.useRef(new Animated.Value(0.9)).current;
 
-  // Charger les favoris depuis AsyncStorage
+  // Charger les favoris (scopés par utilisateur)
   const loadFavorites = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const storedFavorites = await AsyncStorage.getItem('favorites');
-      console.log('Favoris chargés depuis AsyncStorage:', storedFavorites);
-      if (storedFavorites) {
-        const parsedFavorites = JSON.parse(storedFavorites);
-        console.log('Favoris parsés:', parsedFavorites);
-        setFavorites(parsedFavorites);
-      } else {
-        console.log('Aucun favori trouvé dans AsyncStorage');
-        setFavorites([]);
-      }
+      // Migration désactivée volontairement
+      const storedFavorites = await readUserStorage<any[]>(user?.uid, 'favorites');
+      if (storedFavorites) setFavorites(storedFavorites); else setFavorites([]);
     } catch (error) {
       console.error('Erreur lors du chargement des favoris:', error);
       setError('Erreur lors du chargement des favoris');
@@ -88,7 +80,7 @@ export default function FavoritesScreen() {
       const newFavorites = favorites.filter(item => item.id !== id);
       setFavorites(newFavorites);
       try {
-        await AsyncStorage.setItem('favorites', JSON.stringify(newFavorites));
+        await writeUserStorage(user?.uid, 'favorites', newFavorites);
       } catch (error) {
         console.error('Erreur lors de la sauvegarde:', error);
       }
@@ -251,7 +243,7 @@ export default function FavoritesScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+      <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
         <View style={styles.container}>
           {/* Header épuré */}
           <View style={styles.header}>

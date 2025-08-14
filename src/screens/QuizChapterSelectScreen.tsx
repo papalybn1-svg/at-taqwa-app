@@ -1,12 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { BackHandler, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BackHandler, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
+import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
+import { migrateUnscopedKeyToUser, read as readUserStorage } from '../utils/userStorage';
 
 // Liste centralisée des fichiers d'exercices (clé = numéro de chapitre sous forme de string)
 const exercicesFiles: { [key: string]: any[] } = {
@@ -51,6 +52,7 @@ function SplashFamille() {
 export default function QuizChapterSelectScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { user } = useAuth();
   const [quizScores, setQuizScores] = useState<{ [key: string]: number }>({});
   const [showLockModal, setShowLockModal] = useState(false);
   const [lockedChapter, setLockedChapter] = useState<any>(null);
@@ -71,10 +73,9 @@ export default function QuizChapterSelectScreen() {
 
   const loadQuizScores = async () => {
     try {
-      const scores = await AsyncStorage.getItem('quizScores');
-      if (scores) {
-        setQuizScores(JSON.parse(scores));
-      }
+      await migrateUnscopedKeyToUser(user?.uid, 'quizScores');
+      const scores = await readUserStorage<Record<string, number>>(user?.uid, 'quizScores');
+      if (scores) setQuizScores(scores);
     } catch (error) {
       console.error('Erreur lors du chargement des scores:', error);
     }
@@ -216,7 +217,7 @@ export default function QuizChapterSelectScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+      <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
         <View style={styles.container}>
           {/* Header avec bouton retour */}
           <View style={styles.header}>
