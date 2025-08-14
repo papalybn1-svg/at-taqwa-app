@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as SystemUI from 'expo-system-ui';
@@ -12,6 +11,7 @@ import AdminTabNavigator from './src/navigation/AdminTabNavigator';
 import TabNavigator from './src/navigation/TabNavigator';
 import ChapterScreen from './src/screens/ChapterScreen';
 import LoginScreen, { AuthContext } from './src/screens/LoginScreen';
+import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 
 type RootStackParamList = {
   Main: undefined;
@@ -23,6 +23,7 @@ type RootStackParamList = {
     };
   };
   Login: undefined;
+  ResetPassword: { oobCode?: string } | undefined;
   Admin: undefined;
 };
 
@@ -115,40 +116,25 @@ function SplashFamille() {
 
 export default function App() {
   const [splashStep, setSplashStep] = useState(0);
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const { user, loading, setUser } = useAuth();
   
   useEffect(() => {
-    const init = async () => {
-      try {
-        const flag = await AsyncStorage.getItem('onboarding_seen');
-        setHasSeenOnboarding(flag === '1');
-        if (flag === '1') {
-          setSplashStep(2); // Passer directement à l'app si déjà vu
-          return;
-        }
-      } catch {}
-      // Sinon, lancer la séquence splash 0 -> 1 -> 2
-      setSplashStep(0);
-    };
-    init();
+    // Séquence splash par défaut à chaque ouverture
+    setSplashStep(0);
   }, []);
 
   useEffect(() => {
-    if (hasSeenOnboarding === null) return;
-    if (hasSeenOnboarding) return;
     if (splashStep === 0) {
       const timer = setTimeout(() => setSplashStep(1), 3500);
       return () => clearTimeout(timer);
     }
     if (splashStep === 1) {
-      const timer = setTimeout(async () => {
-        setSplashStep(2);
-        try { await AsyncStorage.setItem('onboarding_seen', '1'); } catch {}
-      }, 4000);
+      const timer = setTimeout(() => setSplashStep(2), 4000);
       return () => clearTimeout(timer);
     }
-  }, [splashStep, hasSeenOnboarding]);
+  }, [splashStep]);
+
+  // iOS/Android: masquer la barre système après splash
 
   // Masquer la barre de navigation système Android après les splashs
   useEffect(() => {
@@ -157,11 +143,11 @@ export default function App() {
     }
   }, [splashStep]);
 
-  if (!hasSeenOnboarding && splashStep === 0) {
+  if (splashStep === 0) {
     console.log('📱 Affichage SplashLogo (step 0)');
     return <SplashLogo />;
   }
-  if (!hasSeenOnboarding && splashStep === 1) {
+  if (splashStep === 1) {
     console.log('📱 Affichage SplashFamille (step 1)');
     return <SplashFamille />;
   }
@@ -205,6 +191,7 @@ export default function App() {
               ) : (
                 <Stack.Screen name="Main" component={TabNavigator} />
               )}
+              <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
               <Stack.Screen name="Chapter" component={ChapterScreen} options={{ gestureEnabled: false }} />
             </Stack.Navigator>
           </NavigationContainer>

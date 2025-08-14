@@ -40,7 +40,7 @@ const STORAGE_KEYS = {
 };
 
 export default function LoginScreen({ navigation }: any) {
-  const [screen, setScreen] = useState<'intro' | 'login' | 'register'>('intro');
+  const [screen, setScreen] = useState<'intro' | 'login' | 'register' | 'forgot'>('intro');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [prenom, setPrenom] = useState('');
@@ -256,6 +256,40 @@ export default function LoginScreen({ navigation }: any) {
         </View>
         <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
       </View>
+    );
+  }
+
+  // Ecran mot de passe oublié
+  if (screen === 'forgot') {
+    return (
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          <View style={styles.loginContainer}>
+            <View style={styles.loginMainSection}>
+              <Text style={styles.loginTitle}>Mot de passe oublié</Text>
+              <View style={styles.loginInputWrapper}>
+                <MaterialCommunityIcons name="email-outline" size={20} color="#174C3C" style={styles.loginInputIcon} />
+                <TextInput
+                  style={[styles.loginInput, styles.loginInputWithIcon]}
+                  placeholder="E-mail"
+                  placeholderTextColor="#174C3C"
+                  value={email}
+                  onChangeText={(t) => setEmail(t)}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+              </View>
+              <TouchableOpacity style={styles.loginButton} onPress={handleForgotPassword} disabled={loading || !email.trim()}>
+                {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Envoyer le lien de réinitialisation</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setScreen('login')} style={styles.registerLinkContainer} disabled={loading}>
+                <Text style={styles.registerLinkText}>Retour à la connexion</Text>
+              </TouchableOpacity>
+            </View>
+            <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -493,7 +527,7 @@ export default function LoginScreen({ navigation }: any) {
         {/* Mot de passe oublié */}
         <TouchableOpacity 
           style={styles.forgotPasswordContainer}
-          onPress={handleForgotPassword}
+          onPress={() => setScreen('forgot')}
           disabled={loading}
         >
           <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>

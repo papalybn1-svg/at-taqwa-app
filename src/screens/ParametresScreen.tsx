@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { updateProfile } from 'firebase/auth';
+import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import React, { useContext, useState } from 'react';
 import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -27,6 +27,7 @@ export default function ParametresScreen() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
 
 
 
@@ -264,6 +265,28 @@ export default function ParametresScreen() {
     setLoading(false);
   };
 
+  const handleSendResetEmail = async () => {
+    try {
+      if (!firebaseUser?.email) {
+        Alert.alert('Erreur', "Impossible d'envoyer l'email: utilisateur non connecté.");
+        return;
+      }
+      setSendingReset(true);
+      await sendPasswordResetEmail(auth, firebaseUser.email);
+      Alert.alert('Email envoyé', `Un lien de réinitialisation a été envoyé à ${firebaseUser.email}.`);
+    } catch (e: any) {
+      console.error('❌ Erreur envoi email reset:', e);
+      let msg = "Impossible d'envoyer l'email. Veuillez réessayer.";
+      if (e?.code === 'auth/invalid-email') msg = 'Adresse email invalide.';
+      if (e?.code === 'auth/user-not-found') msg = "Aucun compte trouvé pour cette adresse.";
+      if (e?.code === 'auth/too-many-requests') msg = 'Trop de tentatives, réessayez plus tard.';
+      if (e?.code === 'auth/network-request-failed') msg = 'Erreur réseau. Vérifiez votre connexion.';
+      Alert.alert('Erreur', msg);
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
 
 
   const handleLogout = () => {
@@ -332,6 +355,11 @@ export default function ParametresScreen() {
           <MaterialCommunityIcons name="lock-reset" size={22} color={colors.primary} />
           <Text style={styles.rowText}>Changer le mot de passe</Text>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.row} onPress={handleSendResetEmail} disabled={sendingReset}>
+          <MaterialCommunityIcons name="email-lock" size={22} color={colors.primary} />
+          <Text style={styles.rowText}>Recevoir un email de réinitialisation</Text>
+          <MaterialCommunityIcons name="send" size={20} color={sendingReset ? '#ccc' : colors.placeholder} />
         </TouchableOpacity>
         <TouchableOpacity style={[styles.row, styles.logoutRow]} onPress={handleLogout}>
           <MaterialCommunityIcons name="logout" size={22} color="#f44336" />

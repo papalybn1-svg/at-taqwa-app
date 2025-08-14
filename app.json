@@ -30,7 +30,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/LOGO_AT_TAQWA.png",
+        "foregroundImage": "./assets/logo_fond_transparent.png",
         "backgroundColor": "#2E8B57"
       },
       "edgeToEdgeEnabled": false,
