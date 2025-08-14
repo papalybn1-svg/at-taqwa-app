@@ -5,14 +5,14 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React from 'react';
 import {
-  Animated,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
@@ -117,7 +117,15 @@ const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; on
         color={colors.primary} 
       />
     </View>
-    <Text style={styles.categoryButtonText} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+    <Text 
+      style={styles.categoryButtonText}
+      numberOfLines={2}
+      ellipsizeMode="tail"
+      adjustsFontSizeToFit
+      minimumFontScale={0.9}
+    >
+      {title}
+    </Text>
   </TouchableOpacity>
 );
 
