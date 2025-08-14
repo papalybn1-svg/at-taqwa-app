@@ -1,14 +1,17 @@
 // src/screens/QuizScreen.tsx
 
-import { useNavigation, useFocusEffect, CommonActions, StackActions } from '@react-navigation/native';
-import React, { useEffect, useCallback } from 'react';
-import { Dimensions, Image, StyleSheet, Text, View, BackHandler, PanResponder } from 'react-native';
+import { StackActions, useFocusEffect, useNavigation } from '@react-navigation/native';
+import React, { useCallback, useEffect } from 'react';
+import { BackHandler, Dimensions, Image, PanResponder, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../hooks/useAuth';
+import { read as readUserStorage } from '../utils/userStorage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function QuizScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
 
   const goToHome = () => {
     // Utilise popToTop pour revenir à la racine de la pile
@@ -47,14 +50,22 @@ export default function QuizScreen() {
     }, [])
   );
 
-  // Redirection automatique après 1 seconde
+  // Redirection automatique: si session en cours, aller directement au dernier quiz et question
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.navigate('QuizStart' as never);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [navigation]);
+    let cancelled = false;
+    const go = async () => {
+      const index = await readUserStorage<Record<string, boolean>>(user?.uid, 'quizSessionsIndex');
+      if (!cancelled && index && Object.keys(index).length > 0) {
+        // Prendre la première session (ou la plus récente si on stocke updatedAt plus tard)
+        const chapterKey = Object.keys(index)[0];
+        (navigation as any).navigate('OriginalQuiz', { exercicesKey: chapterKey });
+        return;
+      }
+      if (!cancelled) navigation.navigate('QuizStart' as never);
+    };
+    const timer = setTimeout(go, 100);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [navigation, user?.uid]);
 
   return (
     <SafeAreaView style={styles.container} {...panResponder.panHandlers}>

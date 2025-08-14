@@ -1,15 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { auth, db } from '../screens/firebaseConfig';
-import { 
-  saveUserDataWithPersistence, 
-  getUserDataWithPersistence, 
-  clearAuthPersistence,
-  checkAuthWithPersistence,
-  AuthUser as PersistenceAuthUser
+import {
+    checkAuthWithPersistence,
+    clearAuthPersistence,
+    getUserDataWithPersistence,
+    saveUserDataWithPersistence
 } from '../utils/authPersistence';
+import { removeAllWithPrefix, remove as removeUserStorage } from '../utils/userStorage';
 
 export type UserRole = 'user' | 'admin';
 
@@ -186,6 +185,18 @@ export function useAuth() {
       
       // Nettoyer complètement la persistance
       await clearAuthPersistence();
+      // Nettoyer les clés locales scopées utilisateur
+      const uid = auth.currentUser?.uid;
+      try {
+        await Promise.all([
+          removeUserStorage(uid, 'chapterProgress'),
+          removeUserStorage(uid, 'favorites'),
+          removeUserStorage(uid, 'quizScores'),
+        ]);
+        await removeAllWithPrefix(uid, 'quizSession:');
+      } catch (e) {
+        console.log('⚠️ Erreur lors du nettoyage des clés utilisateur:', e);
+      }
       
       // Déconnecter Firebase
       await auth.signOut();

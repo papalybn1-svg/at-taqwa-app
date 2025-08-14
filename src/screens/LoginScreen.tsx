@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Image as RNImage, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Image as RNImage, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AuthUser } from '../hooks/useAuth';
 import { auth } from './firebaseConfig';
 
@@ -50,9 +50,28 @@ export default function LoginScreen({ navigation }: any) {
   const [errorMessage, setErrorMessage] = useState('');
   const { user, setUser } = useContext(AuthContext);
   const [toast, setToast] = useState<{ visible: boolean, message: string, type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
+  const [passwordStrength, setPasswordStrength] = useState<{ score: number; percent: number; label: 'Faible' | 'Moyen' | 'Fort' | 'Très fort' } | null>(null);
+  const [isPasswordValid, setIsPasswordValid] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ visible: true, message, type });
+  };
+
+  const evaluatePassword = (pwd: string) => {
+    const hasMinLen = pwd.length >= 8;
+    const hasUpper = /[A-Z]/.test(pwd);
+    const hasLower = /[a-z]/.test(pwd);
+    const hasDigit = /[0-9]/.test(pwd);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
+    const rules = [hasMinLen, hasUpper, hasLower, hasDigit, hasSpecial];
+    const score = rules.reduce((s, ok) => s + (ok ? 1 : 0), 0);
+    const percent = Math.min(100, Math.round((score / 5) * 100));
+    let label: 'Faible' | 'Moyen' | 'Fort' | 'Très fort' = 'Faible';
+    if (score >= 4) label = 'Fort';
+    if (score === 5) label = 'Très fort';
+    if (score === 3) label = 'Moyen';
+    setPasswordStrength({ score, percent, label });
+    setIsPasswordValid(hasMinLen && hasUpper && hasLower && hasDigit && hasSpecial);
   };
 
   const handleForgotPassword = async () => {
@@ -243,6 +262,8 @@ export default function LoginScreen({ navigation }: any) {
   // Ecran d'inscription
   if (screen === 'register') {
     return (
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
       <View style={styles.registerContainer}>
         {/* Etoile en haut à droite */}
         <View style={styles.registerStarContainer}>
@@ -263,7 +284,7 @@ export default function LoginScreen({ navigation }: any) {
               color="#174C3C" 
               style={styles.registerInputIcon} 
             />
-            <TextInput 
+          <TextInput 
               style={[styles.registerInput, styles.registerInputWithIcon]} 
               placeholder="Prénom" 
               placeholderTextColor="#174C3C"
@@ -318,7 +339,7 @@ export default function LoginScreen({ navigation }: any) {
             placeholder="Mot de passe"
               placeholderTextColor="#174C3C"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(t) => { setPassword(t); evaluatePassword(t); }}
             secureTextEntry={!isPasswordVisible}
           />
             <TouchableOpacity 
@@ -332,12 +353,33 @@ export default function LoginScreen({ navigation }: any) {
               />
             </TouchableOpacity>
           </View>
+
+          {/* Indicateur de force du mot de passe */}
+          {password.length > 0 && passwordStrength && (
+            <View style={{ width: '100%', maxWidth: 340, marginTop: -8, marginBottom: 8 }}>
+              <View style={{ height: 6, backgroundColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden' }}>
+                <View style={{ height: 6, width: `${passwordStrength.percent}%`, backgroundColor: passwordStrength.percent >= 80 ? '#2E7D32' : passwordStrength.percent >= 60 ? '#F9A825' : '#E53935' }} />
+              </View>
+              <Text style={{ marginTop: 6, fontSize: 12, color: '#174C3C', fontWeight: '600' }}>Force: {passwordStrength.label}</Text>
+              {!isPasswordValid && (
+                <Text style={{ marginTop: 4, fontSize: 12, color: '#B00020' }}>
+                  Min 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre, 1 spécial.
+                </Text>
+              )}
+            </View>
+          )}
           
           {/* Bouton principal S'inscrire */}
           <TouchableOpacity 
             style={styles.registerPrimaryButton} 
-            onPress={handleAuth} 
-            disabled={loading}
+            onPress={() => {
+              if (!isPasswordValid) {
+                setErrorMessage('Le mot de passe est trop faible.');
+                return;
+              }
+              handleAuth();
+            }} 
+            disabled={loading || !isPasswordValid}
           >
             {loading ? (
               <ActivityIndicator color="#174C3C" />
@@ -365,11 +407,15 @@ export default function LoginScreen({ navigation }: any) {
         
         <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
       </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
   // Ecran de connexion
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
     <View style={styles.loginContainer}>
       {/* Section principale du formulaire */}
       <View style={styles.loginMainSection}>
@@ -467,6 +513,8 @@ export default function LoginScreen({ navigation }: any) {
       
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
     </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

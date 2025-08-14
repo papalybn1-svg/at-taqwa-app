@@ -5,19 +5,19 @@
     "slug": "at-taqwa-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/LOGO_AT_TAQWA.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/logo.png",
+      "image": "./assets/LOGO_AT_TAQWA.png",
       "backgroundColor": "#2E8B57",
       "resizeMode": "contain"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-      "buildNumber": "1.4.1",
-      "icon": "./assets/ios-icon.png",
+      "buildNumber": "1.4.5",
+      "icon": "./assets/LOGO_AT_TAQWA.png",
       "infoPlist": {
         "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
@@ -30,11 +30,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.png",
+        "foregroundImage": "./assets/LOGO_AT_TAQWA.png",
         "backgroundColor": "#2E8B57"
       },
       "edgeToEdgeEnabled": false,
       "enableHermes": true,
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.attaqwa.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",

@@ -1,13 +1,12 @@
 // src/screens/QuizScreen.tsx
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StackActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import chapitre02 from '../../data/exercices_par_chapitre/chapitre_02_exercices.json';
 import chapitre03 from '../../data/exercices_par_chapitre/chapitre_03_exercices.json';
 import chapitre05 from '../../data/exercices_par_chapitre/chapitre_05_exercices.json';
@@ -17,6 +16,7 @@ import chapitre09 from '../../data/exercices_par_chapitre/chapitre_09_exercices.
 import chapitre10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
 import chapitre12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
 import chapitre01 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
+import { read as readUserStorage, remove as removeUserStorage, write as writeUserStorage } from '../utils/userStorage';
 import { db } from './firebaseConfig';
 import { AuthContext } from './LoginScreen';
 
@@ -102,6 +102,36 @@ export default function OriginalQuizScreen() {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
   const [isAnswerCorrect, setIsAnswerCorrect] = useState<boolean | null>(null);
   const [showResults, setShowResults] = useState(false);
+  // Reprise automatique d'une session de quiz en cours
+  useEffect(() => {
+    const resumeSession = async () => {
+      const chapterKey = exercicesKey;
+      const sessionKey = `quizSession:${chapterKey}`;
+      const saved = await readUserStorage<{ index: number; answers: Array<number|null> }>(user?.uid, sessionKey);
+      if (saved && typeof saved.index === 'number') {
+        setCurrentQuestionIndex(Math.min(saved.index, quizData.length - 1));
+        setShowQuestionPage(true);
+      }
+    };
+    resumeSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercicesKey]);
+
+  // Sauvegarder la session au fil de l'eau
+  useEffect(() => {
+    const persist = async () => {
+      const chapterKey = exercicesKey;
+      const sessionKey = `quizSession:${chapterKey}`;
+      await writeUserStorage(user?.uid, sessionKey, { index: currentQuestionIndex, answers: [] });
+      // Maintenir un index des sessions pour l'écran Quiz initial
+      const indexKey = 'quizSessionsIndex';
+      const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
+      index[chapterKey] = true;
+      await writeUserStorage(user?.uid, indexKey, index);
+    };
+    persist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQuestionIndex, exercicesKey]);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showQuestionPage, setShowQuestionPage] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(1));
@@ -294,7 +324,7 @@ export default function OriginalQuizScreen() {
         // Calculer le pourcentage de score
         const finalScorePercentage = Math.round((score / quizData.length) * 100);
         
-        // Sauvegarder le score localement
+        // Sauvegarder le score localement (meilleur score uniquement)
         saveQuizScore(exercicesKey, finalScorePercentage);
         
         // Logger le résultat sur Firebase
@@ -307,15 +337,19 @@ export default function OriginalQuizScreen() {
   // Fonction pour sauvegarder le score localement
   const saveQuizScore = async (chapterKey: string, scorePercentage: number) => {
     try {
-      // Récupérer les scores existants
-      const existingScores = await AsyncStorage.getItem('quizScores');
-      const scores = existingScores ? JSON.parse(existingScores) : {};
-      
-      // Mettre à jour le score seulement s'il est meilleur ou s'il n'existe pas
+      const scores = (await readUserStorage<Record<string, number>>(user?.uid, 'quizScores')) || {};
       if (!scores[chapterKey] || scorePercentage > scores[chapterKey]) {
         scores[chapterKey] = scorePercentage;
-        await AsyncStorage.setItem('quizScores', JSON.stringify(scores));
+        await writeUserStorage(user?.uid, 'quizScores', scores);
         console.log(`Score sauvegardé pour le chapitre ${chapterKey}: ${scorePercentage}%`);
+      }
+      // Supprimer la session en fin de quiz et mettre à jour l'index
+      await removeUserStorage(user?.uid, `quizSession:${chapterKey}`);
+      const indexKey = 'quizSessionsIndex';
+      const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
+      if (index[chapterKey]) {
+        delete index[chapterKey];
+        await writeUserStorage(user?.uid, indexKey, index);
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde du score:', error);
@@ -344,22 +378,57 @@ export default function OriginalQuizScreen() {
   const goToNextQuiz = () => {
     console.log('🔄 goToNextQuiz appelé avec exercicesKey:', exercicesKey);
     
-    // Séquence correcte des chapitres disponibles
+    // Récupérer les données des chapitres pour déterminer la partie actuelle
+    const chaptersData = require('../../data/chapitres.json');
+    
+    // Trouver le chapitre actuel et sa partie
+    let currentChapter = null;
+    let currentPartieKey = null;
+    
+    Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
+      partie.chapitres.forEach((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        if (numKey === exercicesKey) {
+          currentChapter = ch;
+          currentPartieKey = partieKey;
+        }
+      });
+    });
+    
+    if (!currentPartieKey) {
+      console.log('❌ Partie non trouvée pour le quiz:', exercicesKey);
+      navigation.navigate('QuizChapterSelect' as never);
+      return;
+    }
+    
+    console.log('📍 Quiz actuel:', exercicesKey, 'dans la partie:', currentPartieKey);
+    
+    // Obtenir tous les chapitres de la partie actuelle qui ont des quiz
     const availableChapters = ['1', '2', '3', '5', '6', '7', '9', '10', '12'];
-    const currentIndex = availableChapters.indexOf(exercicesKey);
+    const partieChapters = chaptersData[currentPartieKey].chapitres
+      .map((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        return numKey;
+      })
+      .filter((numKey: string) => availableChapters.includes(numKey));
     
-    console.log('📍 Index actuel:', currentIndex, 'sur', availableChapters.length, 'chapitres');
+    console.log('📚 Chapitres de la partie avec quiz:', partieChapters);
     
-    if (currentIndex !== -1 && currentIndex < availableChapters.length - 1) {
-      // Il y a un quiz suivant
-      const nextQuizKey = availableChapters[currentIndex + 1];
-      console.log('➡️ Navigation vers le quiz suivant:', nextQuizKey);
+    // Trouver l'index du quiz actuel dans sa partie
+    const currentIndexInPartie = partieChapters.indexOf(exercicesKey);
+    
+    if (currentIndexInPartie !== -1 && currentIndexInPartie < partieChapters.length - 1) {
+      // Il y a un quiz suivant dans la même partie
+      const nextQuizKey = partieChapters[currentIndexInPartie + 1];
+      console.log('➡️ Navigation vers le quiz suivant dans la même partie:', nextQuizKey);
       
       // Utiliser replace pour forcer le rechargement de l'écran
       (navigation as any).replace('OriginalQuiz', { exercicesKey: nextQuizKey });
     } else {
-      // C'était le dernier quiz, retourner à la sélection des chapitres
-      console.log('🏠 Retour à la sélection des chapitres (dernier quiz)');
+      // C'était le dernier quiz de la partie, retourner à la sélection des chapitres
+      console.log('🏠 Retour à la sélection des chapitres (dernier quiz de la partie)');
       navigation.navigate('QuizChapterSelect' as never);
     }
   };
@@ -475,11 +544,16 @@ export default function OriginalQuizScreen() {
           {showQuestionPage ? (
             // PAGE 1: QUESTION SEULEMENT
             <>
+              {/* Conteneur scrollable pour la question */}
+              <ScrollView 
+                style={styles.questionScrollContainer}
+                contentContainerStyle={styles.questionScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
           <Text style={styles.questionText}>{currentQuestion.question}</Text>
+              </ScrollView>
 
-              {/* Espace réservé pour maintenir la hauteur */}
-              <View style={styles.spacer} />
-              
+              {/* Bouton toujours visible en bas */}
               <TouchableOpacity
                 style={styles.answerButton}
                 onPress={goToAnswersPage}
@@ -1071,6 +1145,15 @@ const styles = StyleSheet.create({
   starContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Nouveaux styles pour le scroll de la question
+  questionScrollContainer: {
+    maxHeight: '70%',
+    marginBottom: 20,
+  },
+  questionScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'flex-start',
   },
 
 

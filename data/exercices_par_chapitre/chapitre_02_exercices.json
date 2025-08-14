@@ -7,12 +7,12 @@
   {
     "numero": 2,
     "question": "Vous êtes en prière ; vous vous souvenez souvient d’une souillure, que devez-vous vous faire ? ",
-    "reponse": "vous devez interrompre la prière et aller vous purifier. Il est acceptable que vous continuiez la prière si vous êtes à la limite du délai imparti?"
+    "reponse": "Vous devez interrompre la prière et aller vous purifier. Il est acceptable que vous continuiez la prière si vous êtes à la limite du délai imparti?"
   },
   {
     "numero": 3,
     "question": "Vous venez de terminer la prière. Vous vous souvenez d’une impureté à ce moment. Devez-vous recommencer la prière ",
-    "reponse": "oui, vous devez à l’instant, recommencer la prière."
+    "reponse": "Oui, vous devez à l’instant, recommencer la prière."
   },
   {
     "numero": 4,
@@ -27,7 +27,7 @@
   {
     "numero": 6,
     "question": "Vous venez juste de terminer les ablutions ; vous constatez avoir oublié de laver le bras droit. Que devez-vous faire ?",
-    "reponse": "Vous lavez vous continuez les ablutions jusqu’à la fin. Règle : Si l’on vient juste de terminer les ablutions et que l’on constate avoir oublié une obligation divine, on lave la partie du corps concernée par cette obligation en y appliquant l’intention ; on accomplit les autres obligations divines dans l’ordre"
+    "reponse": "Vous lavez et vous continuez les ablutions jusqu’à la fin. Règle : Si l’on vient juste de terminer les ablutions et que l’on constate avoir oublié une obligation divine, on lave la partie du corps concernée par cette obligation en y appliquant l’intention ; on accomplit les autres obligations divines dans l’ordre"
   },
   {
     "numero": 7,
@@ -37,7 +37,7 @@
   {
     "numero": 8,
     "question": "Il est l’heure de faire une prière d’obligation divine. Vous avez des doutes et ne savez plus si vous avez vos ablutions ou si elles sont rompues. Que devez-vous faire? -prier en considérant que vous avez toujours vos ablutions ?-considérer que les ablutions sont annulées par le doute et les recommencer ?",
-    "reponse": "Vous devez refaire les ablutions.Règle : en cas de doute, il faut refaire ses ablutions."
+    "reponse": "Vous devez refaire les ablutions. Règle : en cas de doute, il faut refaire ses ablutions."
   },
   {
     "numero": 9,
@@ -67,7 +67,7 @@
   {
     "numero": 14,
     "question": "Même question pour la femme après ses menstrues ?",
-    "reponse": "Il se purifie, accomplit la prière du Zohr, mais ne refait pas celle du Subh."
+    "reponse": "Elle se purifie, accomplit la prière du Zohr, mais ne refait pas celle du Subh."
   },
   {
     "numero": 15,

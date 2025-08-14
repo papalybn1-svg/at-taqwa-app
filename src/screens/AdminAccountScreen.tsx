@@ -94,8 +94,14 @@ export default function AdminAccountScreen() {
         { text: "Annuler", style: "cancel" },
         { text: "Confirmer", style: "destructive", onPress: async () => {
           try {
-            await signOut(auth);
-            setUser(null);
+            // Utiliser le hook logout pour garantir nettoyage des données locales
+            const { logout } = require('../hooks/useAuth');
+            if (typeof logout === 'function') {
+              await logout();
+            } else {
+              await signOut(auth);
+              setUser(null);
+            }
           } catch (error) {
             Alert.alert("Erreur", "La déconnexion a échoué.");
           }

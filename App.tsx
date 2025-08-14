@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as SystemUI from 'expo-system-ui';
@@ -68,6 +69,19 @@ function SplashLogo() {
 }
 
 function SplashFamille() {
+  const [progress, setProgress] = React.useState(0);
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(timer);
+          return 100;
+        }
+        return prev + 1.5;
+      });
+    }, 50);
+    return () => clearInterval(timer);
+  }, []);
   return (
     <View style={styles.splashFamilleBg}>
       {/* Bloc image + texte en haut */}
@@ -89,23 +103,52 @@ function SplashFamille() {
         source={require('./assets/femme_et_enfant_2.png')} 
         style={styles.splashFamilleImageXL}
       />
+      {/* Barre de progression en bas (même logique que SplashLogo) */}
+      <View style={[styles.progressContainer, { bottom: 40 }]}>
+        <View style={styles.progressBarBg}>
+          <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+        </View>
+      </View>
     </View>
   );
 }
 
 export default function App() {
   const [splashStep, setSplashStep] = useState(0);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const { user, loading, setUser } = useAuth();
   
   useEffect(() => {
+    const init = async () => {
+      try {
+        const flag = await AsyncStorage.getItem('onboarding_seen');
+        setHasSeenOnboarding(flag === '1');
+        if (flag === '1') {
+          setSplashStep(2); // Passer directement à l'app si déjà vu
+          return;
+        }
+      } catch {}
+      // Sinon, lancer la séquence splash 0 -> 1 -> 2
+      setSplashStep(0);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (hasSeenOnboarding === null) return;
+    if (hasSeenOnboarding) return;
     if (splashStep === 0) {
-      const timer = setTimeout(() => setSplashStep(1), 3500); // Augmenté de 2s à 3.5s
-      return () => clearTimeout(timer);
-    } else if (splashStep === 1) {
-      const timer = setTimeout(() => setSplashStep(2), 4000); // Augmenté de 2s à 4s
+      const timer = setTimeout(() => setSplashStep(1), 3500);
       return () => clearTimeout(timer);
     }
-  }, [splashStep]);
+    if (splashStep === 1) {
+      const timer = setTimeout(async () => {
+        setSplashStep(2);
+        try { await AsyncStorage.setItem('onboarding_seen', '1'); } catch {}
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [splashStep, hasSeenOnboarding]);
 
   // Masquer la barre de navigation système Android après les splashs
   useEffect(() => {
@@ -114,11 +157,11 @@ export default function App() {
     }
   }, [splashStep]);
 
-  if (splashStep === 0) {
+  if (!hasSeenOnboarding && splashStep === 0) {
     console.log('📱 Affichage SplashLogo (step 0)');
     return <SplashLogo />;
   }
-  if (splashStep === 1) {
+  if (!hasSeenOnboarding && splashStep === 1) {
     console.log('📱 Affichage SplashFamille (step 1)');
     return <SplashFamille />;
   }
@@ -149,10 +192,10 @@ export default function App() {
         <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
           <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
           <NavigationContainer>
-            <Stack.Navigator 
+              <Stack.Navigator 
               screenOptions={{ 
                 headerShown: false,
-                cardStyle: { backgroundColor: '#F3F5F7' }
+                  cardStyle: { backgroundColor: '#F3F5F7' }
               }}
             >
               {!user ? (
@@ -162,7 +205,7 @@ export default function App() {
               ) : (
                 <Stack.Screen name="Main" component={TabNavigator} />
               )}
-              <Stack.Screen name="Chapter" component={ChapterScreen} />
+              <Stack.Screen name="Chapter" component={ChapterScreen} options={{ gestureEnabled: false }} />
             </Stack.Navigator>
           </NavigationContainer>
         </SafeAreaView>
