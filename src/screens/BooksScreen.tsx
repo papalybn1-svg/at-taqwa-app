@@ -373,12 +373,41 @@ export default function BooksScreen() {
                               color={isPremium ? "#D4AF37" : "#BB9B4E"} 
                             />
                           </View>
-                          <Text style={styles.partCardTitle}>Partie {pidx + 1}</Text>
-                          {isPremium && (
-                            <View style={styles.premiumBadge}>
-                              <Text style={styles.premiumBadgeText}>PREMIUM</Text>
-                            </View>
-                          )}
+                                                  <Text style={[
+                            styles.partCardTitle,
+                            (partie === 'deuxieme_partie' && userEntitlements.part2) || 
+                            (partie === 'troisieme_partie' && userEntitlements.part3) 
+                              ? { color: '#4CAF50', fontWeight: 'bold' } 
+                              : {}
+                          ]}>
+                            Partie {pidx + 1}
+                            {(partie === 'deuxieme_partie' && userEntitlements.part2) || 
+                             (partie === 'troisieme_partie' && userEntitlements.part3) 
+                              ? ' ✓' 
+                              : ''}
+                          </Text>
+                        {isPremium && (
+                          <View style={[
+                            styles.premiumBadge,
+                            (partie === 'deuxieme_partie' && userEntitlements.part2) || 
+                            (partie === 'troisieme_partie' && userEntitlements.part3) 
+                              ? { backgroundColor: '#4CAF50' } 
+                              : {}
+                          ]}>
+                            <Text style={[
+                              styles.premiumBadgeText,
+                              (partie === 'deuxieme_partie' && userEntitlements.part2) || 
+                              (partie === 'troisieme_partie' && userEntitlements.part3) 
+                                ? { color: 'white' } 
+                                : {}
+                            ]}>
+                              {(partie === 'deuxieme_partie' && userEntitlements.part2) || 
+                               (partie === 'troisieme_partie' && userEntitlements.part3) 
+                                ? 'DÉBLOQUÉ' 
+                                : 'PREMIUM'}
+                            </Text>
+                          </View>
+                        )}
                         </View>
                         <MaterialCommunityIcons name="chevron-right" size={24} color="#174C3C" />
                       </View>
