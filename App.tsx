@@ -1,17 +1,20 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import * as Linking from 'expo-linking';
 import * as SystemUI from 'expo-system-ui';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from './src/hooks/useAuth';
+import { usePaymentService } from './src/lib/paymentService';
 import AdminTabNavigator from './src/navigation/AdminTabNavigator';
 import TabNavigator from './src/navigation/TabNavigator';
 import ChapterScreen from './src/screens/ChapterScreen';
 import LoginScreen, { AuthContext } from './src/screens/LoginScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
+import VerifyEmailScreen from './src/screens/VerifyEmailScreen';
 
 type RootStackParamList = {
   Main: undefined;
@@ -23,6 +26,7 @@ type RootStackParamList = {
     };
   };
   Login: undefined;
+  VerifyEmail: undefined;
   ResetPassword: { oobCode?: string } | undefined;
   Admin: undefined;
 };
@@ -117,11 +121,92 @@ function SplashFamille() {
 export default function App() {
   const [splashStep, setSplashStep] = useState(0);
   const { user, loading, setUser } = useAuth();
+  const { checkEntitlements } = usePaymentService();
   
   useEffect(() => {
     // Séquence splash par défaut à chaque ouverture
     setSplashStep(0);
   }, []);
+
+  // Gestion des deep links PayDunya
+  useEffect(() => {
+    const handleDeepLink = async (url: string) => {
+      console.log('🔗 Deep link reçu:', url);
+      
+      try {
+        const parsed = Linking.parse(url);
+        console.log('🔍 Deep link parsé:', parsed);
+        
+        if (parsed?.hostname === 'paydunya') {
+          switch (parsed.path) {
+            case 'success':
+              console.log('✅ Paiement PayDunya réussi');
+              // Re-vérifier les entitlements
+              try {
+                const entitlements = await checkEntitlements();
+                console.log('🎯 Entitlements après paiement:', entitlements);
+                
+                if (entitlements.part2 || entitlements.part3) {
+                  Alert.alert(
+                    'Paiement réussi !',
+                    'Votre paiement a été confirmé. Vous avez maintenant accès aux parties premium.',
+                    [{ text: 'Parfait !' }]
+                  );
+                }
+              } catch (error) {
+                console.error('❌ Erreur vérification entitlements:', error);
+                Alert.alert(
+                  'Paiement en cours de traitement',
+                  'Votre paiement a été reçu. L\'accès sera débloqué dans quelques instants.',
+                  [{ text: 'OK' }]
+                );
+              }
+              break;
+              
+            case 'cancel':
+              console.log('❌ Paiement PayDunya annulé');
+              Alert.alert(
+                'Paiement annulé',
+                'Vous avez annulé le paiement. Vous pouvez réessayer à tout moment.',
+                [{ text: 'Compris' }]
+              );
+              break;
+              
+            case 'failed':
+              console.log('💥 Paiement PayDunya échoué');
+              Alert.alert(
+                'Paiement échoué',
+                'Le paiement n\'a pas pu être traité. Veuillez réessayer.',
+                [{ text: 'OK' }]
+              );
+              break;
+              
+            default:
+              console.log('❓ Deep link PayDunya inconnu:', parsed.path);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erreur traitement deep link:', error);
+      }
+    };
+
+    // Écouter les deep links entrants
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
+
+    // Vérifier s'il y a un deep link au démarrage
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        console.log('🚀 Deep link au démarrage:', url);
+        handleDeepLink(url);
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [checkEntitlements]);
 
   useEffect(() => {
     if (splashStep === 0) {
@@ -191,6 +276,7 @@ export default function App() {
               ) : (
                 <Stack.Screen name="Main" component={TabNavigator} />
               )}
+              <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
               <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
               <Stack.Screen name="Chapter" component={ChapterScreen} options={{ gestureEnabled: false }} />
             </Stack.Navigator>

@@ -54,48 +54,21 @@ export const checkFirebasePersistence = async (): Promise<boolean> => {
 };
 
 /**
- * Récupère les données utilisateur avec priorité Firebase
+ * Récupère les données utilisateur depuis Firestore
  */
 export const getUserDataWithPersistence = async (user: User): Promise<AuthUser> => {
   try {
-    // En production, priorité à Firebase Auth
-    if (!__DEV__) {
-      console.log('🚀 Mode production - Utilisation Firebase Auth native');
-      
-      // Récupérer le rôle depuis Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data();
-      const role = userData?.role || 'user';
-      
-      const authUser = { ...user, role } as AuthUser;
-      
-      // Sauvegarder pour fallback
-      await saveUserDataWithPersistence(authUser);
-      
-      return authUser;
-    }
-    
-    // En développement, utiliser le cache local
-    const savedData = await AsyncStorage.multiGet([
-      STORAGE_KEYS.USER_ROLE,
-      STORAGE_KEYS.USER_EMAIL,
-      STORAGE_KEYS.USER_DISPLAY_NAME
-    ]);
-
-    const savedRole = savedData[0][1];
-    const savedEmail = savedData[1][1];
-
-    if (savedEmail === user.email && savedRole) {
-      console.log('✅ Données utilisateur récupérées depuis le cache local (dev)');
-      return { ...user, role: savedRole as UserRole };
-    }
-    
-    // Fallback : récupérer depuis Firestore
+    // Récupérer le rôle depuis Firestore
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     const userData = userDoc.data();
     const role = userData?.role || 'user';
     
-    return { ...user, role } as AuthUser;
+    const authUser = { ...user, role } as AuthUser;
+    
+    // Sauvegarder pour fallback
+    await saveUserDataWithPersistence(authUser);
+    
+    return authUser;
   } catch (error) {
     console.error('❌ Erreur récupération données utilisateur:', error);
     return { ...user, role: 'user' } as AuthUser;

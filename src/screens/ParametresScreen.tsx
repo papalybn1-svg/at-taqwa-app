@@ -18,15 +18,7 @@ export default function ParametresScreen() {
   const [editName, setEditName] = useState(firebaseUser?.displayName || '');
   const [editPhoto, setEditPhoto] = useState(firebaseUser?.photoURL || '');
   const [profileModal, setProfileModal] = useState(false);
-  const [modalPwd, setModalPwd] = useState(false);
-
   const [loading, setLoading] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
 
 
@@ -185,85 +177,7 @@ export default function ParametresScreen() {
     setLoading(false);
   };
 
-  const handleChangePassword = async () => {
-    setLoading(true);
-    try {
-      // Vérifications
-      if (!currentPassword.trim()) {
-        Alert.alert('Erreur', 'Veuillez saisir votre mot de passe actuel.');
-        setLoading(false);
-        return;
-      }
-      
-      if (!newPassword.trim()) {
-        Alert.alert('Erreur', 'Veuillez saisir un nouveau mot de passe.');
-        setLoading(false);
-        return;
-      }
-      
-      if (newPassword.length < 6) {
-        Alert.alert('Erreur', 'Le nouveau mot de passe doit contenir au moins 6 caractères.');
-        setLoading(false);
-        return;
-      }
-      
-      if (newPassword !== confirmPassword) {
-        Alert.alert('Erreur', 'Les mots de passe ne correspondent pas.');
-        setLoading(false);
-        return;
-      }
-      
-      if (!firebaseUser?.email) {
-        Alert.alert('Erreur', 'Utilisateur non connecté.');
-        setLoading(false);
-        return;
-      }
-      
-      // Réauthentifier l'utilisateur avec le mot de passe actuel
-      const credential = require('firebase/auth').EmailAuthProvider.credential(
-        firebaseUser.email,
-        currentPassword
-      );
-      
-      await require('firebase/auth').reauthenticateWithCredential(firebaseUser, credential);
-      
-      // Changer le mot de passe
-      await require('firebase/auth').updatePassword(firebaseUser, newPassword);
-      
-      console.log('✅ Mot de passe changé avec succès');
-      
-      // Réinitialiser les champs
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setModalPwd(false);
-      
-      Alert.alert(
-        'Succès !', 
-        'Votre mot de passe a été changé avec succès.',
-        [{ text: 'OK' }]
-      );
-      
-    } catch (e) {
-      console.error('❌ Erreur changement mot de passe:', e);
-      let errorMessage = 'Impossible de changer le mot de passe. Veuillez réessayer.';
-      
-      if (e instanceof Error) {
-        if (e.message.includes('auth/wrong-password')) {
-          errorMessage = 'Mot de passe actuel incorrect.';
-        } else if (e.message.includes('auth/weak-password')) {
-          errorMessage = 'Le nouveau mot de passe est trop faible.';
-        } else if (e.message.includes('auth/requires-recent-login')) {
-          errorMessage = 'Session expirée. Veuillez vous reconnecter.';
-        } else if (e.message.includes('auth/network-request-failed')) {
-          errorMessage = 'Erreur de réseau. Vérifiez votre connexion internet.';
-        }
-      }
-      
-      Alert.alert('Erreur', errorMessage);
-    }
-    setLoading(false);
-  };
+
 
   const handleSendResetEmail = async () => {
     try {
@@ -351,11 +265,7 @@ export default function ParametresScreen() {
           <Text style={styles.rowText}>Modifier le profil</Text>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.row} onPress={() => setModalPwd(true)}>
-          <MaterialCommunityIcons name="lock-reset" size={22} color={colors.primary} />
-          <Text style={styles.rowText}>Changer le mot de passe</Text>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
-        </TouchableOpacity>
+
         <TouchableOpacity style={styles.row} onPress={handleSendResetEmail} disabled={sendingReset}>
           <MaterialCommunityIcons name="email-lock" size={22} color={colors.primary} />
           <Text style={styles.rowText}>Recevoir un email de réinitialisation</Text>
@@ -441,114 +351,7 @@ export default function ParametresScreen() {
         </View>
       </Modal>
 
-      {/* Modal changer mot de passe */}
-      <Modal visible={modalPwd} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <MaterialCommunityIcons name="lock-reset" size={48} color={colors.primary} style={{ marginBottom: 16 }} />
-            <Text style={styles.modalTitle}>Changer le mot de passe</Text>
-            
-            {/* Mot de passe actuel */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Mot de passe actuel</Text>
-              <View style={styles.passwordInputContainer}>
-                <TextInput 
-                  style={styles.passwordInput} 
-                  placeholder="Entrez votre mot de passe actuel" 
-                  value={currentPassword} 
-                  onChangeText={setCurrentPassword} 
-                  placeholderTextColor={colors.placeholder}
-                  secureTextEntry={!showCurrentPassword}
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-                >
-                  <MaterialCommunityIcons 
-                    name={showCurrentPassword ? "eye-off" : "eye"} 
-                    size={20} 
-                    color={colors.primary} 
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
 
-            {/* Nouveau mot de passe */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nouveau mot de passe</Text>
-              <View style={styles.passwordInputContainer}>
-                <TextInput 
-                  style={styles.passwordInput} 
-                  placeholder="Entrez le nouveau mot de passe" 
-                  value={newPassword} 
-                  onChangeText={setNewPassword} 
-                  placeholderTextColor={colors.placeholder}
-                  secureTextEntry={!showNewPassword}
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowNewPassword(!showNewPassword)}
-                >
-                  <MaterialCommunityIcons 
-                    name={showNewPassword ? "eye-off" : "eye"} 
-                    size={20} 
-                    color={colors.primary} 
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Confirmation du nouveau mot de passe */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Confirmer le nouveau mot de passe</Text>
-              <View style={styles.passwordInputContainer}>
-                <TextInput 
-                  style={styles.passwordInput} 
-                  placeholder="Confirmez le nouveau mot de passe" 
-                  value={confirmPassword} 
-                  onChangeText={setConfirmPassword} 
-                  placeholderTextColor={colors.placeholder}
-                  secureTextEntry={!showConfirmPassword}
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <MaterialCommunityIcons 
-                    name={showConfirmPassword ? "eye-off" : "eye"} 
-                    size={20} 
-                    color={colors.primary} 
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.modalButtons}>
-            <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
-                onPress={() => {
-                  setModalPwd(false);
-                  setCurrentPassword('');
-                  setNewPassword('');
-                  setConfirmPassword('');
-                }}
-              disabled={loading}
-            >
-                <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton]} 
-                onPress={handleChangePassword} 
-                disabled={loading || !currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()}
-              >
-                <Text style={[styles.modalButtonText, styles.saveButtonText]}>
-                  {loading ? 'Changement...' : "Changer"}
-              </Text>
-            </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
 
     </View>

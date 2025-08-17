@@ -2,11 +2,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from "react";
-import { Animated, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Animated, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
+import { usePaymentService } from '../lib/paymentService';
 import { Chapter, ChaptersData } from '../types/chapters';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
@@ -32,7 +33,24 @@ export default function BooksScreen() {
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter|null>(null);
   const [selectedPart, setSelectedPart] = React.useState<string|null>(null);
+  const [isLoadingPayment, setIsLoadingPayment] = React.useState(false);
+  const [userEntitlements, setUserEntitlements] = React.useState<{part2: boolean; part3: boolean}>({part2: false, part3: false});
   const scrollY = React.useRef(new Animated.Value(0)).current;
+
+  // Service de paiement
+  const { checkEntitlements, createPayment, openPayDunyaCheckout } = usePaymentService();
+
+  // Charger les entitlements utilisateur
+  const loadEntitlements = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const entitlements = await checkEntitlements();
+      setUserEntitlements(entitlements);
+    } catch (error) {
+      console.error('Erreur chargement entitlements:', error);
+    }
+  };
 
   // Charger la progression utilisateur
   const loadProgress = async () => {
@@ -55,16 +73,18 @@ export default function BooksScreen() {
     }
   };
 
-  // Charger la progression au montage
+  // Charger la progression au montage et quand l'utilisateur change
   React.useEffect(() => {
     loadProgress();
-  }, []);
+    loadEntitlements();
+  }, [user?.uid]);
 
   // Recharger la progression quand l'écran redevient actif
   useFocusEffect(
     React.useCallback(() => {
       loadProgress();
-    }, [])
+      loadEntitlements();
+    }, [user?.uid])
   );
 
   // Sauvegarder la progression
@@ -102,6 +122,16 @@ export default function BooksScreen() {
       const idx = (data as any)[pk].chapitres.findIndex((ch: any) => ch.title === (chapter as any).title && ch.image === (chapter as any).image);
       if (idx >= 0) { partieKey = pk; chapitreIndex = idx; }
     });
+    
+    // Vérifier si la partie nécessite un paiement (Partie 2 et 3 seulement)
+    if (partieKey === 'deuxieme_partie' || partieKey === 'troisieme_partie') {
+      const hasAccess = partieKey === 'deuxieme_partie' ? userEntitlements.part2 : userEntitlements.part3;
+      if (!hasAccess) {
+        showPaywallModal(partieKey);
+        return;
+      }
+    }
+    
     let initialSection = 0;
     if (partieKey) {
       const progressKey = `chapter${partieKey}_${chapitreIndex + 1}`;
@@ -110,6 +140,67 @@ export default function BooksScreen() {
       if (typeof last === 'number') initialSection = last;
     }
     (navigation as any).navigate('Chapter', { chapter, initialSection });
+  };
+
+  // Afficher le modal de paywall
+  const showPaywallModal = (partieKey: string) => {
+    const partieTitre = data[partieKey as keyof ChaptersData].titre;
+    const partieNumero = partieKey === 'deuxieme_partie' ? '2' : '3';
+    const planId = partieKey === 'deuxieme_partie' ? 'BOOK_PART_2' : 'BOOK_PART_3';
+    
+    Alert.alert(
+      'Contenu Premium',
+      `La Partie ${partieNumero} "${partieTitre}" nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Débloquer maintenant', 
+          onPress: () => handlePayment(planId, partieTitre)
+        }
+      ]
+    );
+  };
+
+  // Gérer le paiement
+  const handlePayment = async (planId: 'BOOK_PART_2' | 'BOOK_PART_3', partieTitre: string) => {
+    if (!user?.uid) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour effectuer un paiement');
+      return;
+    }
+
+    setIsLoadingPayment(true);
+    try {
+      console.log('🔄 Démarrage du processus de paiement pour:', planId);
+      
+      const result = await createPayment(planId);
+      
+      if (result.success && result.checkoutUrl) {
+        console.log('✅ Paiement créé, ouverture PayDunya...');
+        await openPayDunyaCheckout(result.checkoutUrl);
+        
+        Alert.alert(
+          'Paiement en cours',
+          `Vous allez être redirigé vers PayDunya pour finaliser votre paiement.${'\n\n'}Une fois le paiement effectué, vous serez automatiquement redirigé vers l'application.`,
+          [{ text: 'Compris' }]
+        );
+      } else {
+        console.error('❌ Erreur création paiement:', result.error);
+        Alert.alert(
+          'Erreur de paiement',
+          result.error || 'Impossible de créer le paiement. Veuillez réessayer.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Erreur paiement:', error);
+      Alert.alert(
+        'Erreur réseau',
+        'Impossible de contacter le serveur. Vérifiez votre connexion internet.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoadingPayment(false);
+    }
   };
 
   const handlePartPress = (partKey: string) => {
@@ -262,36 +353,45 @@ export default function BooksScreen() {
         ) : (
           // Affichage des deux parties
           <View>
-            {Object.keys(data).map((partie, pidx) => (
-              <View key={pidx} style={{ marginBottom: 16 }}>
-                {/* Carte de partie */}
-                <TouchableOpacity 
-                  style={styles.partCard}
-                  onPress={() => handlePartPress(partie)}
-                  activeOpacity={0.95}
-                >
-                  <View style={styles.partCardContent}>
-                    <View style={styles.partCardHeader}>
-                      <View style={styles.partCardTitleContainer}>
-                        <View style={styles.partCardIcon}>
-                          <MaterialCommunityIcons 
-                            name={pidx === 0 ? "book-open-variant" : "book-multiple"} 
-                            size={24} 
-                            color="#BB9B4E" 
-                          />
+            {Object.keys(data).map((partie, pidx) => {
+              const isPremium = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
+              return (
+                <View key={pidx} style={{ marginBottom: 16 }}>
+                  {/* Carte de partie */}
+                  <TouchableOpacity 
+                    style={[styles.partCard, isPremium && styles.premiumCard]}
+                    onPress={() => handlePartPress(partie)}
+                    activeOpacity={0.95}
+                  >
+                    <View style={styles.partCardContent}>
+                      <View style={styles.partCardHeader}>
+                        <View style={styles.partCardTitleContainer}>
+                          <View style={styles.partCardIcon}>
+                            <MaterialCommunityIcons 
+                              name={isPremium ? "crown" : (pidx === 0 ? "book-open-variant" : "book-multiple")} 
+                              size={24} 
+                              color={isPremium ? "#D4AF37" : "#BB9B4E"} 
+                            />
+                          </View>
+                          <Text style={styles.partCardTitle}>Partie {pidx + 1}</Text>
+                          {isPremium && (
+                            <View style={styles.premiumBadge}>
+                              <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                            </View>
+                          )}
                         </View>
-                        <Text style={styles.partCardTitle}>Partie {pidx + 1}</Text>
+                        <MaterialCommunityIcons name="chevron-right" size={24} color="#174C3C" />
                       </View>
-                      <MaterialCommunityIcons name="chevron-right" size={24} color="#174C3C" />
+                      <Text style={styles.partCardSubtitle}>{data[partie as keyof ChaptersData].titre}</Text>
+                      <Text style={styles.partCardChapters}>
+                        {data[partie as keyof ChaptersData].chapitres.length} chapitres
+                        {isPremium && " • Contenu premium"}
+                      </Text>
                     </View>
-                    <Text style={styles.partCardSubtitle}>{data[partie as keyof ChaptersData].titre}</Text>
-                    <Text style={styles.partCardChapters}>
-                      {data[partie as keyof ChaptersData].chapitres.length} chapitres
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            ))}
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -684,6 +784,26 @@ const styles = StyleSheet.create({
     right: 8,
     top: '50%',
     marginTop: -10,
+  },
+
+  // Styles pour les parties premium
+  premiumCard: {
+    borderWidth: 2,
+    borderColor: '#D4AF37',
+    backgroundColor: '#FFFBF0',
+  },
+  premiumBadge: {
+    backgroundColor: '#D4AF37',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  premiumBadgeText: {
+    color: '#174C3C',
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
 
   // Drawer redesigné

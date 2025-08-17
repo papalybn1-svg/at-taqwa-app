@@ -39,32 +39,135 @@ const chapterMap: Record<string, { question: string, reponse?: string, contenu?:
 const chapterId = '01';
 const rawQuizData = chapterMap[chapterId] || [];
 
-// Génère des fausses réponses pertinentes pour chaque question
+// Génère des fausses réponses pertinentes et contextuelles pour chaque question
 function generateOptionsForQuiz(questions: {question: string, reponse?: string, contenu?: string}[]) {
   return questions.map((item, idx, arr) => {
     const correct = item.reponse || item.contenu || 'Réponse';
-    // Récupère toutes les autres réponses du chapitre
+    
+    // Analyser le contexte de la question pour générer des fausses réponses pertinentes
+    const questionText = item.question.toLowerCase();
+    const correctAnswer = correct.toLowerCase();
+    
+    // Déterminer le thème de la question
+    let theme = 'general';
+    if (questionText.includes('ablution') || questionText.includes('purification') || questionText.includes('tahara')) {
+      theme = 'ablution';
+    } else if (questionText.includes('prière') || questionText.includes('salat') || questionText.includes('namaz')) {
+      theme = 'priere';
+    } else if (questionText.includes('temps') || questionText.includes('heure') || questionText.includes('moment')) {
+      theme = 'temps';
+    } else if (questionText.includes('nombre') || questionText.includes('fois') || questionText.includes('combien')) {
+      theme = 'nombre';
+    }
+    
+    // Générer des fausses réponses contextuelles selon le thème
+    const contextualFakes = generateContextualFakes(theme, correctAnswer);
+    
+    // Récupérer d'autres réponses du même chapitre (plus pertinentes)
     const otherAnswers = arr
       .filter((q, i) => i !== idx && (q.reponse || q.contenu))
       .map(q => q.reponse || q.contenu)
-      .filter((r): r is string => !!r && r !== correct);
-    // Filtrage contextuel : on évite les réponses trop similaires ou vides
-    const filteredFakes = otherAnswers.filter(r => r.length > 2 && r !== correct && !correct.includes(r) && !r.includes(correct));
-    // Mélange et prend jusqu'à 3 fausses réponses différentes
-    const shuffledFakes = shuffleOptions(filteredFakes).slice(0, 3);
-    // Si pas assez de fausses réponses, on complète avec des réponses génériques
-    const genericFakes = ["Aucune des réponses", "Je ne sais pas", "Voir le livre", "Non précisé"];
-    const allFakes = [...shuffledFakes, ...shuffleOptions(genericFakes)].slice(0, 3);
-    // Mélange la bonne réponse avec les fausses
-    const allOptions = shuffleOptions([correct, ...allFakes]);
-    // Trouve l'index de la bonne réponse dans le tableau mélangé
+      .filter((r): r is string => {
+        if (!r || r === correct) return false;
+        // Éviter les réponses trop similaires
+        const rLower = r.toLowerCase();
+        return r.length > 3 && 
+               !correctAnswer.includes(rLower) && 
+               !rLower.includes(correctAnswer) &&
+               !rLower.includes('prière') || !questionText.includes('ablution'); // Éviter les hors-sujet
+      });
+    
+    // Combiner les réponses contextuelles avec celles du chapitre
+    const allFakes = [...contextualFakes, ...otherAnswers];
+    const shuffledFakes = shuffleOptions(allFakes).slice(0, 3);
+    
+    // Si pas assez de fausses réponses, utiliser des réponses génériques mais pertinentes
+    if (shuffledFakes.length < 3) {
+      const genericFakes = getGenericFakes(theme);
+      const additionalFakes = shuffleOptions(genericFakes).slice(0, 3 - shuffledFakes.length);
+      shuffledFakes.push(...additionalFakes);
+    }
+    
+    // Mélanger la bonne réponse avec les fausses
+    const allOptions = shuffleOptions([correct, ...shuffledFakes]);
     const correctAnswerIndex = allOptions.findIndex(opt => opt === correct);
+    
     return {
       question: item.question,
       options: allOptions,
       correctAnswerIndex,
     };
   });
+}
+
+// Génère des fausses réponses contextuelles selon le thème
+function generateContextualFakes(theme: string, correctAnswer: string): string[] {
+  const fakes: { [key: string]: string[] } = {
+    ablution: [
+      "Se laver seulement les mains",
+      "Se laver seulement le visage", 
+      "Ne pas se laver du tout",
+      "Se laver seulement les pieds",
+      "Utiliser de l'eau non pure",
+      "Faire les ablutions dans le désordre",
+      "Ne pas faire les ablutions avant la prière",
+      "Faire les ablutions après la prière"
+    ],
+    priere: [
+      "Prier sans orientation vers la Kaaba",
+      "Prier sans intention",
+      "Prier en parlant",
+      "Prier sans couvrir les parties intimes",
+      "Prier en mangeant",
+      "Prier en dormant",
+      "Prier sans purification",
+      "Prier à n'importe quel moment"
+    ],
+    temps: [
+      "À n'importe quelle heure",
+      "Seulement le matin",
+      "Seulement le soir",
+      "Une fois par semaine",
+      "Une fois par mois",
+      "Jamais",
+      "Quand on veut",
+      "Pendant le sommeil"
+    ],
+    nombre: [
+      "Une seule fois",
+      "Dix fois",
+      "Cent fois",
+      "Mille fois",
+      "Autant qu'on veut",
+      "Jamais",
+      "Une fois par jour",
+      "Une fois par semaine"
+    ],
+    general: [
+      "Aucune de ces réponses",
+      "Je ne sais pas",
+      "Cela dépend",
+      "Non précisé",
+      "Voir le livre",
+      "Demander à l'imam",
+      "Cela n'a pas d'importance"
+    ]
+  };
+  
+  return fakes[theme] || fakes.general;
+}
+
+// Génère des réponses génériques selon le thème
+function getGenericFakes(theme: string): string[] {
+  const generics: { [key: string]: string[] } = {
+    ablution: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
+    priere: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
+    temps: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
+    nombre: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
+    general: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"]
+  };
+  
+  return generics[theme] || generics.general;
 }
 
 function shuffleOptions(options: string[]) {
@@ -105,17 +208,45 @@ export default function OriginalQuizScreen() {
   // Reprise automatique d'une session de quiz en cours
   useEffect(() => {
     const resumeSession = async () => {
+      // Attendre que les données du quiz soient chargées
+      if (!quizData.length) {
+        console.log('⏳ Données du quiz pas encore chargées, attente...');
+        return;
+      }
+
       const chapterKey = exercicesKey;
       const sessionKey = `quizSession:${chapterKey}`;
       const saved = await readUserStorage<{ index: number; answers: Array<number|null> }>(user?.uid, sessionKey);
+      
+      console.log(`🔍 Vérification session pour chapitre ${chapterKey}:`, {
+        saved: saved ? `index ${saved.index}` : 'aucune',
+        quizLength: quizData.length,
+        currentIndex: currentQuestionIndex
+      });
+
+      // Vérifier si la session est valide
       if (saved && typeof saved.index === 'number') {
-        setCurrentQuestionIndex(Math.min(saved.index, quizData.length - 1));
+        if (saved.index < quizData.length) {
+          console.log(`🔄 Reprise de session pour chapitre ${chapterKey} à la question ${saved.index}`);
+          setCurrentQuestionIndex(saved.index);
+          setShowQuestionPage(true);
+        } else {
+          console.log(`⚠️ Session invalide pour chapitre ${chapterKey}: index ${saved.index} >= ${quizData.length}`);
+          // Nettoyer la session invalide
+          await removeUserStorage(user?.uid, sessionKey);
+          console.log(`🗑️ Session invalide supprimée pour chapitre ${chapterKey}`);
+          setCurrentQuestionIndex(0);
+          setShowQuestionPage(true);
+        }
+      } else {
+        console.log(`🆕 Nouvelle session pour chapitre ${chapterKey} (question 0)`);
+        setCurrentQuestionIndex(0);
         setShowQuestionPage(true);
       }
     };
     resumeSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercicesKey]);
+  }, [exercicesKey, quizData.length, user?.uid]);
 
   // Sauvegarder la session au fil de l'eau
   useEffect(() => {
@@ -146,14 +277,47 @@ export default function OriginalQuizScreen() {
     }
   }, [quizData.length, navigation]);
 
+  // Nettoyer les sessions corrompues au démarrage
+  useEffect(() => {
+    const cleanupSessions = async () => {
+      try {
+        const indexKey = 'quizSessionsIndex';
+        const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
+        
+        console.log('🧹 Nettoyage des sessions au démarrage...');
+        
+        // Vérifier chaque session enregistrée
+        for (const [chapterKey, hasSession] of Object.entries(index)) {
+          if (hasSession) {
+            const sessionKey = `quizSession:${chapterKey}`;
+            const session = await readUserStorage<{ index: number }>(user?.uid, sessionKey);
+            
+            if (!session) {
+              console.log(`🗑️ Session manquante supprimée de l'index: ${chapterKey}`);
+              delete index[chapterKey];
+            }
+          }
+        }
+        
+        await writeUserStorage(user?.uid, indexKey, index);
+        console.log('✅ Nettoyage des sessions terminé');
+      } catch (error) {
+        console.error('❌ Erreur lors du nettoyage des sessions:', error);
+      }
+    };
+    
+    if (user?.uid) {
+      cleanupSessions();
+    }
+  }, [user?.uid]);
+
   // Recharger le quiz quand les paramètres changent
   useEffect(() => {
     const newExercicesKey = (route.params && (route.params as any).exercicesKey) || '1';
     if (newExercicesKey !== exercicesKey) {
-      // Les paramètres ont changé, recharger le quiz
-      const newRawQuizData = exercicesFiles[newExercicesKey] || [];
-      setQuizData(generateOptionsForQuiz(newRawQuizData));
-      setCurrentQuestionIndex(0);
+      console.log(`🔄 Changement de chapitre: ${exercicesKey} -> ${newExercicesKey}`);
+      
+      // Réinitialiser complètement l'état pour le nouveau chapitre
       setScore(0);
       setSelectedAnswerIndex(null);
       setIsAnswerCorrect(null);
@@ -161,6 +325,13 @@ export default function OriginalQuizScreen() {
       setShowResults(false);
       setShowQuestionPage(true);
       fadeAnim.setValue(1);
+      
+      // Charger les nouvelles données du quiz
+      const newRawQuizData = exercicesFiles[newExercicesKey] || [];
+      const newQuizData = generateOptionsForQuiz(newRawQuizData);
+      setQuizData(newQuizData);
+      
+      console.log(`📊 Nouveau quiz chargé: ${newQuizData.length} questions pour chapitre ${newExercicesKey}`);
     }
   }, [route.params, exercicesKey, exercicesFiles]);
 
@@ -337,22 +508,33 @@ export default function OriginalQuizScreen() {
   // Fonction pour sauvegarder le score localement
   const saveQuizScore = async (chapterKey: string, scorePercentage: number) => {
     try {
+      console.log(`💾 Sauvegarde du score pour chapitre ${chapterKey}: ${scorePercentage}%`);
+      
+      // Sauvegarder le score
       const scores = (await readUserStorage<Record<string, number>>(user?.uid, 'quizScores')) || {};
       if (!scores[chapterKey] || scorePercentage > scores[chapterKey]) {
         scores[chapterKey] = scorePercentage;
         await writeUserStorage(user?.uid, 'quizScores', scores);
-        console.log(`Score sauvegardé pour le chapitre ${chapterKey}: ${scorePercentage}%`);
+        console.log(`✅ Score sauvegardé pour le chapitre ${chapterKey}: ${scorePercentage}%`);
       }
-      // Supprimer la session en fin de quiz et mettre à jour l'index
-      await removeUserStorage(user?.uid, `quizSession:${chapterKey}`);
+      
+      // Nettoyer complètement la session terminée
+      const sessionKey = `quizSession:${chapterKey}`;
+      await removeUserStorage(user?.uid, sessionKey);
+      console.log(`🗑️ Session supprimée: ${sessionKey}`);
+      
+      // Mettre à jour l'index des sessions
       const indexKey = 'quizSessionsIndex';
       const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
       if (index[chapterKey]) {
         delete index[chapterKey];
         await writeUserStorage(user?.uid, indexKey, index);
+        console.log(`📝 Index mis à jour: session ${chapterKey} supprimée`);
       }
+      
+      console.log(`🎯 Quiz terminé pour chapitre ${chapterKey} - session nettoyée`);
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde du score:', error);
+      console.error('❌ Erreur lors de la sauvegarde du score:', error);
     }
   };
 
@@ -372,6 +554,39 @@ export default function OriginalQuizScreen() {
     
     // Régénérer les questions pour un nouveau quiz
     setQuizData(generateOptionsForQuiz(rawQuizData));
+  };
+
+  // Fonction pour permettre de reprendre n'importe quel chapitre
+  const resumeAnyChapter = async () => {
+    try {
+      // Supprimer la session actuelle pour permettre la reprise
+      const chapterKey = exercicesKey;
+      const sessionKey = `quizSession:${chapterKey}`;
+      await removeUserStorage(user?.uid, sessionKey);
+      
+      // Mettre à jour l'index des sessions
+      const indexKey = 'quizSessionsIndex';
+      const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
+      if (index[chapterKey]) {
+        delete index[chapterKey];
+        await writeUserStorage(user?.uid, indexKey, index);
+      }
+      
+      console.log(`✅ Session supprimée pour le chapitre ${chapterKey}, reprise possible`);
+      
+      // Recharger le quiz depuis le début
+      setCurrentQuestionIndex(0);
+      setScore(0);
+      setSelectedAnswerIndex(null);
+      setIsAnswerCorrect(null);
+      setShowAnswer(false);
+      setShowResults(false);
+      setShowQuestionPage(true);
+      fadeAnim.setValue(1);
+      
+    } catch (error) {
+      console.error('Erreur lors de la reprise du chapitre:', error);
+    }
   };
 
   // Fonction pour naviguer vers le quiz suivant
@@ -509,17 +724,27 @@ export default function OriginalQuizScreen() {
 
   return (
     <SafeAreaView key={`quiz-${exercicesKey}`} style={styles.container} {...panResponder.panHandlers}>
-      {/* Bouton de retour */}
-      <TouchableOpacity 
-        style={styles.backButton} 
-                  onPress={() => {
+      {/* Boutons de navigation */}
+      <View style={styles.headerButtons}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => {
             console.log('Bouton retour TOUCHÉ !');
             goToQuizSelection();
           }}
-        activeOpacity={0.7}
-      >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
         </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.restartChapterButton} 
+          onPress={resumeAnyChapter}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons name="refresh" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
 
       {/* Section du personnage - Plus compacte */}
       <View style={styles.characterSection}>
@@ -704,11 +929,21 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: '#174C3C', // Vert principal de l'application
   },
-  backButton: { 
+  headerButtons: {
     position: 'absolute',
     top: 50,
     left: 20,
+    right: 20,
     zIndex: 100,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  backButton: { 
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    padding: 8,
+  },
+  restartChapterButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
     padding: 8,

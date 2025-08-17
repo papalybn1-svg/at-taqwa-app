@@ -51,6 +51,7 @@
     "plugins": [
       "expo-web-browser"
     ],
+    "scheme": "attaqwa",
     "extra": {
       "eas": {
         "projectId": "c0367c88-9331-4f3c-b747-fa3750f9072e"
