@@ -141,6 +141,10 @@ export default function App() {
           switch (parsed.path) {
             case 'success':
               console.log('✅ Paiement PayDunya réussi');
+              // Récupérer le token depuis les paramètres de requête
+              const token = parsed.queryParams?.token;
+              console.log('🔑 Token reçu:', token);
+              
               // Re-vérifier les entitlements
               try {
                 const entitlements = await checkEntitlements();
@@ -151,6 +155,20 @@ export default function App() {
                     'Paiement réussi !',
                     'Votre paiement a été confirmé. Vous avez maintenant accès aux parties premium.',
                     [{ text: 'Parfait !' }]
+                  );
+                } else if (token) {
+                  // Si pas d'entitlements mais token présent, le paiement est peut-être encore en cours
+                  Alert.alert(
+                    'Paiement en cours de traitement',
+                    'Votre paiement a été reçu. L\'accès sera débloqué dans quelques instants.',
+                    [{ text: 'OK' }]
+                  );
+                } else {
+                  // Si pas encore d'entitlements, le paiement est peut-être encore en cours
+                  Alert.alert(
+                    'Paiement en cours de traitement',
+                    'Votre paiement a été reçu et est en cours de traitement. L\'accès sera débloqué dans quelques instants.',
+                    [{ text: 'Compris' }]
                   );
                 }
               } catch (error) {

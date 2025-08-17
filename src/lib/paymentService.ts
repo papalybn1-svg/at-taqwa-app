@@ -96,10 +96,9 @@ export class PaymentService {
       console.log('📡 Réponse createPayment - Headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
         const errorText = await response.text();
         console.error('❌ Erreur createPayment - Body:', errorText);
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
@@ -142,8 +141,8 @@ export class PaymentService {
    */
   async openPayDunyaCheckout(checkoutUrl: string): Promise<void> {
     try {
-      const Linking = await import('expo-linking');
-      await Linking.default.openURL(checkoutUrl);
+      const { openURL } = await import('expo-linking');
+      await openURL(checkoutUrl);
     } catch (error) {
       console.error('Erreur ouverture checkout PayDunya:', error);
       throw new Error('Impossible d\'ouvrir PayDunya');
