@@ -43,25 +43,15 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
 
   useEffect(() => {
     loadFavorites();
-  }, [user?.uid]); // Recharger quand l'utilisateur change
+  }, []);
 
   const loadFavorites = async () => {
     try {
-      if (!user?.uid) {
-        // Si pas d'utilisateur, vider les favoris
-        setFavorites([]);
-        return;
-      }
-      
-      const storedFavorites = await readUserStorage<FavoriteItem[]>(user.uid, 'favorites');
-      if (storedFavorites) {
-        setFavorites(storedFavorites);
-      } else {
-        setFavorites([]);
-      }
+      // Migration désactivée volontairement
+      const storedFavorites = await readUserStorage<FavoriteItem[]>(user?.uid, 'favorites');
+      if (storedFavorites) setFavorites(storedFavorites);
     } catch (error) {
       console.error('Erreur lors du chargement des favoris:', error);
-      setFavorites([]);
     } finally {
       setLoading(false);
     }

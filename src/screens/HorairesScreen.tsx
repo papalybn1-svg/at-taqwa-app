@@ -1,17 +1,10 @@
-  import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View, Dimensions, Platform } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import {
-    initializePrayerNotifications
-} from '../services/prayerNotificationsService';
-import {
-    fetchPrayerTimes,
-    formatPrayerTime,
-    getCurrentDate,
-    getHijriDate,
-    getNextPrayerInfo
-} from '../services/prayerTimesService';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
 
 // Récupération des dimensions de l'écran
@@ -20,26 +13,70 @@ const isTablet = screenWidth >= 768;
 const isSmallScreen = screenWidth < 375;
 
 const PRAYER_LABELS = [
-  { key: 'Fajr', label: 'Subh', icon: 'weather-sunset-up', color: '#FFA726' },
+  { key: 'Fajr', label: 'Fajr', icon: 'weather-sunset-up', color: '#FFA726' },
+  { key: 'Sunrise', label: 'Lever du soleil', icon: 'white-balance-sunny', color: '#FFD54F' },
   { key: 'Dhuhr', label: 'Dhuhr', icon: 'weather-sunny', color: '#FF8A65' },
   { key: 'Asr', label: 'Asr', icon: 'weather-partly-cloudy', color: '#FF7043' },
   { key: 'Maghrib', label: 'Maghrib', icon: 'weather-sunset-down', color: '#FF7043' },
   { key: 'Isha', label: 'Isha', icon: 'weather-night', color: '#7E57C2' },
 ];
 
+// Fonction pour obtenir la date actuelle en français
+function getCurrentDate() {
+  const now = new Date();
+  const options: Intl.DateTimeFormatOptions = { 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  };
+  return now.toLocaleDateString('fr-FR', options);
+}
+
+// Fonction pour obtenir la date Hijri approximative
+function getHijriDate() {
+  const now = new Date();
+  // Conversion approximative (peut être améliorée avec une vraie API Hijri)
+  const gregorianYear = now.getFullYear();
+  const hijriYear = gregorianYear - 579; // Approximation
+  const hijriMonth = now.getMonth() + 1;
+  const hijriDay = now.getDate();
+  
+  const hijriMonths = [
+    'Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
+    'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Shaaban',
+    'Ramadan', 'Shawwal', 'Dhu al-Qadah', 'Dhu al-Hijjah'
+  ];
+  
+  return `${hijriDay} ${hijriMonths[hijriMonth - 1]} ${hijriYear}`;
+}
+
+// Fonction utilitaire pour formater l'heure
+function formatPrayerTime(time: string) {
+  if (!time) return '6H01';
+  // Si c'est déjà HH:MM, on formate
+  if (/^\d{2}:\d{2}$/.test(time)) {
+    const [h, m] = time.split(':');
+    return `${h}H${m}`;
+  }
+  // Si c'est une date ISO, on extrait l'heure
+  const match = time.match(/T(\d{2}):(\d{2})/);
+  if (match) {
+    return `${match[1]}H${match[2]}`;
+  }
+  // Sinon, retourne brut
+  return time;
+}
+
 export default function HorairesScreen() {
   const [loading, setLoading] = useState(true);
-  const [prayerTimes, setPrayerTimes] = useState<Record<string, string> | null>(null);
+  const [prayerTimes, setPrayerTimes] = useState<any>(null);
   const [date, setDate] = useState('');
   const [hijri, setHijri] = useState('');
   const [city, setCity] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [cityInput, setCityInput] = useState('');
-  const [enabledNotifications, setEnabledNotifications] = useState<{ [key: string]: boolean }>({});
+  const [enabledNotifications, setEnabledNotifications] = useState<{ [key: string]: string | null }>({});
   const [dimensions, setDimensions] = useState({ width: screenWidth, height: screenHeight });
-  const [lastUpdate, setLastUpdate] = useState<string>('');
-  const [offlineMode, setOfflineMode] = useState(false);
-  const [nextPrayerInfo, setNextPrayerInfo] = useState<any>(null);
 
   // Ajout navigation pour bouton retour
   const navigation = require('@react-navigation/native').useNavigation();
@@ -53,260 +90,391 @@ export default function HorairesScreen() {
     return () => subscription?.remove();
   }, []);
 
-  // Charger les données une seule fois au montage
   useEffect(() => {
-    let isMounted = true;
-    
+    // Fonction sécurisée pour charger les données
     const loadData = async () => {
-      if (!isMounted) return;
-      
       try {
-        setLoading(true);
-        setOfflineMode(false);
-        
-        // Par défaut, charger Dakar si pas de localisation GPS
-        const result = await fetchPrayerTimes('Dakar');
-        
-        if (!isMounted) return;
-        
-        setPrayerTimes(result.timings);
-        setCity(result.city);
-        setLastUpdate(result.lastUpdate);
-        
-        // Calculer la prochaine prière
-        const nextPrayer = getNextPrayerInfo(result.timings);
-        setNextPrayerInfo(nextPrayer);
+        await fetchPrayerTimes();
+      } catch (error) {
+        console.log('❌ Erreur lors du chargement initial:', error);
+        // L'erreur est déjà gérée dans fetchPrayerTimes
+      }
+    };
+    
+    // Gestion sécurisée des permissions de notifications
+    const requestNotificationPermissions = async () => {
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        console.log('🔔 Status permissions notifications:', status);
+      } catch (error) {
+        console.log('❌ Erreur permissions notifications:', error);
+        // Continue sans notifications si erreur
+    }
+    };
+    
+    // Exécuter les fonctions de manière sécurisée
+    loadData();
+    requestNotificationPermissions();
+  }, []);
+
+  const fetchPrayerTimes = async (manualCity?: string) => {
+    setLoading(true);
+    try {
+      let url = '';
+      let targetCity = 'Dakar'; // Ville par défaut
+      
+      if (manualCity) {
+        targetCity = manualCity;
+        // API pour une ville spécifique du Sénégal
+        url = `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(targetCity)}&country=Senegal&method=4&school=1`;
+      } else {
+        try {
+          // Demander la permission de localisation
+        let { status } = await Location.requestForegroundPermissionsAsync();
+          
+          if (status === 'granted') {
+            // Si permission accordée, utiliser la localisation GPS
+            const location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+              timeInterval: 5000,
+              distanceInterval: 10
+            });
+            
+            console.log('📍 Localisation GPS obtenue:', location.coords.latitude, location.coords.longitude);
+            
+            // API avec coordonnées GPS précises
+            url = `https://api.aladhan.com/v1/timings/${Math.floor(Date.now()/1000)}?latitude=${location.coords.latitude}&longitude=${location.coords.longitude}&method=4&school=1`;
+          } else {
+            console.log('🚫 Permission localisation refusée, utilisation Dakar par défaut');
+            url = `https://api.aladhan.com/v1/timingsByCity?city=Dakar&country=Senegal&method=4&school=1`;
+          }
+        } catch (locationError) {
+          console.log('❌ Erreur localisation, utilisation Dakar par défaut:', locationError);
+          url = `https://api.aladhan.com/v1/timingsByCity?city=Dakar&country=Senegal&method=4&school=1`;
+      }
+      }
+      
+      console.log('🌐 Appel API heures de prière:', url);
+      
+      // Timeout pour éviter les appels trop longs
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 secondes max
+      
+      const res = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'At-Taqwa-App/1.0'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      console.log('✅ Réponse API reçue:', data.status);
+      
+      if (data.code === 200 && data.data && data.data.timings) {
+        setPrayerTimes(data.data.timings);
         
         // Formatage de la date
-        if (result.date) {
-          const gregorian = result.date.gregorian;
-          const hijri = result.date.hijri;
+        if (data.data.date) {
+          const gregorian = data.data.date.gregorian;
+          const hijri = data.data.date.hijri;
           
           setDate(`${gregorian.day} ${gregorian.month.fr || gregorian.month.en} ${gregorian.year}`);
           setHijri(`${hijri.day} ${hijri.month.fr || hijri.month.en} ${hijri.year}`);
-        } else {
-          setDate(getCurrentDate());
-          setHijri(getHijriDate());
         }
         
-        // Initialiser les notifications une seule fois
-        await initializePrayerNotifications(result.timings);
-        
-      } catch (error) {
-        if (!isMounted) return;
-        console.log('❌ Erreur lors du chargement initial:', error);
-        setOfflineMode(true);
-        setDate(getCurrentDate());
-        setHijri(getHijriDate());
-        setCity('Dakar (offline)');
-      } finally {
-        if (isMounted) {
-          setLoading(false);
+        // Mise à jour de la ville
+        if (manualCity) {
+          setCity(manualCity);
+        } else if (data.data.meta && data.data.meta.timezone) {
+          setCity(targetCity);
         }
-      }
-    };
-    
-    loadData();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Dépendances vides pour ne charger qu'une fois
-
-  // Fonction pour changer de ville
-  const handleCityChange = async () => {
-    if (!cityInput.trim()) return;
-    
-    try {
-      setLoading(true);
-      setOfflineMode(false);
-      
-      const result = await fetchPrayerTimes(cityInput.trim());
-      setPrayerTimes(result.timings);
-      setCity(result.city);
-      setLastUpdate(result.lastUpdate);
-      
-      // Calculer la prochaine prière
-      const nextPrayer = getNextPrayerInfo(result.timings);
-      setNextPrayerInfo(nextPrayer);
-      
-      // Formatage de la date
-      if (result.date) {
-        const gregorian = result.date.gregorian;
-        const hijri = result.date.hijri;
         
-        setDate(`${gregorian.day} ${gregorian.month.fr || gregorian.month.en} ${gregorian.year}`);
-        setHijri(`${hijri.day} ${hijri.month.fr || hijri.month.en} ${hijri.year}`);
+        console.log('✅ Heures de prière mises à jour avec succès');
+      } else {
+        throw new Error('Format de réponse API invalide');
       }
-      
-      // Initialiser les notifications pour la nouvelle ville
-      await initializePrayerNotifications(result.timings);
-      
-      setModalVisible(false);
-      setCityInput('');
       
     } catch (error) {
-      console.log('❌ Erreur lors du changement de ville:', error);
-      setOfflineMode(true);
+      console.log('❌ Erreur lors de la récupération des heures de prière:', error);
+      
+      // En cas d'erreur API, utiliser des données de fallback mais avec la date actuelle
+      const fallbackTimes = {
+        Fajr: '05:45',
+        Sunrise: '07:00',
+        Dhuhr: '13:15',
+        Asr: '16:30',
+        Maghrib: '19:30',
+        Isha: '20:45'
+      };
+      
+      setPrayerTimes(fallbackTimes);
+      setDate(getCurrentDate());
+      setHijri(getHijriDate());
+      setCity(manualCity || 'Dakar');
+      
+      console.log('⚠️ Utilisation des données de fallback en raison d\'une erreur API');
     } finally {
-      setLoading(false);
+    setLoading(false);
     }
   };
 
-  // Gestionnaire de geste de swipe
+  const handleCitySelect = () => {
+    try {
+      setModalVisible(false);
+      if (cityInput.trim()) {
+        const selectedCity = cityInput.trim();
+        
+        // Liste des villes principales du Sénégal
+        const senegalCities = [
+          'Dakar', 'Saint-Louis', 'Thiès', 'Kaolack', 'Ziguinchor',
+          'Touba', 'Mbour', 'Rufisque', 'Diourbel', 'Louga',
+          'Tambacounda', 'Kolda', 'Fatick', 'Kaffrine', 'Sédhiou',
+          'Matam', 'Kédougou', 'Podor', 'Bakel', 'Kédougou'
+        ];
+        
+        // Recherche de la ville (insensible à la casse)
+        const foundCity = senegalCities.find(city => 
+          city.toLowerCase().includes(selectedCity.toLowerCase()) ||
+          selectedCity.toLowerCase().includes(city.toLowerCase())
+        );
+        
+        if (foundCity) {
+          setCity(foundCity);
+          fetchPrayerTimes(foundCity);
+          console.log('✅ Ville sélectionnée:', foundCity);
+        } else {
+          console.log('⚠️ Ville non trouvée, utilisation Dakar par défaut');
+          setCity('Dakar');
+          fetchPrayerTimes('Dakar');
+        }
+      } else {
+        console.log('⚠️ Nom de ville vide, utilisation Dakar par défaut');
+        setCity('Dakar');
+        fetchPrayerTimes('Dakar');
+      }
+    } catch (error) {
+      console.log('❌ Erreur lors du changement de ville:', error);
+    setModalVisible(false);
+      setCity('Dakar');
+      fetchPrayerTimes('Dakar');
+    }
+  };
+
+  // Détection de la prochaine prière
+  function getNextPrayer() {
+    if (!prayerTimes) return null;
+    const now = new Date();
+    let nextKey = null;
+    let minDiff = Infinity;
+    for (const item of PRAYER_LABELS) {
+      const t = prayerTimes[item.key];
+      if (!t) continue;
+      let h, m;
+      if (/^\d{2}:\d{2}$/.test(t)) {
+        [h, m] = t.split(':');
+      } else {
+        const match = t.match(/T(\d{2}):(\d{2})/);
+        if (match) {
+          h = match[1]; m = match[2];
+        } else continue;
+      }
+      const prayerDate = new Date(now);
+      prayerDate.setHours(Number(h), Number(m), 0, 0);
+      const diff = prayerDate.getTime() - now.getTime();
+      if (diff > 0 && diff < minDiff) {
+        minDiff = diff;
+        nextKey = item.key;
+      }
+    }
+    return nextKey;
+  }
+  const nextPrayerKey = getNextPrayer();
+
+  // Fonction pour planifier une notification locale
+  async function schedulePrayerNotification(prayerKey: string, time: string, label: string) {
+    try {
+      // Vérifier d'abord les permissions
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('🔔 Permissions notifications non accordées');
+        return;
+      }
+      
+      // Formate l'heure
+      let h, m;
+      if (/^\d{2}:\d{2}$/.test(time)) {
+        [h, m] = time.split(':');
+      } else {
+        const match = time.match(/T(\d{2}):(\d{2})/);
+        if (match) {
+          h = match[1]; m = match[2];
+        } else {
+          console.log('❌ Format d\'heure invalide pour notification:', time);
+          return;
+        }
+      }
+      
+      const hour = Number(h);
+      const minute = Number(m);
+      
+      if (isNaN(hour) || isNaN(minute)) {
+        console.log('❌ Heures invalides pour notification:', h, m);
+        return;
+      }
+      
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Heure de ${label}`,
+          body: `C'est l'heure de la prière ${label}`,
+          sound: true,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          hour,
+          minute,
+          repeats: true,
+        },
+      });
+      
+      setEnabledNotifications((prev) => ({ ...prev, [prayerKey]: id }));
+      console.log('✅ Notification programmée pour', label, 'à', `${h}:${m}`);
+    } catch (error) {
+      console.log('❌ Erreur lors de la programmation de notification:', error);
+    }
+  }
+
+  // Fonction pour annuler une notification
+  async function cancelPrayerNotification(prayerKey: string) {
+    try {
+      const id = enabledNotifications[prayerKey];
+      if (id) {
+        await Notifications.cancelScheduledNotificationAsync(id);
+        setEnabledNotifications((prev) => ({ ...prev, [prayerKey]: null }));
+        console.log('✅ Notification annulée pour', prayerKey);
+      }
+    } catch (error) {
+      console.log('❌ Erreur lors de l\'annulation de notification:', error);
+    }
+  }
+
   const onGestureEvent = (event: any) => {
     if (event.nativeEvent.state === State.END) {
       const { translationX, velocityX } = event.nativeEvent;
+      // Swipe de droite à gauche avec une vitesse suffisante ou une distance suffisante
       if ((translationX > 50 && velocityX > 500) || translationX > 150) {
         navigation.goBack();
-      }
     }
-  };
-
-  // Formater l'heure de dernière mise à jour
-  const formatLastUpdate = (timestamp: string) => {
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return '--/-- --:--';
-    }
-  };
-
-  if (loading) {
-    return (
-      <GestureHandlerRootView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Chargement des horaires...</Text>
-        </View>
-      </GestureHandlerRootView>
-    );
   }
+  };
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <PanGestureHandler onGestureEvent={onGestureEvent}>
-        <View style={styles.container}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+    <View style={styles.container}>
           {/* Header moderne cohérent avec les autres pages */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Heures de prière</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Heures de prière</Text>
             <View style={styles.placeholder} />
-          </View>
+      </View>
+      {/* Image plus discrète */}
+      <View style={styles.headerContainer}>
+        <Image 
+          source={require('../../assets/heurepriere.jpg')} 
+          style={styles.headerImage}
+          resizeMode="cover"
+        />
+      </View>
 
-          {/* Image d'en-tête */}
-          <View style={styles.headerContainer}>
-            <Image
-              source={require('../../assets/heurepriere.jpg')}
-              style={styles.headerImage}
-              resizeMode="cover"
-            />
-          </View>
-
-          {/* Carte dorée avec date */}
-          <View style={styles.dateCard}>
-            <View style={styles.dateIconContainer}>
-              <MaterialCommunityIcons name="calendar" size={24} color="#2C3E50" />
-            </View>
-            <View style={styles.dateTextContainer}>
-              <Text style={styles.dateText}>{date || '23 Janvier 2025'}</Text>
-              <Text style={styles.hijriText}>{hijri || '24 Rajab 1446'}</Text>
-            </View>
-          </View>
-
-          {/* Section ville */}
-          <View style={styles.citySection}>
-            <View style={styles.cityInfo}>
-              <MaterialCommunityIcons name="map-marker" size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} color={colors.primary} />
-              <Text style={styles.cityText}>{city || 'Dakar'}</Text>
-            </View>
-            <TouchableOpacity style={styles.changeCityButton} onPress={() => setModalVisible(true)}>
-              <Text style={styles.changeCityText}>Changer</Text>
-              <MaterialCommunityIcons name="chevron-right" size={isTablet ? 18 : (isSmallScreen ? 12 : 14)} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Indicateur mode hors ligne */}
-          {offlineMode && (
-            <View style={styles.offlineBanner}>
-              <MaterialCommunityIcons name="wifi-off" size={16} color="#FF6B6B" />
-              <Text style={styles.offlineText}>Mode hors ligne - Dernières données disponibles</Text>
-            </View>
-          )}
-
-          {/* Liste des prières */}
-          <View style={styles.prayerListContainer}>
-            <ScrollView 
-              style={styles.prayerListContent}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.prayerListContentContainer}
-            >
-              {PRAYER_LABELS.map((item, index) => {
-                const isNextPrayer = nextPrayerInfo?.key === item.key;
-                
-                return (
-                  <View key={item.key}>
-                    <View style={[
-                      styles.prayerRow,
-                      isNextPrayer && styles.nextPrayerRow
-                    ]}>
-                      <View style={styles.prayerLeftSection}>
-                        <View style={[
-                          styles.prayerIconContainer,
-                          isNextPrayer && styles.nextPrayerIconContainer
-                        ]}>
-                          <MaterialCommunityIcons 
-                            name={item.icon as any} 
-                            size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} 
-                            color={isNextPrayer ? '#FFFFFF' : item.color} 
-                          />
-                        </View>
-                        <View style={styles.prayerLabelContainer}>
-                          <Text style={[
-                            styles.prayerLabel,
-                            isNextPrayer && styles.nextPrayerLabel
-                          ]}>
-                            {item.label}
-                          </Text>
-                          {isNextPrayer && (
-                            <View style={styles.nextPrayerIndicator}>
-                              <Text style={styles.nextPrayerIndicatorText}>Prochaine</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                      <View style={styles.prayerRightSection}>
-                        <Text style={[
-                          styles.prayerTime,
-                          isNextPrayer && styles.nextPrayerTime
-                        ]}>
-                          {prayerTimes ? formatPrayerTime(prayerTimes[item.key]) : '6H01'}
-                        </Text>
-                        {isNextPrayer && nextPrayerInfo && (
-                          <View style={styles.countdownContainer}>
-                            <Text style={styles.countdownText}>
-                              Dans {nextPrayerInfo.minutesUntil} min
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                    {index < PRAYER_LABELS.length - 1 && <View style={styles.prayerSeparator} />}
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </View>
+      {/* Carte dorée avec date */}
+      <View style={styles.dateCard}>
+        <View style={styles.dateIconContainer}>
+          <Image 
+            source={require('../../assets/priere.png')} 
+            style={styles.dateIcon}
+            resizeMode="contain"
+          />
         </View>
-      </PanGestureHandler>
+        <View style={styles.dateTextContainer}>
+          <Text style={styles.dateText}>{date || '23 Janvier 2025'}</Text>
+          <Text style={styles.hijriText}>{hijri || '24 Rajab 1446'}</Text>
+        </View>
+      </View>
+
+      {/* Section ville */}
+      <View style={styles.citySection}>
+        <View style={styles.cityInfo}>
+          <MaterialCommunityIcons name="map-marker" size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} color={colors.primary} />
+          <Text style={styles.cityText}>{city || 'Dakar'}</Text>
+        </View>
+        <TouchableOpacity style={styles.changeCityButton} onPress={() => setModalVisible(true)}>
+          <Text style={styles.changeCityText}>Changer</Text>
+          <MaterialCommunityIcons name="chevron-right" size={isTablet ? 18 : (isSmallScreen ? 12 : 14)} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Liste des prières */}
+      <View style={styles.prayerListContainer}>
+        {loading ? (
+          <ActivityIndicator color={colors.white} size="large" style={{ marginTop: 20 }} />
+        ) : (
+          <View style={styles.prayerListContent}>
+            {PRAYER_LABELS.map((item, index) => (
+              <View key={item.key}>
+                <View style={styles.prayerRow}>
+                  <View style={styles.prayerLeftSection}>
+                    <View style={styles.prayerIconContainer}>
+                      <MaterialCommunityIcons 
+                        name={item.icon as any} 
+                        size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} 
+                        color={item.color} 
+                      />
+                    </View>
+                    <Text style={styles.prayerLabel}>
+                      {item.label}
+                    </Text>
+                </View>
+                  <View style={styles.prayerRightSection}>
+                    <Text style={styles.prayerTime}>
+                      {prayerTimes ? formatPrayerTime(prayerTimes[item.key]) : '6H01'}
+                    </Text>
+                  <TouchableOpacity
+                      style={styles.notificationButton}
+                    onPress={async () => {
+                      try {
+                      if (enabledNotifications[item.key]) {
+                        await cancelPrayerNotification(item.key);
+                      } else if (prayerTimes && prayerTimes[item.key]) {
+                        await schedulePrayerNotification(item.key, prayerTimes[item.key], item.label);
+                        }
+                      } catch (error) {
+                        console.log('❌ Erreur lors de la gestion de notification:', error);
+                      }
+                    }}
+                  >
+                      <MaterialCommunityIcons 
+                        name={enabledNotifications[item.key] ? "bell" : "bell-outline"} 
+                        size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} 
+                        color={enabledNotifications[item.key] ? "#FFD700" : "rgba(255, 255, 255, 0.8)"} 
+                    />
+                  </TouchableOpacity>
+                  </View>
+                </View>
+                {index < PRAYER_LABELS.length - 1 && <View style={styles.prayerSeparator} />}
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
 
       {/* Modal choix ville */}
       <Modal visible={modalVisible} transparent animationType="fade">
@@ -346,14 +514,16 @@ export default function HorairesScreen() {
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisible(false)}>
                 <Text style={styles.modalCancelText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalConfirmButton} onPress={handleCityChange}>
+            </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirmButton} onPress={handleCitySelect}>
                 <Text style={styles.modalConfirmText}>Valider</Text>
-              </TouchableOpacity>
+            </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+    </View>
+      </PanGestureHandler>
     </GestureHandlerRootView>
   );
 }
@@ -363,17 +533,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F7FA',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: colors.primary,
-  },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,13 +567,9 @@ const styles = StyleSheet.create({
     marginHorizontal: isTablet ? 32 : 20, 
     marginTop: 12, 
     overflow: 'hidden', 
-    position: 'relative',
-    backgroundColor: colors.primary,
+    position: 'relative' 
   },
-  headerImage: { 
-    width: '100%', 
-    height: '100%', 
-  },
+  headerImage: { width: '100%', height: '100%', opacity: 0.7 },
   dateCard: {
     backgroundColor: '#D4AF37',
     borderRadius: isTablet ? 26 : 22,
@@ -445,6 +601,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 1,
   },
+  dateIcon: {
+    width: isTablet ? 32 : 28,
+    height: isTablet ? 32 : 28,
+    backgroundColor: 'transparent',
+  },
   dateTextContainer: {
     flex: 1,
     alignItems: 'center',
@@ -461,64 +622,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginTop: 2,
     textAlign: 'center',
-  },
-  citySection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: isTablet ? 32 : 20,
-    marginBottom: 12,
-    paddingVertical: isTablet ? 8 : 6,
-    paddingHorizontal: isTablet ? 16 : 12,
-    borderRadius: isTablet ? 16 : 12,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 1,
-  },
-  cityInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  cityText: {
-    fontSize: isTablet ? 16 : (isSmallScreen ? 12 : 13),
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginLeft: isTablet ? 8 : 6,
-  },
-  changeCityButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    paddingVertical: isTablet ? 6 : 4,
-    paddingHorizontal: isTablet ? 12 : 8,
-    borderRadius: isTablet ? 14 : 10,
-  },
-  changeCityText: {
-    fontSize: isTablet ? 14 : (isSmallScreen ? 11 : 12),
-    fontWeight: '600',
-    color: colors.primary,
-    marginRight: isTablet ? 4 : 3,
-  },
-  offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3F3',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 20,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF6B6B',
-  },
-  offlineText: {
-    fontSize: 12,
-    color: '#FF6B6B',
-    marginLeft: 8,
-    fontWeight: '500',
   },
   prayerListContainer: {
     backgroundColor: colors.primary,
@@ -540,8 +643,7 @@ const styles = StyleSheet.create({
   },
   prayerListContent: {
     flex: 1,
-  },
-  prayerListContentContainer: {
+    justifyContent: 'flex-start',
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
   },
   prayerRow: {
@@ -592,6 +694,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginRight: isTablet ? 14 : 10,
     letterSpacing: 0.3,
+  },
+  notificationButton: {
+    padding: isTablet ? 6 : 4,
+    borderRadius: isTablet ? 16 : 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 1,
   },
   modalOverlay: {
     flex: 1,
@@ -657,6 +769,47 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: isTablet ? 16 : (isSmallScreen ? 13 : 14),
   },
+  citySection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: isTablet ? 32 : 20,
+    marginBottom: 12,
+    paddingVertical: isTablet ? 8 : 6,
+    paddingHorizontal: isTablet ? 16 : 12,
+    borderRadius: isTablet ? 16 : 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 1,
+  },
+  cityInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cityText: {
+    fontSize: isTablet ? 16 : (isSmallScreen ? 12 : 13),
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginLeft: isTablet ? 8 : 6,
+  },
+  changeCityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    paddingVertical: isTablet ? 6 : 4,
+    paddingHorizontal: isTablet ? 12 : 8,
+    borderRadius: isTablet ? 14 : 10,
+  },
+  changeCityText: {
+    fontSize: isTablet ? 14 : (isSmallScreen ? 11 : 12),
+    fontWeight: '600',
+    color: colors.primary,
+    marginRight: isTablet ? 4 : 3,
+  },
   availableCitiesContainer: {
     marginTop: isTablet ? 20 : 15,
     marginBottom: isTablet ? 20 : 15,
@@ -683,57 +836,5 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 15 : (isSmallScreen ? 12 : 13),
     color: '#333',
   },
-  // Styles pour la prochaine prière
-  nextPrayerRow: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: isTablet ? 16 : 12,
-    marginHorizontal: isTablet ? 8 : 4,
-    marginVertical: isTablet ? 4 : 2,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  nextPrayerIconContainer: {
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  prayerLabelContainer: {
-    flex: 1,
-    flexDirection: 'column',
-  },
-  nextPrayerLabel: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  nextPrayerIndicator: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: isTablet ? 8 : 6,
-    paddingVertical: isTablet ? 2 : 1,
-    borderRadius: isTablet ? 10 : 8,
-    alignSelf: 'flex-start',
-    marginTop: isTablet ? 4 : 2,
-  },
-  nextPrayerIndicatorText: {
-    fontSize: isTablet ? 12 : (isSmallScreen ? 9 : 10),
-    color: '#2C3E50',
-    fontWeight: 'bold',
-  },
-  nextPrayerTime: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: isTablet ? 18 : (isSmallScreen ? 15 : 16),
-  },
-  countdownContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: isTablet ? 8 : 6,
-    paddingVertical: isTablet ? 4 : 2,
-    borderRadius: isTablet ? 10 : 8,
-    marginTop: isTablet ? 4 : 2,
-  },
-  countdownText: {
-    fontSize: isTablet ? 12 : (isSmallScreen ? 9 : 10),
-    color: '#FFFFFF',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
+
 }); 

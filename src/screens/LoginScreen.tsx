@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Image as RNImage, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -40,7 +40,7 @@ const STORAGE_KEYS = {
 };
 
 export default function LoginScreen({ navigation }: any) {
-  const [screen, setScreen] = useState<'intro' | 'login' | 'register' | 'forgot'>('intro');
+  const [screen, setScreen] = useState<'intro' | 'login' | 'register'>('intro');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [prenom, setPrenom] = useState('');
@@ -122,16 +122,10 @@ export default function LoginScreen({ navigation }: any) {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCred.user, { displayName: `${prenom} ${nom}` });
         
-        // Envoyer l'email de vérification
-        await sendEmailVerification(userCred.user);
-        console.log('📧 Email de vérification envoyé à:', userCred.user.email);
-        
         // Créer le document utilisateur avec le rôle par défaut
-        // emailVerified sera mis à jour après vérification
         await setDoc(doc(db, 'users', userCred.user.uid), {
           email: userCred.user.email,
           role: 'user',
-          emailVerified: false,
           createdAt: new Date(),
           displayName: `${prenom} ${nom}`,
         });
@@ -149,43 +143,22 @@ export default function LoginScreen({ navigation }: any) {
           console.error('❌ Erreur sauvegarde locale:', error);
         }
 
-        showToast('Inscription réussie ! Vérifiez votre email pour activer votre compte.', 'success');
+        showToast('Inscription réussie ! Vous êtes maintenant connecté.', 'success');
         console.log('✅ Inscription réussie pour:', userCred.user.email);
         
-        // Afficher une alerte explicative
-        Alert.alert(
-          'Inscription réussie !',
-          'Un email de vérification a été envoyé à votre adresse. Veuillez vérifier votre boîte de réception et cliquer sur le lien pour activer votre compte.',
-          [
-            { 
-              text: 'Vérifier mon email', 
-              onPress: () => {
-                // Rediriger vers l'écran de vérification email (sans déconnecter)
-                navigation.navigate('VerifyEmail' as never);
-              }
-            }
-          ]
-        );
+        // Laisser useAuth gérer la navigation automatiquement
+        // Pas besoin de navigation manuelle ici
       } else {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
-        
-        // Vérifier si l'email est vérifié (seulement pour les nouveaux utilisateurs)
         const userDocRef = doc(db, 'users', userCred.user.uid);
         let userDoc = await getDoc(userDocRef);
         let userData = userDoc.data();
-        
-        if (!userCred.user.emailVerified && !userData) {
-          showToast('Veuillez vérifier votre email avant de vous connecter.', 'error');
-          setLoading(false);
-          return;
-        }
 
         if (!userData) {
           // Si le document n'existe pas, on le crée automatiquement
           await setDoc(userDocRef, {
             email: userCred.user.email,
             role: 'user',
-            emailVerified: userCred.user.emailVerified,
             createdAt: new Date(),
             displayName: userCred.user.displayName || '',
           });
@@ -283,40 +256,6 @@ export default function LoginScreen({ navigation }: any) {
         </View>
         <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
       </View>
-    );
-  }
-
-  // Ecran mot de passe oublié
-  if (screen === 'forgot') {
-    return (
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-          <View style={styles.loginContainer}>
-            <View style={styles.loginMainSection}>
-              <Text style={styles.loginTitle}>Mot de passe oublié</Text>
-              <View style={styles.loginInputWrapper}>
-                <MaterialCommunityIcons name="email-outline" size={20} color="#174C3C" style={styles.loginInputIcon} />
-                <TextInput
-                  style={[styles.loginInput, styles.loginInputWithIcon]}
-                  placeholder="E-mail"
-                  placeholderTextColor="#174C3C"
-                  value={email}
-                  onChangeText={(t) => setEmail(t)}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
-              </View>
-              <TouchableOpacity style={styles.loginButton} onPress={handleForgotPassword} disabled={loading || !email.trim()}>
-                {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Envoyer le lien de réinitialisation</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setScreen('login')} style={styles.registerLinkContainer} disabled={loading}>
-                <Text style={styles.registerLinkText}>Retour à la connexion</Text>
-              </TouchableOpacity>
-            </View>
-            <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
     );
   }
 
@@ -554,7 +493,7 @@ export default function LoginScreen({ navigation }: any) {
         {/* Mot de passe oublié */}
         <TouchableOpacity 
           style={styles.forgotPasswordContainer}
-          onPress={() => setScreen('forgot')}
+          onPress={handleForgotPassword}
           disabled={loading}
         >
           <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>

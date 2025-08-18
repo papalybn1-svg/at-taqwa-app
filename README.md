@@ -1,116 +1,103 @@
-# 📱 At‑Taqwa App
+# 📱 At-Taqwa App
 
-Application mobile (React Native + Expo) pour apprendre, lire les chapitres, faire des quiz et consulter les horaires de prière. Déploiements iOS (TestFlight) et Android (EAS Build), CI/CD GitHub Actions.
-
----
-
-## ✨ Fonctionnalités
-- Lecture chapitres avec reprise précise (dernière section)
-- Quiz par chapitre avec reprise de session et sauvegarde du meilleur score
-- Favoris par section
-- Progression, favoris et scores scopiés par utilisateur (`uid:` sur AsyncStorage)
-- Nettoyage automatique des données locales à la déconnexion
-- Splashs uniquement au premier lancement (flag `onboarding_seen`)
-- Optimisations scroll/gestes Android (nestedScrollEnabled, keyboard resize)
+## Description
+Application mobile islamique (React Native/Expo) pour l'apprentissage, les quiz, la prière et la distribution sur iOS (TestFlight) et Android (Firebase).
 
 ---
 
-## 🗂️ Structure
-- `App.tsx`: Entrée app, routing et splash logique premier lancement
-- `src/screens/`: Écrans (Home, Books, Chapter, Quiz*, Tasbih, Notifications, …)
-- `src/hooks/useAuth.ts`: Auth + logout avec purge des clés utilisateur
-- `src/utils/userStorage.ts`: `read/write/remove`, migration optionnelle, suppression par préfixe
-- `eas.json`: Profils de build/submit
-- `.github/workflows/*.yml`: CI/CD Android + iOS
+## 🚀 Fonctionnalités principales
+- Quiz à progression verrouillée (cadenas)
+- Gestion des scores et progression utilisateur
+- Splash screen personnalisé
+- Distribution iOS automatisée via TestFlight (CI/CD GitHub Actions)
+- Distribution Android via Firebase App Distribution
 
 ---
 
-## 🔧 Installation locale
+## 🛠️ Installation & Configuration
+
+### 1. **Cloner le projet**
 ```bash
-git clone https://github.com/papalybn1-svg/at-taqwa-app.git
+git clone https://github.com/ibrahima98/at-taqwa.git
 cd at-taqwa-app
+```
+
+### 2. **Installer les dépendances**
+```bash
 npm install
 ```
 
-### Config Expo/EAS
-- `app.json` (owner/slug, ids, icônes/splash):
-  - iOS: `ios.buildNumber` (à incrémenter à chaque soumission)
-  - Android: `android.softwareKeyboardLayoutMode = "resize"`
-  - Icône/splash: `./assets/LOGO_AT_TAQWA.png` (PNG 1024×1024)
-- `eas.json`: profils `preview` (APK), `production` (AAB/IPA), `submit.production.ios.ascAppId`
+### 3. **Configuration Firebase**
+- Ajoute les fichiers `google-services.json` (Android) et `GoogleService-Info.plist` (iOS) si tu utilises Firebase.
+- Configure les identifiants dans la console Firebase.
 
-### Secrets CI/CD (GitHub)
-- `ATTAQWAAPP` (ou `EXPO_TOKEN`) pour EAS
+### 4. **Configuration Expo/EAS**
+- Vérifie le fichier `app.json` (owner, slug, bundle ID, etc.)
+- Vérifie le fichier `eas.json` (profils build/submit, ascAppId, etc.)
 
----
-
-## 🏗️ Build & Submit (EAS)
-### Android
-```bash
-# APK interne (preview)
-npx eas-cli@latest build --platform android --profile preview --non-interactive
-
-# Production (AAB)
-npx eas-cli@latest build --platform android --profile production --non-interactive
-```
-
-### iOS
-```bash
-# Build production (IPA)
-npx eas-cli@latest build --platform ios --profile production --non-interactive
-
-# Soumettre le dernier build à TestFlight
-npx eas-cli@latest submit -p ios --latest --non-interactive
-
-# Ou build + auto-submit
-npx eas-cli@latest build --platform ios --profile production --non-interactive --auto-submit
-```
+### 5. **Variables d'environnement (CI/CD)**
+- Ajoute le secret `EXPO_TOKEN` dans GitHub (Settings > Secrets > Actions)
+- Configure la clé API App Store Connect (Key ID, Issuer ID, .p8) via `eas credentials`
 
 ---
 
-## 🤖 CI/CD GitHub Actions
-- Android: `.github/workflows/android-build.yml`
-  - Push sur `main`/`imam` → build EAS Android + (option conseillé) upload d’artifact
-  - Ajoutez après le download:
-```yaml
-- name: Upload APK artifact
-  uses: actions/upload-artifact@v4
-  with:
-    name: android-apk
-    path: |
-      **/*.apk
-      **/*.aab
-```
+## 🏗️ Build & Distribution
 
-- iOS: `.github/workflows/ios-testflight.yml`
-  - Push sur `main`/`imam` → build + `eas submit` TestFlight
+### **iOS (TestFlight via GitHub Actions)**
+- À chaque push sur `main` ou `imam`, le workflow `.github/workflows/ios-testflight.yml` :
+  - Build l'app iOS sur un runner macOS
+  - Soumet automatiquement le build sur TestFlight
+- **Clé API App Store Connect** obligatoire (voir doc plus haut)
+- Les testeurs peuvent être ajoutés sans UDID, via TestFlight
+
+### **Android (Firebase App Distribution)**
+- Build APK ou AAB via EAS ou Expo
+- Upload sur Firebase App Distribution pour testeurs Android
 
 ---
 
-## ✅ Check‑list avant release
-- [ ] iOS `buildNumber` incrémenté (ex: 1.4.6)
-- [ ] Android `versionCode` (si utilisé) incrémenté
-- [ ] Icône/splash: `assets/LOGO_AT_TAQWA.png` (PNG 1024)
-- [ ] Tests manuels:
-  - Lecture: reprise section OK
-  - Quiz: reprise session + meilleur score OK
-  - Changement de compte: pas de fuite de progression/favoris/scores
-  - Android: scrolls imbriqués OK, clavier ne masque pas les champs
+## 🧪 Test du système de cadenas (Quiz)
+1. Commencer par le quiz du chapitre 1 (toujours débloqué)
+2. Obtenir 80% pour débloquer le chapitre suivant
+3. Les chapitres suivants restent verrouillés si score < 80%
+4. Le score s'affiche uniquement pour les quiz complétés
+5. La progression est sauvegardée localement (AsyncStorage)
 
 ---
 
-## 🧠 Notes techniques
-- Stockage local scopié: clés `uid:<name>` (`chapterProgress`, `favorites`, `quizScores`, `quizSession:*`)
-- Logout: suppression de toutes les clés `uid:*` + `quizSession:*`
-- Splash: premier lancement uniquement (flag `onboarding_seen`)
-- UI: `numberOfLines`, `adjustsFontSizeToFit` pour titres longs; `nestedScrollEnabled` et `keyboardDismissMode` sur scrolls
+## 🔑 Clés techniques
+- **React Native / Expo**
+- **EAS Build & Submit**
+- **TestFlight (CI/CD)**
+- **Firebase App Distribution**
+- **AsyncStorage** pour la persistance locale
 
 ---
 
-## 👤 Contact
-- Auteur: Ibrahima Ly — papalybn@gmail.com
-- Expo: `https://expo.dev/@brahim98/at-taqwa-app`
+## 📦 Structure du projet
+- `App.tsx` : Entrée principale de l'app
+- `src/screens/` : Tous les écrans (Quiz, Sélection, Tasbih, etc.)
+- `assets/` : Images, icônes, splash, etc.
+- `eas.json` : Profils de build et de soumission
+- `.github/workflows/ios-testflight.yml` : CI/CD TestFlight
 
 ---
 
-Barakallahu fik pour la confiance et l’utilisation d’At‑Taqwa.
+## 📝 Déploiement TestFlight (Résumé)
+1. Générer une clé API App Store Connect (Key ID, Issuer ID, .p8)
+2. Lier la clé à ton projet avec `eas credentials`
+3. Push sur GitHub → build & soumission automatique
+4. Attendre la vérification Apple
+5. Ajouter des testeurs sur TestFlight
+
+---
+
+## 📧 Contact
+Pour toute question ou contribution :
+- **Auteur** : Ibrahima Ly
+- **Mail** : papalybn@gmail.com
+- **Expo** : [expo.dev/@brahim98/at-taqwa-app](https://expo.dev/@brahim98/at-taqwa-app)
+
+---
+
+**Barakallahoufik pour ta confiance et bonne utilisation de l'app At-Taqwa !** 
