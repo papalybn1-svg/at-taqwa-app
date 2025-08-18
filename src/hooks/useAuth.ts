@@ -3,11 +3,11 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { auth, db } from '../screens/firebaseConfig';
 import {
-    checkAuthWithPersistence,
     clearAuthPersistence,
     getUserDataWithPersistence,
     saveUserDataWithPersistence
 } from '../utils/authPersistence';
+import { cleanupUserQuizSessions } from '../utils/quizSession';
 import { removeAllWithPrefix, remove as removeUserStorage } from '../utils/userStorage';
 
 export type UserRole = 'user' | 'admin';
@@ -34,12 +34,8 @@ export function useAuth() {
 
   // Fonction pour vérifier si l'utilisateur est connecté avec persistance
   const checkLocalAuth = async (): Promise<AuthUser | null> => {
-    try {
-      return await checkAuthWithPersistence();
-    } catch (error) {
-      console.error('❌ Erreur vérification persistance:', error);
-      return null;
-    }
+    // Laisser Firebase Auth gérer la persistance automatiquement
+    return null;
   };
 
   // Fonction pour récupérer les données utilisateur avec persistance
@@ -71,30 +67,8 @@ export function useAuth() {
   useEffect(() => {
     let isMounted = true;
 
-    // Vérifier d'abord le cache local pour Expo Go (développement uniquement)
-    const checkLocalAuthFirst = async () => {
-      if (__DEV__) {
-        try {
-          const localUser = await checkLocalAuth();
-          if (localUser && isMounted) {
-            console.log('🔄 Utilisateur trouvé en cache local (Expo Go), connexion automatique...');
-            setUser(localUser);
-            setLoading(false);
-            setInitializing(false);
-            return; // Sortir si on a trouvé un utilisateur en cache
-          }
-        } catch (error) {
-          console.error('❌ Erreur vérification cache local:', error);
-        }
-        
-        console.log('📱 Aucun utilisateur en cache, attente de Firebase Auth...');
-      } else {
-        console.log('🚀 Mode production - Attente de Firebase Auth native...');
-      }
-    };
-
-    // Vérifier le cache local immédiatement (développement uniquement)
-    checkLocalAuthFirst();
+    // Laisser Firebase Auth gérer la persistance automatiquement
+    console.log('🚀 Initialisation Firebase Auth avec persistance...');
 
     // Timeout de sécurité pour forcer la fin du chargement après 15 secondes
     const timeoutId = setTimeout(() => {
@@ -119,31 +93,47 @@ export function useAuth() {
         if (firebaseUser) {
           setLoading(true);
           
-          // D'abord, essayer de récupérer depuis le cache local
-          let userWithRole = await getUserDataFromStorage(firebaseUser);
+          // Vérifier si l'utilisateur existe en base
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userData = userDoc.data();
           
-          // Mettre à jour l'état immédiatement avec les données du cache
+          // Si l'utilisateur n'existe pas en base ET que l'email n'est pas vérifié
+          if (!userData && !firebaseUser.emailVerified) {
+            console.log('⚠️ Nouvel utilisateur non vérifié:', firebaseUser.email);
+            if (isMounted) {
+              setUser(null);
+              setLoading(false);
+              if (initializing) setInitializing(false);
+            }
+            return;
+          }
+          
+          // Si l'utilisateur existe en base, on considère qu'il est vérifié
+          if (userData && !firebaseUser.emailVerified) {
+            console.log('✅ Utilisateur existant, email considéré comme vérifié:', firebaseUser.email);
+          }
+          
+          // Récupérer le rôle depuis Firestore
+          const freshRole = await fetchUserRoleFromFirestore(firebaseUser);
+          const freshUserData = { ...firebaseUser, role: freshRole };
+          console.log('🔥 Rôle Firestore:', freshRole, 'pour', firebaseUser.email, 'UID:', firebaseUser.uid);
+
           if (isMounted) {
-            setUser(userWithRole);
+            // Nettoyer les données de l'ancien utilisateur si différent
+            if (user && user.uid !== firebaseUser.uid) {
+              console.log('🔄 Changement d\'utilisateur détecté, nettoyage des données...');
+              console.log('👤 Ancien utilisateur:', user.email, 'UID:', user.uid);
+              console.log('👤 Nouvel utilisateur:', firebaseUser.email, 'UID:', firebaseUser.uid);
+              await cleanupUserData(user.uid);
+            }
+            
+            setUser(freshUserData);
             setLoading(false);
             if (initializing) setInitializing(false);
-          }
-
-          // Ensuite, récupérer les données fraîches depuis Firestore en arrière-plan
-          try {
-            const freshRole = await fetchUserRoleFromFirestore(firebaseUser);
-            const freshUserData = { ...firebaseUser, role: freshRole };
-            console.log('🔥 Rôle Firestore:', freshRole, 'pour', firebaseUser.email, 'UID:', firebaseUser.uid);
-
-            if (isMounted) {
-              // Toujours mettre à jour le rôle, même si c'est la même valeur
-              setUser(freshUserData);
-              await saveUserDataLocally(freshUserData);
-              console.log('🔄 Rôle utilisateur mis à jour depuis Firestore:', freshRole);
-            }
-          } catch (firestoreError) {
-            console.log('⚠️ Erreur Firestore, utilisation du cache local');
-            // En cas d'erreur Firestore, on garde les données du cache
+            
+            // Sauvegarder pour fallback
+            await saveUserDataLocally(freshUserData);
+            console.log('✅ Utilisateur connecté avec persistance:', firebaseUser.email);
           }
         } else {
           // En production, si Firebase dit déconnecté, l'utilisateur est vraiment déconnecté
@@ -179,6 +169,24 @@ export function useAuth() {
 
   const isAdmin = () => user?.role === 'admin';
 
+  // Fonction pour nettoyer les données utilisateur
+  const cleanupUserData = async (uid: string) => {
+    try {
+      console.log('🧹 Nettoyage des données pour l\'utilisateur:', uid);
+      await Promise.all([
+        removeUserStorage(uid, 'chapterProgress'),
+        removeUserStorage(uid, 'favorites'),
+        removeUserStorage(uid, 'quizScores'),
+        removeUserStorage(uid, 'zikrProgress'),
+      ]);
+      await removeAllWithPrefix(uid, 'quizSession:');
+      await cleanupUserQuizSessions(uid);
+      console.log('✅ Données utilisateur nettoyées');
+    } catch (error) {
+      console.error('❌ Erreur nettoyage données utilisateur:', error);
+    }
+  };
+
   const logout = async () => {
     try {
       setLoading(true);
@@ -187,15 +195,8 @@ export function useAuth() {
       await clearAuthPersistence();
       // Nettoyer les clés locales scopées utilisateur
       const uid = auth.currentUser?.uid;
-      try {
-        await Promise.all([
-          removeUserStorage(uid, 'chapterProgress'),
-          removeUserStorage(uid, 'favorites'),
-          removeUserStorage(uid, 'quizScores'),
-        ]);
-        await removeAllWithPrefix(uid, 'quizSession:');
-      } catch (e) {
-        console.log('⚠️ Erreur lors du nettoyage des clés utilisateur:', e);
+      if (uid) {
+        await cleanupUserData(uid);
       }
       
       // Déconnecter Firebase

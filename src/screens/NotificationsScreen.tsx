@@ -4,8 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { collection, getDocs, getFirestore, limit, orderBy, query, startAfter } from 'firebase/firestore';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import Card from '../components/Card';
 import colors from '../theme/colors';
 import { typography } from '../theme/typography';
@@ -100,15 +99,7 @@ export default function NotificationsScreen() {
     }
   }, [hasMore, loadingMore, refreshing]);
 
-  // Gestionnaire de geste de swipe
-  const onGestureEvent = (event: any) => {
-    if (event.nativeEvent.state === State.END) {
-      const { translationX, velocityX } = event.nativeEvent;
-      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
-        navigation.goBack();
-      }
-    }
-  };
+
 
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -223,9 +214,7 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.safeArea}>
-      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
-        <View style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
@@ -264,9 +253,7 @@ export default function NotificationsScreen() {
           </View>
         }
       />
-        </View>
-      </PanGestureHandler>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 

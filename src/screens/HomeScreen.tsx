@@ -5,14 +5,15 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React from 'react';
 import {
-  Animated,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    Dimensions,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
@@ -117,7 +118,15 @@ const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; on
         color={colors.primary} 
       />
     </View>
-    <Text style={styles.categoryButtonText} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+    <Text 
+      style={styles.categoryButtonText}
+      numberOfLines={2}
+      ellipsizeMode="tail"
+      adjustsFontSizeToFit
+      minimumFontScale={0.9}
+    >
+      {title}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -126,7 +135,7 @@ export default function HomeScreen() {
   const { user } = React.useContext(AuthContext);
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [newNotificationsCount, setNewNotificationsCount] = React.useState(0);
-  const [hadithOfTheDay, setHadithOfTheDay] = React.useState<{text: string, source: string} | null>(null);
+
   const [previewModalVisible, setPreviewModalVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter | null>(null);
   const [firestoreStatus, setFirestoreStatus] = React.useState<'connecting' | 'connected' | 'error'>('connecting');
@@ -191,10 +200,7 @@ export default function HomeScreen() {
     }
   ];
 
-  const fallbackHadith = {
-    text: "Le Prophète ﷺ a dit : \"La prière est le pilier de la religion. Celui qui l'accomplit a établi sa religion, et celui qui l'abandonne a détruit sa religion.\"",
-    source: 'Rapporté par Al-Boukhari'
-  };
+
 
   const handleChapterPress = (chapter: Chapter) => {
     setSelectedChapter(chapter);
@@ -309,32 +315,11 @@ export default function HomeScreen() {
         if (firestoreStatus === 'connected') {
           await loadNotifications();
           
-          // Fetch Hadith of the day
-          try {
-            const hadithsRef = collection(db, 'hadiths');
-            const hadithsQuery = query(hadithsRef, orderBy('createdAt', 'desc'), limit(1));
-            const hadithsSnapshot = await getDocs(hadithsQuery);
-            if (!hadithsSnapshot.empty) {
-              const hadithData = hadithsSnapshot.docs[0].data();
-              setHadithOfTheDay({ 
-                text: hadithData.text || 'Hadith du jour', 
-                source: hadithData.source || 'Source inconnue' 
-              });
-              console.log('✅ Hadith du jour chargé');
-            } else {
-              console.log('ℹ️ Aucun hadith trouvé, utilisation du fallback');
-              setHadithOfTheDay(fallbackHadith);
-            }
-          } catch (hadithError) {
-            console.error('❌ Erreur lors du chargement du hadith:', hadithError);
-            console.log('🔄 Utilisation du hadith de fallback');
-            setHadithOfTheDay(fallbackHadith);
-          }
+
         } else if (firestoreStatus === 'error') {
           // Utiliser les données de fallback en cas d'erreur
           console.log('🔄 Mode hors ligne - utilisation des données de fallback');
           setNotifications(fallbackNotifications);
-          setHadithOfTheDay(fallbackHadith);
           setNewNotificationsCount(0);
         } else {
           console.log('⏳ En attente de la connexion Firestore...');
@@ -343,7 +328,6 @@ export default function HomeScreen() {
         console.error("Erreur de chargement des données:", error);
         // En cas d'erreur, utiliser les données de fallback
         setNotifications(fallbackNotifications);
-        setHadithOfTheDay(fallbackHadith);
         setNewNotificationsCount(0);
       }
     };
@@ -501,21 +485,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {hadithOfTheDay &&
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Hadith du jour</Text>
-            <View style={styles.hadithCard}>
-                <MaterialCommunityIcons name="format-quote-open" size={24} color={colors.primary} style={{alignSelf: 'flex-start', opacity: 0.5}}/>
-                <Text style={styles.hadithText}>
-                  {hadithOfTheDay.text || 'Hadith du jour'}
-                </Text>
-                <MaterialCommunityIcons name="format-quote-close" size={24} color={colors.primary} style={{alignSelf: 'flex-end', opacity: 0.5}}/>
-                <Text style={styles.hadithSource}>
-                  — {hadithOfTheDay.source || 'Source inconnue'}
-                </Text>
-            </View>
-          </View>
-        }
+
 
         {/* Section Auteur du livre */}
         <View style={styles.section}>
@@ -752,17 +722,19 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 20,
+    minHeight: 100,
   },
   categoryButton: {
     alignItems: 'center',
     width: '25%',
+    minHeight: 80,
   },
   categoryIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: Math.min(60, Dimensions.get('window').width * 0.15),
+    height: Math.min(60, Dimensions.get('window').width * 0.15),
+    borderRadius: Math.min(30, Dimensions.get('window').width * 0.075),
     backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
@@ -774,13 +746,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   categoryButtonText: {
-    fontSize: 12,
+    fontSize: Math.max(10, Dimensions.get('window').width * 0.03),
     color: colors.text,
     textAlign: 'center',
+    lineHeight: Math.max(14, Dimensions.get('window').width * 0.035),
   },
   bookCardModern: {
-    width: 180,
-    height: 260,
+    width: Dimensions.get('window').width * 0.45,
+    height: Dimensions.get('window').height * 0.35,
     backgroundColor: colors.white,
     borderRadius: 18,
     elevation: 6,
@@ -793,7 +766,7 @@ const styles = StyleSheet.create({
   },
   bookImageContainer: {
     width: '100%',
-    height: 120,
+    height: Dimensions.get('window').height * 0.15,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     overflow: 'hidden',
