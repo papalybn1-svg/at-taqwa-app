@@ -55,8 +55,6 @@ export default function BooksScreen() {
   // Charger la progression utilisateur
   const loadProgress = async () => {
     try {
-      // Migration désactivée pour éviter d'importer d'anciennes progressions globales
-
       const saved = await readUserStorage<ChapterState>(user?.uid, 'chapterProgress');
       if (saved) {
         // Convertir en map pour l'affichage (clé -> percent)
@@ -252,241 +250,228 @@ export default function BooksScreen() {
             </TouchableOpacity>
           </View>
 
-      {/* Contenu scrollable */}
-      <ScrollView 
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
-        {selectedPart ? (
-          // Affichage des chapitres d'une partie sélectionnée
-          <View>
-            {/* Header de la partie */}
-            <View style={styles.partHeader}>
-              <Text style={styles.partTitle}>{data[selectedPart as keyof ChaptersData].titre}</Text>
-            </View>
-            
-            {/* Liste des chapitres de la partie */}
-            <View style={{ paddingHorizontal: 20 }}>
-              {data[selectedPart as keyof ChaptersData].chapitres.map((ch, idx) => {
-                const chapterProgress = progress[`chapter${selectedPart}_${idx+1}`] || 0;
-                return (
-                  <TouchableOpacity 
-                    key={idx} 
-                    style={[
-                      styles.newChapterCard,
-                      { 
-                        transform: [{ scale: 1 }],
-                        shadowColor: chapterProgress > 0 ? '#D4AF37' : '#000',
-                        shadowOpacity: chapterProgress > 0 ? 0.15 : 0.08,
-                      }
-                    ]}
-                    onPress={() => handleChapterPress(ch)}
-                    activeOpacity={0.95}
-                  >
-                    {/* Image avec overlay de progression */}
-                    <View style={styles.imageContainer}>
-                      <Image 
-                        source={imageMap[ch.image] || require('../../assets/1.png')} 
-                        style={styles.newChapterImage} 
-                      />
-                    </View>
-                    
-                    {/* Contenu du chapitre */}
-                    <View style={styles.newChapterContent}>
-                      <View style={styles.chapterHeader}>
-                        <View style={styles.chapterTitleContainer}>
-                          <Text style={[styles.newChapterTitle, { color: '#19514A' }]} numberOfLines={1}>
-                            {ch.title ? ch.title.replace(/\.\s*$/, ':') : 'Chapitre'}
-                          </Text>
-                        </View>
-                        <View style={[
-                          styles.progressBadge, 
-                          { backgroundColor: chapterProgress === 100 ? '#D4AF37' : chapterProgress > 0 ? '#FFF3CD' : '#F1F3F4' }
-                        ]}>
-                          <Text style={[
-                            styles.progressText,
-                            { color: chapterProgress === 100 ? 'white' : chapterProgress > 0 ? '#B8860B' : '#666' }
-                          ]}>
-                            {Math.round(chapterProgress)}%
-                          </Text>
-                        </View>
-                      </View>
-                      
-                      <Text style={[styles.newChapterDesc, { color: '#19514A', fontWeight: 'bold' }]}>{ch.desc}</Text>
-                      
-                      {/* Nom de la partie */}
-                      <Text style={[styles.chapterPartieText, { color: '#666' }]}>
-                        {data[selectedPart as keyof ChaptersData].titre}
-                      </Text>
-                      
-                      <View style={styles.chapterFooter}>
-                        <View style={styles.authorContainer}>
-                          <MaterialCommunityIcons name="account-edit" size={14} color="#666" />
-                          <Text style={styles.newChapterAuthor}>{ch.author}</Text>
-                        </View>
-
-                        {/* Barre de progression moderne */}
-                        <View style={styles.progressBarContainer}>
-                          <View style={styles.progressBarBg}>
-                            <Animated.View 
-                              style={[
-                                styles.progressBarFill,
-                                { 
-                                  width: `${chapterProgress}%`,
-                                  backgroundColor: chapterProgress === 100 ? '#D4AF37' : '#174C3C'
-                                }
-                              ]} 
-                            />
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        ) : (
-          // Affichage des deux parties
-          <View>
-            {Object.keys(data).map((partie, pidx) => {
-              const isPremium = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
-              return (
-                <View key={pidx} style={{ marginBottom: 16 }}>
-                  {/* Carte de partie */}
-                  <TouchableOpacity 
-                    style={[styles.partCard, isPremium && styles.premiumCard]}
-                    onPress={() => handlePartPress(partie)}
-                    activeOpacity={0.95}
-                  >
-                    <View style={styles.partCardContent}>
-                      <View style={styles.partCardHeader}>
-                        <View style={styles.partCardTitleContainer}>
-                          <View style={styles.partCardIcon}>
-                            <MaterialCommunityIcons 
-                              name={isPremium ? "crown" : (pidx === 0 ? "book-open-variant" : "book-multiple")} 
-                              size={24} 
-                              color={isPremium ? "#D4AF37" : "#BB9B4E"} 
-                            />
-                          </View>
-                                                  <Text style={[
-                            styles.partCardTitle,
-                            (partie === 'deuxieme_partie' && userEntitlements.part2) || 
-                            (partie === 'troisieme_partie' && userEntitlements.part3) 
-                              ? { color: '#4CAF50', fontWeight: 'bold' } 
-                              : {}
-                          ]}>
-                            Partie {pidx + 1}
-                            {(partie === 'deuxieme_partie' && userEntitlements.part2) || 
-                             (partie === 'troisieme_partie' && userEntitlements.part3) 
-                              ? ' ✓' 
-                              : ''}
-                          </Text>
-                        {isPremium && (
-                          <View style={[
-                            styles.premiumBadge,
-                            (partie === 'deuxieme_partie' && userEntitlements.part2) || 
-                            (partie === 'troisieme_partie' && userEntitlements.part3) 
-                              ? { backgroundColor: '#4CAF50' } 
-                              : {}
-                          ]}>
-                            <Text style={[
-                              styles.premiumBadgeText,
-                              (partie === 'deuxieme_partie' && userEntitlements.part2) || 
-                              (partie === 'troisieme_partie' && userEntitlements.part3) 
-                                ? { color: 'white' } 
-                                : {}
-                            ]}>
-                              {(partie === 'deuxieme_partie' && userEntitlements.part2) || 
-                               (partie === 'troisieme_partie' && userEntitlements.part3) 
-                                ? 'DÉBLOQUÉ' 
-                                : 'PREMIUM'}
-                            </Text>
-                          </View>
-                        )}
-                        </View>
-                        <MaterialCommunityIcons name="chevron-right" size={24} color="#174C3C" />
-                      </View>
-                      <Text style={styles.partCardSubtitle}>{data[partie as keyof ChaptersData].titre}</Text>
-                      <Text style={styles.partCardChapters}>
-                        {data[partie as keyof ChaptersData].chapitres.length} chapitres
-                        {isPremium && " • Contenu premium"}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
+          {/* Contenu scrollable */}
+          <ScrollView 
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            {selectedPart ? (
+              // Affichage des chapitres d'une partie sélectionnée
+              <View>
+                {/* Header de la partie */}
+                <View style={styles.partHeader}>
+                  <Text style={styles.partTitle}>{data[selectedPart as keyof ChaptersData].titre}</Text>
                 </View>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
+                
+                {/* Liste des chapitres de la partie */}
+                <View style={{ paddingHorizontal: 20 }}>
+                  {data[selectedPart as keyof ChaptersData].chapitres.map((ch, idx) => {
+                    const chapterProgress = progress[`chapter${selectedPart}_${idx+1}`] || 0;
+                    return (
+                      <TouchableOpacity 
+                        key={idx} 
+                        style={[
+                          styles.newChapterCard,
+                          { 
+                            transform: [{ scale: 1 }],
+                            shadowColor: chapterProgress > 0 ? '#D4AF37' : '#000',
+                            shadowOpacity: chapterProgress > 0 ? 0.15 : 0.08,
+                          }
+                        ]}
+                        onPress={() => handleChapterPress(ch)}
+                        activeOpacity={0.95}
+                      >
+                        {/* Image avec overlay de progression */}
+                        <View style={styles.imageContainer}>
+                          <Image 
+                            source={imageMap[ch.image] || require('../../assets/1.png')} 
+                            style={styles.newChapterImage} 
+                          />
+                        </View>
+                        
+                        {/* Contenu du chapitre */}
+                        <View style={styles.newChapterContent}>
+                          <View style={styles.chapterHeader}>
+                            <View style={styles.chapterTitleContainer}>
+                              <Text style={[styles.newChapterTitle, { color: '#19514A' }]} numberOfLines={1}>
+                                {ch.title ? ch.title.replace(/\.\s*$/, ':') : 'Chapitre'}
+                              </Text>
+                            </View>
+                            <View style={[
+                              styles.progressBadge, 
+                              { backgroundColor: chapterProgress === 100 ? '#D4AF37' : chapterProgress > 0 ? '#FFF3CD' : '#F1F3F4' }
+                            ]}>
+                              <Text style={[
+                                styles.progressText,
+                                { color: chapterProgress === 100 ? 'white' : chapterProgress > 0 ? '#B8860B' : '#666' }
+                              ]}>
+                                {Math.round(chapterProgress)}%
+                              </Text>
+                            </View>
+                          </View>
+                          
+                          <Text style={[styles.newChapterDesc, { color: '#19514A', fontWeight: 'bold' }]}>{ch.desc}</Text>
+                          
+                          {/* Nom de la partie */}
+                          <Text style={[styles.chapterPartieText, { color: '#666' }]}>
+                            {data[selectedPart as keyof ChaptersData].titre}
+                          </Text>
+                          
+                          <View style={styles.chapterFooter}>
+                            <View style={styles.authorContainer}>
+                              <MaterialCommunityIcons name="account-edit" size={14} color="#666" />
+                              <Text style={styles.newChapterAuthor}>{ch.author}</Text>
+                            </View>
 
-      {/* Drawer latéral redesigné */}
-      <Modal visible={drawerVisible} transparent animationType="slide">
-        <View style={styles.drawerOverlay}>
-          <Animated.View style={styles.drawerContainer}>
-            <LinearGradient
-              colors={['#174C3C', '#1F5F4F']}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View style={{ flex: 1 }}>
-              <View style={styles.drawerHeader}>
-                <MaterialCommunityIcons name="book-multiple" size={28} color="white" />
-                <Text style={styles.drawerTitle}>Table des matières</Text>
-                <TouchableOpacity onPress={closeDrawer} style={styles.closeButton}>
-                  <MaterialCommunityIcons name="close" size={24} color="white" />
-                </TouchableOpacity>
+                            {/* Barre de progression moderne */}
+                            <View style={styles.progressBarContainer}>
+                              <View style={styles.progressBarBg}>
+                                <Animated.View 
+                                  style={[
+                                    styles.progressBarFill,
+                                    { 
+                                      width: `${chapterProgress}%`,
+                                      backgroundColor: chapterProgress === 100 ? '#D4AF37' : '#174C3C'
+                                    }
+                                  ]} 
+                                />
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
-              
-              <ScrollView style={styles.drawerContent}>
-                {Object.keys(data).map((partie, pidx) => (
-                  <View key={pidx} style={styles.drawerSection}>
-                    <Text style={styles.drawerSectionTitle}>{data[partie as keyof ChaptersData].titre}</Text>
-                    {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => {
-                      const chapterProgress = progress[`chapter${Object.keys(data)[pidx]}_${idx+1}`] || 0;
-                      return (
-                        <TouchableOpacity 
-                          key={idx} 
-                          style={styles.drawerChapterItem}
-                          onPress={() => {
-                            handleChapterPress(ch);
-                            closeDrawer();
-                          }}
-                        >
-                          <View style={styles.drawerChapterIcon}>
-                            <MaterialCommunityIcons 
-                              name={chapterProgress === 100 ? "check-circle" : chapterProgress > 0 ? "circle-half-full" : "circle-outline"} 
-                              size={16} 
-                              color={chapterProgress === 100 ? "#D4AF37" : chapterProgress > 0 ? "#FFF3CD" : "#ffffff80"}
-                            />
+            ) : (
+              // Affichage des deux parties
+              <View>
+                {Object.keys(data).map((partie, pidx) => {
+                  const isPremium = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
+                  const isUnlocked = (partie === 'deuxieme_partie' && userEntitlements.part2) || 
+                                    (partie === 'troisieme_partie' && userEntitlements.part3);
+                  return (
+                    <View key={pidx} style={{ marginBottom: 16 }}>
+                      {/* Carte de partie */}
+                      <TouchableOpacity 
+                        style={[styles.partCard, isPremium && styles.premiumCard]}
+                        onPress={() => handlePartPress(partie)}
+                        activeOpacity={0.95}
+                      >
+                        <View style={styles.partCardContent}>
+                          <View style={styles.partCardHeader}>
+                            <View style={styles.partCardTitleContainer}>
+                              <View style={styles.partCardIcon}>
+                                <MaterialCommunityIcons 
+                                  name={isPremium ? "crown" : (pidx === 0 ? "book-open-variant" : "book-multiple")} 
+                                  size={24} 
+                                  color={isPremium ? "#D4AF37" : "#BB9B4E"} 
+                                />
+                              </View>
+                              <Text style={[
+                                styles.partCardTitle,
+                                isUnlocked ? { color: '#4CAF50', fontWeight: 'bold' } : {}
+                              ]}>
+                                Partie {pidx + 1}
+                                {isUnlocked ? ' ✓' : ''}
+                              </Text>
+                              {isPremium && (
+                                <View style={[
+                                  styles.premiumBadge,
+                                  isUnlocked ? { backgroundColor: '#4CAF50' } : {}
+                                ]}>
+                                  <Text style={[
+                                    styles.premiumBadgeText,
+                                    isUnlocked ? { color: 'white' } : {}
+                                  ]}>
+                                    {isUnlocked ? 'DÉBLOQUÉ' : 'PREMIUM'}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                            <MaterialCommunityIcons name="chevron-right" size={24} color="#174C3C" />
                           </View>
-                          <View style={styles.drawerChapterTitleContainer}>
-                            <Text style={styles.drawerChapterText} numberOfLines={1}>
-                              {ch.title ? ch.title.replace(/\.\s*$/, ':') : 'Chapitre'}
-                            </Text>
-                            <Text style={styles.drawerChapterText} numberOfLines={4}>
-                              {ch.desc || 'Titre du chapitre'}
-                            </Text>
-                          </View>
-                          <Text style={styles.drawerChapterProgress}>{Math.round(chapterProgress)}%</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-        </View>
-                ))}
-      </ScrollView>
+                          <Text style={styles.partCardSubtitle}>{data[partie as keyof ChaptersData].titre}</Text>
+                          <Text style={styles.partCardChapters}>
+                            {data[partie as keyof ChaptersData].chapitres.length} chapitres
+                            {isPremium && " • Contenu premium"}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Drawer latéral redesigné */}
+          <Modal visible={drawerVisible} transparent animationType="slide">
+            <View style={styles.drawerOverlay}>
+              <Animated.View style={styles.drawerContainer}>
+                <LinearGradient
+                  colors={['#174C3C', '#1F5F4F']}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <View style={{ flex: 1 }}>
+                  <View style={styles.drawerHeader}>
+                    <MaterialCommunityIcons name="book-multiple" size={28} color="white" />
+                    <Text style={styles.drawerTitle}>Table des matières</Text>
+                    <TouchableOpacity onPress={closeDrawer} style={styles.closeButton}>
+                      <MaterialCommunityIcons name="close" size={24} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <ScrollView style={styles.drawerContent}>
+                    {Object.keys(data).map((partie, pidx) => (
+                      <View key={pidx} style={styles.drawerSection}>
+                        <Text style={styles.drawerSectionTitle}>{data[partie as keyof ChaptersData].titre}</Text>
+                        {data[partie as keyof ChaptersData].chapitres.map((ch, idx) => {
+                          const chapterProgress = progress[`chapter${Object.keys(data)[pidx]}_${idx+1}`] || 0;
+                          return (
+                            <TouchableOpacity 
+                              key={idx} 
+                              style={styles.drawerChapterItem}
+                              onPress={() => {
+                                handleChapterPress(ch);
+                                closeDrawer();
+                              }}
+                            >
+                              <View style={styles.drawerChapterIcon}>
+                                <MaterialCommunityIcons 
+                                  name={chapterProgress === 100 ? "check-circle" : chapterProgress > 0 ? "circle-half-full" : "circle-outline"} 
+                                  size={16} 
+                                  color={chapterProgress === 100 ? "#D4AF37" : chapterProgress > 0 ? "#FFF3CD" : "#ffffff80"}
+                                />
+                              </View>
+                              <View style={styles.drawerChapterTitleContainer}>
+                                <Text style={styles.drawerChapterText} numberOfLines={1}>
+                                  {ch.title ? ch.title.replace(/\.\s*$/, ':') : 'Chapitre'}
+                                </Text>
+                                <Text style={styles.drawerChapterText} numberOfLines={4}>
+                                  {ch.desc || 'Titre du chapitre'}
+                                </Text>
+                              </View>
+                              <Text style={styles.drawerChapterProgress}>{Math.round(chapterProgress)}%</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              </Animated.View>
+              <Pressable style={{ flex: 1 }} onPress={closeDrawer} />
             </View>
-          </Animated.View>
-          <Pressable style={{ flex: 1 }} onPress={closeDrawer} />
-                 </View>
-       </Modal>
-         </View>
-       </PanGestureHandler>
-     </GestureHandlerRootView>
+          </Modal>
+        </View>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 
