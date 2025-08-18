@@ -62,13 +62,13 @@ export default function QuizChapterSelectScreen() {
   // Charger les scores des quiz depuis le stockage local
   useEffect(() => {
     loadQuizScores();
-  }, [user?.uid]);
+  }, []);
 
   // Recharger les scores quand l'écran redevient actif
   useFocusEffect(
     useCallback(() => {
       loadQuizScores();
-    }, [user?.uid])
+    }, [])
   );
 
   const loadQuizScores = async () => {

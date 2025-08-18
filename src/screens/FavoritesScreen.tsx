@@ -41,7 +41,7 @@ export default function FavoritesScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadFavorites();
-    }, [user?.uid])
+    }, [])
   );
 
   React.useEffect(() => {

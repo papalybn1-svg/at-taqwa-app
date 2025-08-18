@@ -4,11 +4,10 @@ import { useNavigation } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Dimensions, Image, Keyboard, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Vibration, View } from "react-native";
-import { useAuth } from '../hooks/useAuth';
+import { ActivityIndicator, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, Vibration, View, TextInput, Alert, TouchableWithoutFeedback, Keyboard } from "react-native";
 import colors from "../theme/colors";
-import { read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
+const ZIKR_PROGRESS_KEY = '@zikr_progress';
 const SOUND_ENABLED_KEY = '@sound_enabled';
 const CUSTOM_ZIKRS_KEY = '@custom_zikrs';
 const { width: screenWidth } = Dimensions.get('window');
@@ -24,7 +23,6 @@ export type Zikr = {
 type ActiveZikr = Zikr & { count: number };
 
 export default function TasbihScreen() {
-  const { user } = useAuth();
   const [systemZikrs, setSystemZikrs] = useState<Zikr[]>([]);
   const [customZikrs, setCustomZikrs] = useState<Zikr[]>([]);
   const [zikrProgress, setZikrProgress] = useState<{ [key: string]: number }>({});
@@ -185,9 +183,9 @@ export default function TasbihScreen() {
   const loadZikrData = useCallback(async () => {
     setLoading(true);
     try {
-      // Load progress first (scopé par utilisateur)
-      const savedProgress = await readUserStorage<{ [key: string]: number }>(user?.uid, 'zikrProgress');
-      const progress = savedProgress || {};
+      // Load progress first
+      const savedProgress = await AsyncStorage.getItem(ZIKR_PROGRESS_KEY);
+      const progress = savedProgress ? JSON.parse(savedProgress) : {};
       
       // Fetch zikrs from Firestore
       const zikrsRef = collection(db, 'zikrs');
@@ -267,13 +265,11 @@ export default function TasbihScreen() {
     loadZikrData();
     loadCustomZikrs();
     loadSoundPreference();
-  }, [loadZikrData, loadCustomZikrs, loadSoundPreference, user?.uid]);
+  }, [loadZikrData, loadCustomZikrs, loadSoundPreference]);
 
   useEffect(() => {
-    if (user?.uid && Object.keys(zikrProgress).length > 0) {
-      writeUserStorage(user.uid, 'zikrProgress', zikrProgress);
-    }
-  }, [zikrProgress, user?.uid]);
+    AsyncStorage.setItem(ZIKR_PROGRESS_KEY, JSON.stringify(zikrProgress));
+  }, [zikrProgress]);
 
   const increment = (id: string) => {
     const allZikrs = [...systemZikrs, ...customZikrs];

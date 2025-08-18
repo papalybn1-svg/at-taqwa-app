@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
-
+import AdminHadithsScreen from '../screens/AdminHadithsScreen';
 import AdminUsersScreen from '../screens/AdminUsersScreen';
 import AdminZikrsScreen from '../screens/AdminZikrsScreen';
 import colors from '../theme/colors';
@@ -51,7 +51,16 @@ export default function AdminTabNavigator() {
           ),
         }}
       />
-
+      <Tab.Screen
+        name="Hadiths"
+        component={AdminHadithsScreen}
+        options={{
+          tabBarLabel: 'Hadiths',
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <MaterialCommunityIcons name="book-open-variant" color={color} size={size} />
+          ),
+        }}
+      />
       <Tab.Screen
         name="Zikrs"
         component={AdminZikrsScreen}
