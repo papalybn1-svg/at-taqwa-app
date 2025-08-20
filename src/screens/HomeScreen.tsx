@@ -432,21 +432,23 @@ export default function HomeScreen() {
 
 
 
-  // Correction : tous les chapitres doivent apparaître
+  // Filtrer pour ne montrer que les chapitres de la première partie (non premium)
   let globalChapitreIndex = 1;
-  const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie]: any, partieIndex: number) =>
-    partie.chapitres.map((ch: any, chapitreIndex: number) => {
-      const currentChapitreNumber = globalChapitreIndex++;
-      const pageCount = getChapterPages(ch.image);
-      return {
-        ...ch,
-        id: `${partieIndex}-${chapitreIndex}`,
-        partie: partie.titre,
-        title: `Chapitre ${currentChapitreNumber}.`,
-        pageCount: pageCount
-      };
-    })
-  );
+  const allChapters = Object.entries(chaptersData)
+    .filter(([partieKey, partie]: any) => partieKey === 'premiere_partie') // Seulement la première partie
+    .flatMap(([partieKey, partie]: any, partieIndex: number) =>
+      partie.chapitres.map((ch: any, chapitreIndex: number) => {
+        const currentChapitreNumber = globalChapitreIndex++;
+        const pageCount = getChapterPages(ch.image);
+        return {
+          ...ch,
+          id: `${partieIndex}-${chapitreIndex}`,
+          partie: partie.titre,
+          title: `Chapitre ${currentChapitreNumber}.`,
+          pageCount: pageCount
+        };
+      })
+    );
 
   return (
     <View style={styles.safeArea}>
