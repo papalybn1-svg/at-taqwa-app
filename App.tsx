@@ -53,6 +53,7 @@ function SplashLogo() {
 
   return (
     <View style={styles.splashLogoBg}>
+      <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
       {/* Logo principal centré */}
       <View style={styles.logoContainer}>
         <Image 
@@ -89,6 +90,7 @@ function SplashFamille() {
   }, []);
   return (
     <View style={styles.splashFamilleBg}>
+      <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
       {/* Bloc image + texte en haut */}
       <View style={styles.topContentBlock}>
         {/* Logo en haut */}
@@ -258,6 +260,7 @@ export default function App() {
     console.log('⏳ App en état de chargement - user:', user, 'loading:', loading);
     return (
     <View style={{ flex: 1, backgroundColor: '#F3F5F7', justifyContent: 'center', alignItems: 'center' }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F3F5F7" />
       <Text style={{ fontSize: 18, color: '#174C3C' }}>Chargement...</Text>
         <Text style={{ fontSize: 14, color: '#666', marginTop: 10 }}>Initialisation de l'authentification</Text>
     </View>
@@ -279,7 +282,7 @@ export default function App() {
     <AuthContext.Provider value={{ user, setUser }}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
-          <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
+          <StatusBar barStyle="dark-content" backgroundColor="#F3F5F7" />
           <NavigationContainer>
               <Stack.Navigator 
               screenOptions={{ 

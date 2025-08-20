@@ -11,7 +11,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import OriginalQuizScreen from '../screens/OriginalQuizScreen';
 import ParametresScreen from '../screens/ParametresScreen';
 import QuizChapterSelectScreen from '../screens/QuizChapterSelectScreen';
-import QuizGameScreen from '../screens/QuizGameScreen';
+
 import QuizScreen from '../screens/QuizScreen';
 import QuizStartScreen from '../screens/QuizStartScreen';
 import TasbihScreen from '../screens/TasbihScreen';
@@ -52,10 +52,10 @@ function HomeStack() {
         }}
       />
       <Stack.Screen 
-        name="QuizGame" 
-        component={QuizGameScreen}
+        name="QuizChapterSelect" 
+        component={QuizChapterSelectScreen}
         options={{
-          gestureEnabled: true, // Permet le swipe pour revenir
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen 
@@ -91,13 +91,6 @@ function HomeStack() {
         component={AuthorProfileScreen}
         options={{
           gestureEnabled: true, // Permet le swipe pour revenir
-        }}
-      />
-      <Stack.Screen 
-        name="QuizChapterSelect" 
-        component={QuizChapterSelectScreen}
-        options={{
-          gestureEnabled: false,
         }}
       />
     </Stack.Navigator>

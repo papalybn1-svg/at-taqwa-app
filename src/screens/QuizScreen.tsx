@@ -1,74 +1,39 @@
 // src/screens/QuizScreen.tsx
 
-import { StackActions, useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, { useCallback, useEffect } from 'react';
-import { BackHandler, Dimensions, Image, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../hooks/useAuth';
-import { read as readUserStorage } from '../utils/userStorage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Fonction pour calculer les dimensions responsive
+const getResponsiveSize = (size: number, isWidth: boolean = true) => {
+  const baseWidth = 375; // iPhone standard
+  const baseHeight = 812; // iPhone standard
+  const scale = isWidth ? screenWidth / baseWidth : screenHeight / baseHeight;
+  return Math.round(size * scale);
+};
+
+// Fonction pour déterminer si c'est un petit écran
+const isSmallScreen = screenHeight < 700;
+const isLargeScreen = screenHeight > 900;
+
 export default function QuizScreen() {
   const navigation = useNavigation();
-  const { user } = useAuth();
 
-  const goToHome = () => {
-    // Utilise popToTop pour revenir à la racine de la pile
-    navigation.dispatch(StackActions.popToTop());
-  };
-
-  // Gestionnaire de swipe personnalisé pour iOS
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Détecter un swipe horizontal de gauche à droite
-      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && gestureState.dx > 50;
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      // Optionnel: ajouter un feedback visuel pendant le swipe
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      // Si c'est un swipe de gauche à droite suffisant, aller à l'accueil
-      if (gestureState.dx > 100 && Math.abs(gestureState.dy) < 100) {
-        console.log('Swipe détecté - retour à l\'accueil');
-        goToHome();
-      }
-    },
-  });
-
-  // Gestionnaire pour le bouton retour Android uniquement
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        goToHome();
-        return true;
-  };
-
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-      return () => subscription.remove();
-    }, [])
-  );
-
-  // Redirection automatique: si session en cours, aller directement au dernier quiz et question
+  // Redirection automatique vers la page "Commencer" après 1 seconde
   useEffect(() => {
     let cancelled = false;
     const go = async () => {
-      const index = await readUserStorage<Record<string, boolean>>(user?.uid, 'quizSessionsIndex');
-      if (!cancelled && index && Object.keys(index).length > 0) {
-        // Prendre la première session (ou la plus récente si on stocke updatedAt plus tard)
-        const chapterKey = Object.keys(index)[0];
-        (navigation as any).navigate('OriginalQuiz', { exercicesKey: chapterKey });
-        return;
-      }
       if (!cancelled) navigation.navigate('QuizStart' as never);
     };
-    const timer = setTimeout(go, 100);
+    const timer = setTimeout(go, 1000);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [navigation, user?.uid]);
+  }, [navigation]);
 
   return (
-    <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
+    <SafeAreaView style={styles.container}>
       {/* Contenu principal */}
       <View style={styles.content}>
         {/* Titre Bismillah */}
@@ -102,50 +67,50 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center', 
     justifyContent: 'flex-start',
-    paddingHorizontal: 20,
-    paddingTop: 60, // Augmenté de 20 à 60 pour plus de marge en haut
+    paddingHorizontal: getResponsiveSize(20),
+    paddingTop: getResponsiveSize(isSmallScreen ? 40 : 60, false),
   },
 
   title: {
-    fontSize: 36,
+    fontSize: getResponsiveSize(isSmallScreen ? 28 : isLargeScreen ? 42 : 36),
     fontWeight: 'bold', 
     color: 'white',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(isSmallScreen ? 15 : 20, false),
     textAlign: 'center', 
   },
   arabicText: {
-    fontSize: 28,
+    fontSize: getResponsiveSize(isSmallScreen ? 18 : isLargeScreen ? 26 : 22),
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center', 
-    marginBottom: 40,
+    marginBottom: getResponsiveSize(isSmallScreen ? 30 : 40, false),
     fontFamily: 'System',
-    letterSpacing: 3,
+    letterSpacing: getResponsiveSize(1),
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-    paddingHorizontal: 20,
+    textShadowOffset: { width: getResponsiveSize(2), height: getResponsiveSize(2) },
+    textShadowRadius: getResponsiveSize(4),
+    paddingHorizontal: getResponsiveSize(10),
   },
   imageContainer: {
     alignItems: 'center', 
     justifyContent: 'center',
     position: 'relative',
-    marginTop: -50, // Ajouté marginTop négatif pour faire monter vers le haut
+    marginTop: getResponsiveSize(isSmallScreen ? -30 : -50, false),
     flex: 1, // Prend tout l'espace disponible pour centrer
   },
   decorativeCircle: {
     position: 'absolute',
-    width: screenWidth * 0.8, // Augmenté de 0.6 à 0.8
-    height: screenWidth * 0.8, // Augmenté de 0.6 à 0.8
-    borderRadius: screenWidth * 0.4, // Augmenté de 0.3 à 0.4
+    width: screenWidth * (isSmallScreen ? 0.7 : isLargeScreen ? 0.85 : 0.8),
+    height: screenWidth * (isSmallScreen ? 0.7 : isLargeScreen ? 0.85 : 0.8),
+    borderRadius: screenWidth * (isSmallScreen ? 0.35 : isLargeScreen ? 0.425 : 0.4),
     backgroundColor: '#FFFFFF', // Blanc opaque
     zIndex: 0,
   },
   girlImage: {
-    width: screenWidth * 2.0, // Augmenté de 1.6 à 2.0
-    height: screenHeight * 1.3, // Augmenté de 1.0 à 1.3
-    maxWidth: 900, // Augmenté de 700 à 900
-    maxHeight: 1200, // Augmenté de 900 à 1200
+    width: screenWidth * (isSmallScreen ? 1.6 : isLargeScreen ? 2.2 : 2.0),
+    height: screenHeight * (isSmallScreen ? 1.0 : isLargeScreen ? 1.4 : 1.3),
+    maxWidth: getResponsiveSize(isSmallScreen ? 700 : isLargeScreen ? 1000 : 900),
+    maxHeight: getResponsiveSize(isSmallScreen ? 800 : isLargeScreen ? 1400 : 1200, false),
     zIndex: 1,
   },
 });

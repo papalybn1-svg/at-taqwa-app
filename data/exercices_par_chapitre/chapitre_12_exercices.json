@@ -1,34 +1,62 @@
 [
   {
     "numero": 1,
-    "question": "Vous arrivez après la qutba de l’imam, mais à temps pour la prière, avez-vous une réparation à faire ?",
-    "reponse": "Non. Il est préférable d’arriver à temps pour suivre la qutba de l’imam, mais si vous l’avez manquée non intentionnellement, votre prière est valable. Celui qui cherche à n’arriver qu’au moment de la prière, négligeant la qutba, commet une grave erreur."
+    "question": "Vous arrivez après la qutba de l’imam, mais à temps pour la prière, avez-vous une réparation à faire ?",
+    "reponse": "Non. Il est préférable d’arriver à temps pour suivre la qutba de l’imam, mais si vous l’avez manquée non intentionnellement, votre prière est valable. Celui qui cherche à n’arriver qu’au moment de la prière, négligeant la qutba, commet une grave erreur.",
+    "fausses_reponses": [
+      "Oui, il faut refaire toute la prière.",
+      "Oui, vous devez réciter une prière compensatoire après le salut final.",
+      "Non, mais il faut faire une prosternation supplémentaire après la prière."
+    ]
   },
   {
     "numero": 2,
-    "question": "Vous arrivez à la fin de la 1ère raka, vous accomplissez la 2ème raka avec l’imam. Après le salut final de l’imam, comment achevez-vous votre prière ?",
-    "reponse": "Vous vous levez après le salut de l’imam, vous récitez la Fatiha + une surate ; vous avez ainsi rattrapé la 1ère raka que vous aviez manquée. La prière étant de 2 rakas, vous prononcez la tahiyya puis le salut final. Evidemment, à votre arrivée, vous avez formulé l’intention de prier derrière l’imam et fait le takbiratul ihrâm avant de le rejoindre."
+    "question": "Vous arrivez à la fin de la 1ère raka, vous accomplissez la 2ème raka avec l’imam. Après le salut final de l’imam, comment achevez-vous votre prière ?",
+    "reponse": "Vous vous levez après le salut de l’imam, vous récitez la Fatiha + une surate ; vous avez ainsi rattrapé la 1ère raka que vous aviez manquée. La prière étant de 2 rakas, vous prononcez la tahiyya puis le salut final. Evidemment, à votre arrivée, vous avez formulé l’intention de prier derrière l’imam et fait le takbiratul ihrâm avant de le rejoindre.",
+    "fausses_reponses": [
+      "Vous terminez simplement la 2ème raka sans rattraper la 1ère.",
+      "Vous recommencez la prière depuis le début.",
+      "Vous ne faites rien et considérez votre prière comme complète."
+    ]
   },
   {
     "numero": 3,
-    "question": "Vous rejoignez l’imam après le rukû de la 2ème raka. Comment terminez-vous votre prière ?",
-    "reponse": "Si je ne rejoins l’imam qu’après le rukû de la 2ème raka, cela veut dire que je ne fais pas partie de cette raka ; donc je ne fais pas partie de la prière puisqu’il s’agit d’une prière de 2 rakas."
+    "question": "Vous rejoignez l’imam après le rukû de la 2ème raka. Comment terminez-vous votre prière ?",
+    "reponse": "Si je ne rejoins l’imam qu’après le rukû de la 2ème raka, cela veut dire que je ne fais pas partie de cette raka ; donc je ne fais pas partie de la prière puisqu’il s’agit d’une prière de 2 rakas.",
+    "fausses_reponses": [
+      "Je fais quand même la 2ème raka avec l’imam.",
+      "Je rattrape la 2ème raka après le salut final.",
+      "Je fais une prière surérogatoire pour compenser."
+    ]
   },
   {
     "numero": 4,
-    "question": "L’imam constate qu’il est arrivé en retard ; pour gagner du temps, il supprime les 3 appels et passe immédiatement à sa qutba, puis à la prière. Cette prière est-elle valable ?",
-    "reponse": "Après le salut final de l’imam, je mets fin à cette prière et je commence une prière normale de Zohr de 4 rakas, avec récitation à voix basse."
+    "question": "L’imam constate qu’il est arrivé en retard ; pour gagner du temps, il supprime les 3 appels et passe immédiatement à sa qutba, puis à la prière. Cette prière est-elle valable ?",
+    "reponse": "Après le salut final de l’imam, je mets fin à cette prière et je commence une prière normale de Zohr de 4 rakas, avec récitation à voix basse.",
+    "fausses_reponses": [
+      "La prière est invalide, il faut la recommencer complètement.",
+      "La prière reste valable mais il faut faire un sujûd de réparation.",
+      "L’imam doit recommencer la prière depuis le début pour tout le groupe."
+    ]
   },
   {
     "numero": 5,
-    "question": "Après les 3 appels, l’imam constate que beaucoup de retard a été accumulé. Il décide alors de supprimer sa qutba et passe directement à la prière. Cette prière est-elle valable ?",
-    "reponse": "La prière est valable, mais l’imam aurait pu faire procéder à un seul appel."
+    "question": "Après les 3 appels, l’imam constate que beaucoup de retard a été accumulé. Il décide alors de supprimer sa qutba et passe directement à la prière. Cette prière est-elle valable ?",
+    "reponse": "La prière est valable, mais l’imam aurait pu faire procéder à un seul appel.",
+    "fausses_reponses": [
+      "La prière est invalide si la qutba est supprimée.",
+      "La prière n’est valable que si les fidèles répètent la qutba après la prière.",
+      "Il faut recommencer la prière de Zohr plus tard."
+    ]
   },
   {
     "numero": 6,
-    "question": "Comment, au 9ème jour du mois de dzulhijja, à Arafat, durant le Pèlerinage, l’imam fait-il la prière de Zohr si ce jour d’Arafat tombe sur un vendredi ? Fait-il la qutba avant ou après la prière, accomplit-il 4 rakas ou 2 ? Récite-t-il à haute voix ou à voix basse ?",
-    "reponse": "Si le stationnement des pèlerins à Arafat tombe sur un vendredi, cela ne change rien à la prière. Car à Arafat les pèlerins n’accomplissent pas la prière du vendredi, les conditions de résidence n’étant pas remplies. Après l’adhan et l’iqâma, l’imam fait la prière de Zohr en récitant à voix basse. Comme il est en voyage, de même que tous les pèlerins, il raccourcit la prière à 2 rakas. Il regroupe les prières de Zohr et de l’Asr. Aussi, dès le salut final de Zohr il donne ordre de prononcer l’iqâma pour la salat Asr. L’imam se lève et accomplit les 2 rakas de la prière de l’Asr. C’est seulement après le saut final de l’Asr qu’il prononce sa qutba."
-  }
+    "question": "Comment, au 9ème jour du mois de dzulhijja, à Arafat, durant le Pèlerinage, l’imam fait-il la prière de Zohr si ce jour d’Arafat tombe sur un vendredi ? Fait-il la qutba avant ou après la prière, accomplit-il 4 rakas ou 2 ? Récite-t-il à haute voix ou à voix basse ?",
+    "reponse": "Si le stationnement des pèlerins à Arafat tombe sur un vendredi, cela ne change rien à la prière. Car à Arafat les pèlerins n’accomplissent pas la prière du vendredi, les conditions de résidence n’étant pas remplies. Après l’adhan et l’iqâma, l’imam fait la prière de Zohr en récitant à voix basse. Comme il est en voyage, de même que tous les pèlerins, il raccourcit la prière à 2 rakas. Il regroupe les prières de Zohr et de l’Asr. Aussi, dès le salut final de Zohr il donne ordre de prononcer l’iqâma pour la salat Asr. L’imam se lève et accomplit les 2 rakas de la prière de l’Asr. C’est seulement après le salut final de l’Asr qu’il prononce sa qutba.",
+    "fausses_reponses": [
+      "L’imam fait la prière de Zohr à 4 rakas et récite à haute voix.",
+      "Il supprime la qutba et accomplit seulement 2 rakas de Zohr sans Asr.",
+      "Il accomplit Zohr et Asr séparément à 4 rakas chacune et récite à voix haute."
     ]
-
-  
+  }
+]

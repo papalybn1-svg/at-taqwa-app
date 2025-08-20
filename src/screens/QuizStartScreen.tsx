@@ -7,6 +7,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Fonction pour calculer les dimensions responsive
+const getResponsiveSize = (size: number, isWidth: boolean = true) => {
+  const baseWidth = 375; // iPhone standard
+  const baseHeight = 812; // iPhone standard
+  const scale = isWidth ? screenWidth / baseWidth : screenHeight / baseHeight;
+  return Math.round(size * scale);
+};
+
+// Fonction pour déterminer si c'est un petit écran
+const isSmallScreen = screenHeight < 700;
+const isLargeScreen = screenHeight > 900;
+
 export default function QuizStartScreen() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -62,7 +74,7 @@ export default function QuizStartScreen() {
         style={styles.backButton} 
         onPress={goHome}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
+        <MaterialCommunityIcons name="arrow-left" size={getResponsiveSize(24)} color="white" />
       </TouchableOpacity>
 
       {/* Contenu principal - Image de l'homme */}
@@ -81,7 +93,7 @@ export default function QuizStartScreen() {
         <View style={styles.backCard} />
         <View style={styles.middleCard} />
         <View style={styles.whiteCard}>
-          <Text style={styles.cardTitle}>{'Commençons le\nQuizz'}</Text>
+          <Text style={styles.cardTitle}>Testez vos connaissances</Text>
           <TouchableOpacity 
             style={styles.playButton} 
             onPress={goToChapters}
@@ -101,24 +113,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#174C3C',
-    paddingBottom: 30,
+    paddingBottom: getResponsiveSize(30, false),
   },
   backButton: {
     position: 'absolute',
-    top: 20,
-    left: 20,
+    top: getResponsiveSize(20, false),
+    left: getResponsiveSize(20),
     zIndex: 30,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 20,
-    padding: 8,
-    width: 40,
-    height: 40,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(8),
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: getResponsiveSize(2, false) },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowRadius: getResponsiveSize(4),
     elevation: 5,
   },
   mainContent: {
@@ -134,93 +146,93 @@ const styles = StyleSheet.create({
     zIndex: 300,
   },
   manImage: {
-    width: screenWidth * 1.4,
-    height: screenHeight * 0.9,
-    maxWidth: 800,
-    maxHeight: 1000,
-    marginTop: -200,
+    width: screenWidth * (isSmallScreen ? 1.2 : isLargeScreen ? 1.6 : 1.4),
+    height: screenHeight * (isSmallScreen ? 0.7 : isLargeScreen ? 1.0 : 0.9),
+    maxWidth: getResponsiveSize(isSmallScreen ? 600 : isLargeScreen ? 900 : 800),
+    maxHeight: getResponsiveSize(isSmallScreen ? 700 : isLargeScreen ? 1200 : 1000, false),
+    marginTop: getResponsiveSize(isSmallScreen ? -150 : isLargeScreen ? -250 : -200, false),
     zIndex: 400,
   },
   cardStack: {
     position: 'absolute',
-    bottom: 80,
-    left: 15,
-    right: 15,
+    bottom: getResponsiveSize(isSmallScreen ? 60 : isLargeScreen ? 100 : 80, false),
+    left: getResponsiveSize(15),
+    right: getResponsiveSize(15),
     alignItems: 'center',
   },
   backCard: {
     backgroundColor: '#0F3A2E',
-    borderRadius: 30,
-    height: 300,
+    borderRadius: getResponsiveSize(30),
+    height: getResponsiveSize(isSmallScreen ? 250 : isLargeScreen ? 350 : 300, false),
     width: '100%',
     position: 'absolute',
-    bottom: -20,
-    borderWidth: 2,
+    bottom: getResponsiveSize(-20, false),
+    borderWidth: getResponsiveSize(2),
     borderColor: '#0A2D23',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: getResponsiveSize(2, false) },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: getResponsiveSize(4),
     elevation: 5,
   },
   middleCard: {
     backgroundColor: '#BB9B4E',
-    borderRadius: 30,
-    height: 310,
+    borderRadius: getResponsiveSize(30),
+    height: getResponsiveSize(isSmallScreen ? 260 : isLargeScreen ? 360 : 310, false),
     width: '95%',
     position: 'absolute',
-    bottom: -10,
-    borderWidth: 2,
+    bottom: getResponsiveSize(-10, false),
+    borderWidth: getResponsiveSize(2),
     borderColor: '#A08642',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: getResponsiveSize(3, false) },
     shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowRadius: getResponsiveSize(6),
     elevation: 7,
   },
   whiteCard: {
     backgroundColor: 'white',
-    borderRadius: 30,
-    paddingHorizontal: 40,
-    paddingTop: 120,
-    paddingBottom: 30,
+    borderRadius: getResponsiveSize(30),
+    paddingHorizontal: getResponsiveSize(isSmallScreen ? 30 : isLargeScreen ? 50 : 40),
+    paddingTop: getResponsiveSize(isSmallScreen ? 100 : isLargeScreen ? 140 : 120, false),
+    paddingBottom: getResponsiveSize(isSmallScreen ? 25 : isLargeScreen ? 35 : 30, false),
     alignItems: 'center',
     justifyContent: 'flex-end',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: getResponsiveSize(4, false) },
     shadowOpacity: 0.2,
-    shadowRadius: 10,
+    shadowRadius: getResponsiveSize(10),
     elevation: 15,
-    borderWidth: 2,
+    borderWidth: getResponsiveSize(2),
     borderColor: '#F0F0F0',
     width: '90%',
-    height: 320,
+    height: getResponsiveSize(isSmallScreen ? 270 : isLargeScreen ? 370 : 320, false),
   },
   cardTitle: {
-    fontSize: 28,
+    fontSize: getResponsiveSize(isSmallScreen ? 18 : isLargeScreen ? 24 : 20),
     fontWeight: 'bold',
     color: '#174C3C',
     textAlign: 'center',
-    marginBottom: 20,
-    marginTop: 20,
-    lineHeight: 36,
+    marginBottom: getResponsiveSize(isSmallScreen ? 15 : isLargeScreen ? 25 : 20, false),
+    marginTop: getResponsiveSize(isSmallScreen ? 15 : isLargeScreen ? 25 : 20, false),
+    lineHeight: getResponsiveSize(isSmallScreen ? 22 : isLargeScreen ? 28 : 24, false),
   },
   playButton: {
     backgroundColor: '#BB9B4E',
-    paddingHorizontal: 50,
-    paddingVertical: 16,
-    borderRadius: 25,
+    paddingHorizontal: getResponsiveSize(isSmallScreen ? 40 : isLargeScreen ? 60 : 50),
+    paddingVertical: getResponsiveSize(isSmallScreen ? 14 : isLargeScreen ? 18 : 16, false),
+    borderRadius: getResponsiveSize(25),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: getResponsiveSize(4, false) },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowRadius: getResponsiveSize(6),
     elevation: 8,
-    minWidth: 150,
+    minWidth: getResponsiveSize(isSmallScreen ? 130 : isLargeScreen ? 170 : 150),
     alignItems: 'center',
   },
   playButtonText: {
     color: 'white',
-    fontSize: 20,
+    fontSize: getResponsiveSize(isSmallScreen ? 18 : isLargeScreen ? 22 : 20),
     fontWeight: 'bold',
   },
 }); 

@@ -1,22 +1,47 @@
 [
   {
-    "question": "Que cherches-tu quand tu pries ?",
-    "reponse": "Etre en présence d’Allah"
+    "question": "Que cherches-tu quand tu pries ?",
+    "reponse": "Etre en présence d’Allah",
+    "fausses_reponses": [
+      "Avoir des biens matériels",
+      "Etre reconnu par les autres",
+      "Chercher le paradis immédiatement"
+    ]
   },
   {
-    "question": "Dans quelle Sourate trouve-t-on le verset annonçant les 3 premières prières ?",
-    "reponse": "N°50, Qaf"
+    "question": "Dans quelle Sourate trouve-t-on le verset annonçant les 3 premières prières ?",
+    "reponse": "Sourate N° 50, Qaf",
+    "fausses_reponses": [
+      "Sourate N° 36, Ya-Sin",
+      "Sourate N° 2, Al Baqara",
+      "Sourate N° 20, Ta-Ha"
+    ]
   },
   {
-    "question": "Dans quelle Sourate trouve-t-on le verset annonçant les 5 prières ?",
-    "reponse": "N° 17, Al Isra"
+    "question": "Dans quelle Sourate trouve-t-on le verset annonçant les 5 prières ?",
+    "reponse": "Sourate N° 17, Al Isra",
+    "fausses_reponses": [
+      "Sourate N° 4, An-Nisa",
+      "Sourate N° 23, Al-Mu’minun",
+      "Sourate N° 62, Al-Jumua"
+    ]
   },
   {
-    "question": "Comme source traditionnelle, quel hadith d’Ibn Abbas relatif à la prière peut-on citer ?",
-    "reponse": "Ascension nocturne"
+    "question": "Comme source traditionnelle, quel hadith d’Ibn Abbas relatif à la prière peut-on citer ?",
+    "reponse": "Ascension nocturne",
+    "fausses_reponses": [
+      "Le pèlerinage d’Adieu",
+      "Le sermon du vendredi",
+      "Le jeûne de Ramadan"
+    ]
   },
-   {
-      "question": "Quel est le hadith rapporté par Abu Horaïra dans lequel le Prophète (SPL) compare la prière à une rivière.",
-      "contenu": "C’est par les 5 prières que Dieu efface les pêchés."
-    }
+  {
+    "question": "Quel est le hadith rapporté par Abu Horaïra dans lequel le Prophète (SPL) compare la prière à une rivière ?",
+    "reponse": "C’est par les 5 prières que Dieu efface les pêchés.",
+    "fausses_reponses": [
+      "La prière est la clé du paradis.",
+      "Sans prière, la foi n’est pas complète.",
+      "La prière est meilleure que le sommeil."
+    ]
+  }
 ]

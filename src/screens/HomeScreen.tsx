@@ -13,13 +13,26 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    ActivityIndicator
 } from 'react-native';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import colors from '../theme/colors';
 import { AuthContext } from './LoginScreen';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
+
+// Fonction utilitaire pour obtenir l'image d'un chapitre avec fallback
+const getChapterImage = (imageKey: string) => {
+  console.log('🔍 Tentative de chargement image:', imageKey);
+  if (imageMap[imageKey]) {
+    console.log('✅ Image trouvée dans le mapping:', imageKey);
+    return imageMap[imageKey];
+  }
+  console.log('⚠️ Image non trouvée, utilisation du fallback:', imageKey);
+  // Fallback vers l'image par défaut
+  return imageMap['1'] || require('../../assets/1.png');
+};
 
 type RootStackParamList = {
   Main: undefined;
@@ -139,6 +152,7 @@ export default function HomeScreen() {
   const [previewModalVisible, setPreviewModalVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter | null>(null);
   const [firestoreStatus, setFirestoreStatus] = React.useState<'connecting' | 'connected' | 'error'>('connecting');
+  const [imageLoadingStates, setImageLoadingStates] = React.useState<{ [key: string]: boolean }>({});
   const scrollX = React.useRef(new Animated.Value(0)).current;
 
   // Test de connexion Firestore au démarrage
@@ -493,7 +507,7 @@ export default function HomeScreen() {
           <View style={styles.authorCard}>
             <View style={styles.authorHeader}>
               <View style={styles.authorAvatar}>
-                <MaterialCommunityIcons name="account-circle" size={40} color={colors.primary} />
+                <MaterialCommunityIcons name="account-circle" size={45} color={colors.primary} />
               </View>
               <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
                 <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
@@ -501,11 +515,10 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.authorDetails}>
-              <Text style={styles.authorName}>Aly Sow</Text>
-              <Text style={styles.authorTitle}>Imam et Érudit Islamique</Text>
+              <Text style={styles.authorName}>Aly Anta Sow</Text>
               <Text style={styles.authorBio}>
-                Plus de 20 ans d'expérience dans l'enseignement de la prière. 
-                Auteur de plusieurs ouvrages sur la spiritualité musulmane.
+                Passionné de recherches sur l'islam, il rend les textes islamiques accessibles aux non arabophones. 
+                Auteur d'essais sur le Hajj, la Oumra, le Jeûne de Ramadan et la vie du Prophète.
               </Text>
             </View>
           </View>
@@ -519,13 +532,13 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => item.id || index.toString()}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
-            contentContainerStyle={{paddingHorizontal: 8, paddingVertical: 8}}
+            contentContainerStyle={{paddingHorizontal: 12, paddingVertical: 8}}
             removeClippedSubviews={true}
             maxToRenderPerBatch={5}
             windowSize={5}
             initialNumToRender={5}
             renderItem={({ item, index }) => {
-              const inputRange = [(index - 1) * 200, index * 200, (index + 1) * 200];
+              const inputRange = [(index - 1) * 176, index * 176, (index + 1) * 176];
               const scale = scrollX.interpolate({
                 inputRange,
                 outputRange: [0.96, 1, 0.96],
@@ -537,20 +550,39 @@ export default function HomeScreen() {
                 extrapolate: 'clamp',
               });
               return (
-                <Animated.View style={{ transform: [{ scale }], opacity, marginHorizontal: 8 }}>
+                <Animated.View style={{ transform: [{ scale }], opacity, marginHorizontal: 6 }}>
                   <TouchableOpacity style={styles.bookCardModern} onPress={() => handleChapterPress(item)}>
                     <View style={styles.bookImageContainer}>
+                      {imageLoadingStates[item.image] !== false && (
+                        <ActivityIndicator 
+                          size="small" 
+                          color={colors.primary} 
+                          style={styles.imageLoader}
+                        />
+                      )}
                       <Image 
-                        source={imageMap[item.image] || imageMap['1']} 
-                        style={styles.bookImageModern}
+                        source={getChapterImage(item.image)} 
+                        style={[
+                          styles.bookImageModern,
+                          imageLoadingStates[item.image] === false && styles.imageLoaded
+                        ]}
                         resizeMode="cover"
-                        defaultSource={require('../../assets/1.png')}
-                        onError={() => console.log('Erreur de chargement image:', item.image)}
+                        onError={() => {
+                          console.log('Erreur de chargement image:', item.image);
+                          setImageLoadingStates(prev => ({ ...prev, [item.image]: false }));
+                        }}
+                        onLoad={() => {
+                          console.log('Image chargée avec succès:', item.image);
+                          setImageLoadingStates(prev => ({ ...prev, [item.image]: false }));
+                        }}
+                        onLoadStart={() => {
+                          setImageLoadingStates(prev => ({ ...prev, [item.image]: true }));
+                        }}
                       />
                     </View>
                     <View style={styles.bookCardContentModern}>
                       <Text style={styles.bookCardTitleModern} numberOfLines={1}>{item.title.replace(/\.\s*$/, ':')}</Text>
-                      <Text style={styles.bookCardTitleModern} numberOfLines={3}>{item.desc || 'Titre du chapitre'}</Text>
+                      <Text style={styles.bookCardDescModern} numberOfLines={3}>{item.desc || 'Titre du chapitre'}</Text>
                       <Text style={styles.bookCardSubtitleModern} numberOfLines={2}>{item.partie || 'Partie'}</Text>
                       <View style={styles.bookCardFooterModern}>
                         <View style={styles.pagesCountModern}>
@@ -577,8 +609,10 @@ export default function HomeScreen() {
             <View style={styles.previewModalContentModern}>
               <View style={styles.previewModalHeaderModern}>
                   <Image 
-                    source={imageMap[selectedChapter.image] || imageMap['1']} 
-                  style={styles.previewModalImageModern}
+                    source={getChapterImage(selectedChapter.image)} 
+                    style={styles.previewModalImageModern}
+                    resizeMode="cover"
+                    onError={() => console.log('Erreur de chargement image modal:', selectedChapter.image)}
                   />
                 <TouchableOpacity style={styles.closeButton} onPress={closePreviewModal}>
                   <MaterialCommunityIcons name="close" size={24} color={colors.text} />
@@ -752,67 +786,77 @@ const styles = StyleSheet.create({
     lineHeight: Math.max(14, Dimensions.get('window').width * 0.035),
   },
   bookCardModern: {
-    width: Dimensions.get('window').width * 0.45,
-    height: Dimensions.get('window').height * 0.35,
+    width: 160,
+    height: 280,
     backgroundColor: colors.white,
-    borderRadius: 18,
-    elevation: 6,
+    borderRadius: 16,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     overflow: 'hidden',
     marginBottom: 8,
   },
   bookImageContainer: {
     width: '100%',
-    height: Dimensions.get('window').height * 0.15,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    height: 140,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
   },
   bookImageModern: {
-    width: '110%',
-    height: '110%',
+    width: '100%',
+    height: '100%',
     resizeMode: 'cover',
-    minWidth: '110%',
-    minHeight: '110%',
-    transform: [{ scale: 1.1 }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   bookCardContentModern: {
     flex: 1,
-    padding: 8,
+    padding: 12,
     justifyContent: 'space-between',
-    minHeight: 125,
+    minHeight: 140,
   },
   bookCardTitleModern: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: -6,
+    marginBottom: 2,
+    textAlign: 'center',
+    lineHeight: 14,
+    paddingHorizontal: 4,
+    height: 16,
+  },
+  bookCardDescModern: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 4,
     textAlign: 'center',
     lineHeight: 13,
     paddingHorizontal: 4,
     height: 39,
   },
   bookCardSubtitleModern: {
-    fontSize: 9,
-    color: '#174C3C',
+    fontSize: 10,
+    color: colors.primary,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 2,
-    lineHeight: 10,
+    marginBottom: 4,
+    lineHeight: 12,
     paddingHorizontal: 4,
-    height: 20,
+    height: 24,
   },
   bookCardFooterModern: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -2,
+    marginTop: 2,
   },
   readTimeModern: {
     flexDirection: 'row',
@@ -829,9 +873,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pagesCountTextModern: {
-    color: colors.gray,
-    fontSize: 10,
-    fontWeight: '500',
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '600',
     marginLeft: 4,
   },
   hadithCard: {
@@ -888,11 +932,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   previewModalImageModern: {
-    width: 60,
-    height: 60,
+    width: 80,
+    height: 80,
     borderRadius: 12,
     backgroundColor: '#f8f9fa',
     marginRight: 10,
+    resizeMode: 'cover',
   },
   previewModalTitleModern: {
     fontSize: 20,
@@ -992,14 +1037,16 @@ const styles = StyleSheet.create({
   },
   authorCard: {
     backgroundColor: colors.white,
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 20,
     marginHorizontal: 24,
-    elevation: 4,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   authorHeader: {
     flexDirection: 'row',
@@ -1008,47 +1055,62 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   authorAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f8f9fa',
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    backgroundColor: '#f0f4ff',
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   authorDetails: {
     flex: 1,
   },
+  authorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   authorName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 4,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 8,
   },
   authorTitle: {
-    fontSize: 13,
-    color: colors.primary,
+    fontSize: 14,
+    color: '#BB9B4E',
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 0,
+    marginLeft: 8,
   },
   authorBio: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.gray,
-    lineHeight: 16,
+    lineHeight: 18,
+    fontWeight: '400',
   },
   authorButton: {
     backgroundColor: '#BB9B4E',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    borderRadius: 22,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   authorButtonText: {
     color: colors.white,
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontSize: 13,
-    marginLeft: 6,
+    marginLeft: 8,
   },
   authorBadge: {
     backgroundColor: colors.primary,
@@ -1115,5 +1177,16 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#f8f9fa',
+  },
+  imageLoader: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -10,
+    marginTop: -10,
+    zIndex: 1,
+  },
+  imageLoaded: {
+    opacity: 1,
   },
 }); 

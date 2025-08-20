@@ -10,17 +10,17 @@ import colors from '../theme/colors';
 import { migrateUnscopedKeyToUser, read as readUserStorage } from '../utils/userStorage';
 
 // Liste centralisée des fichiers d'exercices (clé = numéro de chapitre sous forme de string)
-const exercicesFiles: { [key: string]: any[] } = {
-  '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
-  '2': require('../../data/exercices_par_chapitre/chapitre_02_exercices.json'),
-  '3': require('../../data/exercices_par_chapitre/chapitre_03_exercices.json'),
-  '5': require('../../data/exercices_par_chapitre/chapitre_05_exercices.json'),
-  '6': require('../../data/exercices_par_chapitre/chapitre_06_exercices.json'),
-  '7': require('../../data/exercices_par_chapitre/chapitre_07_exercices.json'),
-  '9': require('../../data/exercices_par_chapitre/chapitre_09_exercices.json'),
-  '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
-  '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
-};
+  const exercicesFiles: { [key: string]: any[] } = {
+    '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
+    '2': require('../../data/exercices_par_chapitre/chapitre_2_exercices.json'),
+    '3': require('../../data/exercices_par_chapitre/chapitre_3_exercices.json'),
+    '5': require('../../data/exercices_par_chapitre/chapitre_5_exercices.json'),
+    '6': require('../../data/exercices_par_chapitre/chapitre_6_exercices.json'),
+    '7': require('../../data/exercices_par_chapitre/chapitre_7_exercices.json'),
+    '9': require('../../data/exercices_par_chapitre/chapitre_9_execrcices.json'),
+    '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
+    '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
+  };
 
 // SplashFamille copié depuis App.tsx
 function SplashFamille() {
@@ -876,8 +876,8 @@ const styles = StyleSheet.create({
      borderColor: 'rgba(23, 76, 60, 0.1)',
    },
    quizImageContainer: {
-     width: 70,
-     height: 70,
+     width: 100,
+     height: 100,
      borderRadius: 16,
      marginRight: 16,
      overflow: 'hidden',

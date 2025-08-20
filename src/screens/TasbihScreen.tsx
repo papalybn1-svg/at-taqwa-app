@@ -1084,19 +1084,20 @@ const styles = StyleSheet.create({
   tasbihImage: {
     width: 350,
     height: 350,
+    marginLeft: -10,
   },
   counterScreen: {
     position: 'absolute',
-    top: '15%',
+    top: '17%',
     left: '25%',
     right: '25%',
-    bottom: '55%',
+    bottom: '53%',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
   },
   digitalCounter: {
-    fontSize: 40,
+    fontSize: 48,
     fontWeight: '900',
     color: '#000000',
     fontFamily: Platform.OS === 'ios' ? 'Menlo-Bold' : 'monospace',

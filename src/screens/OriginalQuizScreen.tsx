@@ -7,12 +7,12 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import chapitre02 from '../../data/exercices_par_chapitre/chapitre_02_exercices.json';
-import chapitre03 from '../../data/exercices_par_chapitre/chapitre_03_exercices.json';
-import chapitre05 from '../../data/exercices_par_chapitre/chapitre_05_exercices.json';
-import chapitre06 from '../../data/exercices_par_chapitre/chapitre_06_exercices.json';
-import chapitre07 from '../../data/exercices_par_chapitre/chapitre_07_exercices.json';
-import chapitre09 from '../../data/exercices_par_chapitre/chapitre_09_exercices.json';
+import chapitre02 from '../../data/exercices_par_chapitre/chapitre_2_exercices.json';
+import chapitre03 from '../../data/exercices_par_chapitre/chapitre_3_exercices.json';
+import chapitre05 from '../../data/exercices_par_chapitre/chapitre_5_exercices.json';
+import chapitre06 from '../../data/exercices_par_chapitre/chapitre_6_exercices.json';
+import chapitre07 from '../../data/exercices_par_chapitre/chapitre_7_exercices.json';
+import chapitre09 from '../../data/exercices_par_chapitre/chapitre_9_execrcices.json';
 import chapitre10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
 import chapitre12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
 import chapitre01 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
@@ -23,7 +23,7 @@ import { AuthContext } from './LoginScreen';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // 🗺️ Mapping des chapitres
-const chapterMap: Record<string, { question: string, reponse?: string, contenu?: string }[]> = {
+const chapterMap: Record<string, { question: string, reponse?: string, contenu?: string, fausses_reponses?: string[] }[]> = {
   '01': chapitre01,
   '02': chapitre02,
   '03': chapitre03,
@@ -39,142 +39,52 @@ const chapterMap: Record<string, { question: string, reponse?: string, contenu?:
 const chapterId = '01';
 const rawQuizData = chapterMap[chapterId] || [];
 
-// Génère des fausses réponses pertinentes et contextuelles pour chaque question
-function generateOptionsForQuiz(questions: {question: string, reponse?: string, contenu?: string}[]) {
-  return questions.map((item, idx, arr) => {
-    const correct = item.reponse || item.contenu || 'Réponse';
+// Fonction pour mélanger un tableau
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Génère les options de quiz avec les vraies fausses réponses
+function generateOptionsForQuiz(questions: {question: string, reponse?: string, contenu?: string, fausses_reponses?: string[]}[]) {
+  return questions.map((item) => {
+    const correctAnswer = item.reponse || item.contenu || 'Réponse';
+    const falseAnswers = item.fausses_reponses || [];
     
-    // Analyser le contexte de la question pour générer des fausses réponses pertinentes
-    const questionText = item.question.toLowerCase();
-    const correctAnswer = correct.toLowerCase();
+    // S'assurer qu'on a exactement 3 fausses réponses
+    let finalFalseAnswers = [...falseAnswers];
     
-    // Déterminer le thème de la question
-    let theme = 'general';
-    if (questionText.includes('ablution') || questionText.includes('purification') || questionText.includes('tahara')) {
-      theme = 'ablution';
-    } else if (questionText.includes('prière') || questionText.includes('salat') || questionText.includes('namaz')) {
-      theme = 'priere';
-    } else if (questionText.includes('temps') || questionText.includes('heure') || questionText.includes('moment')) {
-      theme = 'temps';
-    } else if (questionText.includes('nombre') || questionText.includes('fois') || questionText.includes('combien')) {
-      theme = 'nombre';
+    // Si on n'a pas assez de fausses réponses, ajouter des réponses génériques
+    while (finalFalseAnswers.length < 3) {
+      finalFalseAnswers.push(`Option ${finalFalseAnswers.length + 1}`);
     }
     
-    // Générer des fausses réponses contextuelles selon le thème
-    const contextualFakes = generateContextualFakes(theme, correctAnswer);
+    // Prendre seulement les 3 premières fausses réponses
+    finalFalseAnswers = finalFalseAnswers.slice(0, 3);
     
-    // Récupérer d'autres réponses du même chapitre (plus pertinentes)
-    const otherAnswers = arr
-      .filter((q, i) => i !== idx && (q.reponse || q.contenu))
-      .map(q => q.reponse || q.contenu)
-      .filter((r): r is string => {
-        if (!r || r === correct) return false;
-        // Éviter les réponses trop similaires
-        const rLower = r.toLowerCase();
-        return r.length > 3 && 
-               !correctAnswer.includes(rLower) && 
-               !rLower.includes(correctAnswer) &&
-               !rLower.includes('prière') || !questionText.includes('ablution'); // Éviter les hors-sujet
-      });
+    // Créer toutes les options (1 bonne + 3 mauvaises)
+    const allOptions = [correctAnswer, ...finalFalseAnswers];
     
-    // Combiner les réponses contextuelles avec celles du chapitre
-    const allFakes = [...contextualFakes, ...otherAnswers];
-    const shuffledFakes = shuffleOptions(allFakes).slice(0, 3);
+    // Mélanger aléatoirement les positions
+    const shuffledOptions = shuffleArray(allOptions);
     
-    // Si pas assez de fausses réponses, utiliser des réponses génériques mais pertinentes
-    if (shuffledFakes.length < 3) {
-      const genericFakes = getGenericFakes(theme);
-      const additionalFakes = shuffleOptions(genericFakes).slice(0, 3 - shuffledFakes.length);
-      shuffledFakes.push(...additionalFakes);
-    }
-    
-    // Mélanger la bonne réponse avec les fausses
-    const allOptions = shuffleOptions([correct, ...shuffledFakes]);
-    const correctAnswerIndex = allOptions.findIndex(opt => opt === correct);
+    // Trouver l'index de la bonne réponse après mélange
+    const correctAnswerIndex = shuffledOptions.findIndex(option => option === correctAnswer);
     
     return {
       question: item.question,
-      options: allOptions,
+      options: shuffledOptions,
       correctAnswerIndex,
+      correctAnswer: correctAnswer
     };
   });
 }
 
-// Génère des fausses réponses contextuelles selon le thème
-function generateContextualFakes(theme: string, correctAnswer: string): string[] {
-  const fakes: { [key: string]: string[] } = {
-    ablution: [
-      "Se laver seulement les mains",
-      "Se laver seulement le visage", 
-      "Ne pas se laver du tout",
-      "Se laver seulement les pieds",
-      "Utiliser de l'eau non pure",
-      "Faire les ablutions dans le désordre",
-      "Ne pas faire les ablutions avant la prière",
-      "Faire les ablutions après la prière"
-    ],
-    priere: [
-      "Prier sans orientation vers la Kaaba",
-      "Prier sans intention",
-      "Prier en parlant",
-      "Prier sans couvrir les parties intimes",
-      "Prier en mangeant",
-      "Prier en dormant",
-      "Prier sans purification",
-      "Prier à n'importe quel moment"
-    ],
-    temps: [
-      "À n'importe quelle heure",
-      "Seulement le matin",
-      "Seulement le soir",
-      "Une fois par semaine",
-      "Une fois par mois",
-      "Jamais",
-      "Quand on veut",
-      "Pendant le sommeil"
-    ],
-    nombre: [
-      "Une seule fois",
-      "Dix fois",
-      "Cent fois",
-      "Mille fois",
-      "Autant qu'on veut",
-      "Jamais",
-      "Une fois par jour",
-      "Une fois par semaine"
-    ],
-    general: [
-      "Aucune de ces réponses",
-      "Je ne sais pas",
-      "Cela dépend",
-      "Non précisé",
-      "Voir le livre",
-      "Demander à l'imam",
-      "Cela n'a pas d'importance"
-    ]
-  };
-  
-  return fakes[theme] || fakes.general;
-}
-
-// Génère des réponses génériques selon le thème
-function getGenericFakes(theme: string): string[] {
-  const generics: { [key: string]: string[] } = {
-    ablution: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
-    priere: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
-    temps: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
-    nombre: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
-    general: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"]
-  };
-  
-  return generics[theme] || generics.general;
-}
-
-function shuffleOptions(options: string[]) {
-  return options.slice().sort(() => Math.random() - 0.5);
-}
-
-const quizData = generateOptionsForQuiz(rawQuizData);
+// Les données seront générées dans le composant
 
 
 
@@ -187,12 +97,12 @@ export default function OriginalQuizScreen() {
   // Mapping centralisé des fichiers d'exercices
   const exercicesFiles: { [key: string]: any[] } = {
     '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
-    '2': require('../../data/exercices_par_chapitre/chapitre_02_exercices.json'),
-    '3': require('../../data/exercices_par_chapitre/chapitre_03_exercices.json'),
-    '5': require('../../data/exercices_par_chapitre/chapitre_05_exercices.json'),
-    '6': require('../../data/exercices_par_chapitre/chapitre_06_exercices.json'),
-    '7': require('../../data/exercices_par_chapitre/chapitre_07_exercices.json'),
-    '9': require('../../data/exercices_par_chapitre/chapitre_09_exercices.json'),
+    '2': require('../../data/exercices_par_chapitre/chapitre_2_exercices.json'),
+    '3': require('../../data/exercices_par_chapitre/chapitre_3_exercices.json'),
+    '5': require('../../data/exercices_par_chapitre/chapitre_5_exercices.json'),
+    '6': require('../../data/exercices_par_chapitre/chapitre_6_exercices.json'),
+    '7': require('../../data/exercices_par_chapitre/chapitre_7_exercices.json'),
+    '9': require('../../data/exercices_par_chapitre/chapitre_9_execrcices.json'),
     '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
     '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
   };
@@ -216,7 +126,7 @@ export default function OriginalQuizScreen() {
 
       const chapterKey = exercicesKey;
       const sessionKey = `quizSession:${chapterKey}`;
-      const saved = await readUserStorage<{ index: number; answers: Array<number|null> }>(user?.uid, sessionKey);
+      const saved = await readUserStorage<{ index: number; score: number; answers: Array<number|null> }>(user?.uid, sessionKey);
       
       console.log(`🔍 Vérification session pour chapitre ${chapterKey}:`, {
         saved: saved ? `index ${saved.index}` : 'aucune',
@@ -227,8 +137,11 @@ export default function OriginalQuizScreen() {
       // Vérifier si la session est valide
       if (saved && typeof saved.index === 'number') {
         if (saved.index < quizData.length) {
-          console.log(`🔄 Reprise de session pour chapitre ${chapterKey} à la question ${saved.index}`);
+          // Limiter le score à ne pas dépasser le nombre de questions
+          const limitedScore = Math.min(saved.score || 0, quizData.length);
+          console.log(`🔄 Reprise de session pour chapitre ${chapterKey} à la question ${saved.index} avec score ${limitedScore}`);
           setCurrentQuestionIndex(saved.index);
+          setScore(limitedScore);
           setShowQuestionPage(true);
         } else {
           console.log(`⚠️ Session invalide pour chapitre ${chapterKey}: index ${saved.index} >= ${quizData.length}`);
@@ -253,7 +166,7 @@ export default function OriginalQuizScreen() {
     const persist = async () => {
       const chapterKey = exercicesKey;
       const sessionKey = `quizSession:${chapterKey}`;
-      await writeUserStorage(user?.uid, sessionKey, { index: currentQuestionIndex, answers: [] });
+      await writeUserStorage(user?.uid, sessionKey, { index: currentQuestionIndex, score: score, answers: [] });
       // Maintenir un index des sessions pour l'écran Quiz initial
       const indexKey = 'quizSessionsIndex';
       const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
@@ -262,7 +175,7 @@ export default function OriginalQuizScreen() {
     };
     persist();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentQuestionIndex, exercicesKey]);
+  }, [currentQuestionIndex, score, exercicesKey]);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showQuestionPage, setShowQuestionPage] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(1));
@@ -277,7 +190,7 @@ export default function OriginalQuizScreen() {
     }
   }, [quizData.length, navigation]);
 
-  // Nettoyer les sessions corrompues au démarrage
+  // Nettoyer les sessions corrompues et les scores > 100% au démarrage
   useEffect(() => {
     const cleanupSessions = async () => {
       try {
@@ -290,7 +203,7 @@ export default function OriginalQuizScreen() {
         for (const [chapterKey, hasSession] of Object.entries(index)) {
           if (hasSession) {
             const sessionKey = `quizSession:${chapterKey}`;
-            const session = await readUserStorage<{ index: number }>(user?.uid, sessionKey);
+            const session = await readUserStorage<{ index: number; score: number }>(user?.uid, sessionKey);
             
             if (!session) {
               console.log(`🗑️ Session manquante supprimée de l'index: ${chapterKey}`);
@@ -300,6 +213,24 @@ export default function OriginalQuizScreen() {
         }
         
         await writeUserStorage(user?.uid, indexKey, index);
+        
+        // Nettoyer les scores qui dépassent 100%
+        const scores = (await readUserStorage<Record<string, number>>(user?.uid, 'quizScores')) || {};
+        let scoresUpdated = false;
+        
+        for (const [chapterKey, score] of Object.entries(scores)) {
+          if (score > 100) {
+            console.log(`🔧 Correction du score pour chapitre ${chapterKey}: ${score}% -> 100%`);
+            scores[chapterKey] = 100;
+            scoresUpdated = true;
+          }
+        }
+        
+        if (scoresUpdated) {
+          await writeUserStorage(user?.uid, 'quizScores', scores);
+          console.log('✅ Scores corrigés et sauvegardés');
+        }
+        
         console.log('✅ Nettoyage des sessions terminé');
       } catch (error) {
         console.error('❌ Erreur lors du nettoyage des sessions:', error);
@@ -390,9 +321,24 @@ export default function OriginalQuizScreen() {
       setShowQuestionPage(true);
       return;
     }
-    // Sinon, naviguer vers la page de sélection des chapitres
-    console.log('Navigation vers la sélection des chapitres');
-    navigation.navigate('QuizChapterSelect' as never);
+    
+    // Vérifier si on doit retourner à un chapitre spécifique
+    const returnToChapter = (route.params as any)?.returnToChapter;
+    if (returnToChapter) {
+      console.log('Retour vers le chapitre avec section spécifique:', returnToChapter);
+      (navigation as any).navigate('Chapter', {
+        chapter: {
+          image: returnToChapter.image,
+          title: returnToChapter.title,
+          desc: returnToChapter.title
+        },
+        initialSection: returnToChapter.section
+      });
+    } else {
+      // Sinon, naviguer vers la page de sélection des chapitres
+      console.log('Navigation vers la sélection des chapitres');
+      navigation.navigate('QuizChapterSelect' as never);
+    }
   };
 
   // Gestionnaire de swipe personnalisé pour iOS
@@ -422,8 +368,21 @@ export default function OriginalQuizScreen() {
           setShowQuestionPage(true);
           return true;
         }
+              // Vérifier si on doit retourner à un chapitre spécifique
+      const returnToChapter = (route.params as any)?.returnToChapter;
+      if (returnToChapter) {
+        (navigation as any).navigate('Chapter', {
+          chapter: {
+            image: returnToChapter.image,
+            title: returnToChapter.title,
+            desc: returnToChapter.title
+          },
+          initialSection: returnToChapter.section
+        });
+      } else {
         // Sinon, aller à la sélection des chapitres
         navigation.navigate('QuizChapterSelect' as never);
+      }
         return true;
       };
 
@@ -510,12 +469,15 @@ export default function OriginalQuizScreen() {
     try {
       console.log(`💾 Sauvegarde du score pour chapitre ${chapterKey}: ${scorePercentage}%`);
       
+      // Limiter le score à 100% maximum
+      const limitedScorePercentage = Math.min(scorePercentage, 100);
+      
       // Sauvegarder le score
       const scores = (await readUserStorage<Record<string, number>>(user?.uid, 'quizScores')) || {};
-      if (!scores[chapterKey] || scorePercentage > scores[chapterKey]) {
-        scores[chapterKey] = scorePercentage;
+      if (!scores[chapterKey] || limitedScorePercentage > scores[chapterKey]) {
+        scores[chapterKey] = limitedScorePercentage;
         await writeUserStorage(user?.uid, 'quizScores', scores);
-        console.log(`✅ Score sauvegardé pour le chapitre ${chapterKey}: ${scorePercentage}%`);
+        console.log(`✅ Score sauvegardé pour le chapitre ${chapterKey}: ${limitedScorePercentage}%`);
       }
       
       // Nettoyer complètement la session terminée
@@ -556,43 +518,74 @@ export default function OriginalQuizScreen() {
     setQuizData(generateOptionsForQuiz(rawQuizData));
   };
 
-  // Fonction pour permettre de reprendre n'importe quel chapitre
-  const resumeAnyChapter = async () => {
-    try {
-      // Supprimer la session actuelle pour permettre la reprise
-      const chapterKey = exercicesKey;
-      const sessionKey = `quizSession:${chapterKey}`;
-      await removeUserStorage(user?.uid, sessionKey);
-      
-      // Mettre à jour l'index des sessions
-      const indexKey = 'quizSessionsIndex';
-      const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
-      if (index[chapterKey]) {
-        delete index[chapterKey];
-        await writeUserStorage(user?.uid, indexKey, index);
-      }
-      
-      console.log(`✅ Session supprimée pour le chapitre ${chapterKey}, reprise possible`);
-      
-      // Recharger le quiz depuis le début
-      setCurrentQuestionIndex(0);
-      setScore(0);
-      setSelectedAnswerIndex(null);
-      setIsAnswerCorrect(null);
-      setShowAnswer(false);
-      setShowResults(false);
-      setShowQuestionPage(true);
-      fadeAnim.setValue(1);
-      
-    } catch (error) {
-      console.error('Erreur lors de la reprise du chapitre:', error);
-    }
+
+
+  // Fonction pour déterminer si on vient d'un chapitre
+  const isComingFromChapter = () => {
+    return !!(route.params as any)?.returnToChapter;
   };
 
-  // Fonction pour naviguer vers le quiz suivant
+  // Fonction pour naviguer vers le quiz suivant ou le chapitre suivant
   const goToNextQuiz = () => {
     console.log('🔄 goToNextQuiz appelé avec exercicesKey:', exercicesKey);
     
+    // Si on vient d'un chapitre, naviguer vers le chapitre suivant
+    if (isComingFromChapter()) {
+      console.log('📖 Navigation vers le chapitre suivant (venant d\'un chapitre)');
+      
+      // Récupérer les données des chapitres pour déterminer la partie actuelle
+      const chaptersData = require('../../data/chapitres.json');
+      
+      // Trouver le chapitre actuel et sa partie
+      let currentChapter = null;
+      let currentPartieKey = null;
+      
+      Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
+        partie.chapitres.forEach((ch: any) => {
+          const num = (ch as any).numero || ch.image || '1';
+          const numKey = String(parseInt(num, 10));
+          if (numKey === exercicesKey) {
+            currentChapter = ch;
+            currentPartieKey = partieKey;
+          }
+        });
+      });
+      
+      if (!currentPartieKey) {
+        console.log('❌ Partie non trouvée pour le quiz:', exercicesKey);
+        navigation.navigate('QuizChapterSelect' as never);
+        return;
+      }
+      
+      // Trouver le chapitre suivant dans la même partie
+      const partieChapters = chaptersData[currentPartieKey].chapitres;
+      const currentIndex = partieChapters.findIndex((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        return numKey === exercicesKey;
+      });
+      
+      if (currentIndex !== -1 && currentIndex < partieChapters.length - 1) {
+        // Il y a un chapitre suivant
+        const nextChapter = partieChapters[currentIndex + 1];
+        console.log('➡️ Navigation vers le chapitre suivant:', nextChapter.title);
+        
+        (navigation as any).navigate('Chapter', {
+          chapter: {
+            image: nextChapter.image,
+            title: nextChapter.title,
+            desc: nextChapter.desc || nextChapter.title
+          }
+        });
+      } else {
+        // C'était le dernier chapitre de la partie, retourner à la sélection des chapitres
+        console.log('🏠 Retour à la sélection des chapitres (dernier chapitre de la partie)');
+        (navigation as any).navigate('Books', { selectedPart: currentPartieKey });
+      }
+      return;
+    }
+    
+    // Sinon, navigation normale vers le quiz suivant
     // Récupérer les données des chapitres pour déterminer la partie actuelle
     const chaptersData = require('../../data/chapitres.json');
     
@@ -658,7 +651,7 @@ export default function OriginalQuizScreen() {
       <SafeAreaView key={`results-${exercicesKey}`} style={styles.container} {...panResponder.panHandlers}>
         {/* Bouton de retour */}
         <TouchableOpacity 
-          style={styles.backButton} 
+          style={styles.resultsBackButton} 
           onPress={() => {
             console.log('Bouton retour TOUCHÉ (résultats) !');
             goToQuizSelection();
@@ -666,7 +659,7 @@ export default function OriginalQuizScreen() {
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-          </TouchableOpacity>
+        </TouchableOpacity>
 
         {/* Section du personnage - identique aux autres pages */}
         <View style={styles.characterSection}>
@@ -707,7 +700,9 @@ export default function OriginalQuizScreen() {
             
             {canProceedToNext ? (
               <TouchableOpacity style={styles.restartButton} onPress={goToNextQuiz}>
-                <Text style={styles.restartButtonText}>Quiz suivant</Text>
+                <Text style={styles.restartButtonText}>
+                  {isComingFromChapter() ? 'Chapitre suivant' : 'Quiz suivant'}
+                </Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
@@ -735,14 +730,6 @@ export default function OriginalQuizScreen() {
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.restartChapterButton} 
-          onPress={resumeAnyChapter}
-          activeOpacity={0.7}
-        >
-          <MaterialCommunityIcons name="refresh" size={20} color="white" />
         </TouchableOpacity>
       </View>
 
@@ -874,9 +861,15 @@ export default function OriginalQuizScreen() {
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.answerSection}>
-                    <View style={styles.correctAnswerBanner}>
-                      <Text style={styles.correctAnswerText}>
-                        Réponse correcte
+                    <View style={[
+                      styles.correctAnswerBanner,
+                      !isAnswerCorrect && styles.incorrectAnswerBanner
+                    ]}>
+                      <Text style={[
+                        styles.correctAnswerText,
+                        !isAnswerCorrect && styles.incorrectAnswerText
+                      ]}>
+                        {isAnswerCorrect ? 'Réponse correcte' : 'Réponse fausse'}
                       </Text>
                     </View>
                     <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
@@ -933,21 +926,34 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     left: 20,
-    right: 20,
     zIndex: 100,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
   backButton: { 
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
     padding: 8,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  restartChapterButton: {
+  resultsBackButton: { 
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 100,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
     padding: 8,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+
   characterSection: {
     position: 'absolute',
     top: 25, // Réduit de 40 à 25 pour faire monter l'image un peu
@@ -1028,6 +1034,19 @@ const styles = StyleSheet.create({
   correctAnswerText: {
     color: 'white',
     fontSize: 13, // Réduit de 14 à 13
+    fontWeight: 'bold',
+  },
+  incorrectAnswerBanner: {
+    backgroundColor: '#DC3545',
+    padding: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 6,
+    minHeight: 40,
+  },
+  incorrectAnswerText: {
+    color: 'white',
+    fontSize: 13,
     fontWeight: 'bold',
   },
   nextButton: {
@@ -1224,11 +1243,12 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   hintText: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: 14,
+    color: '#19514A',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 15,
     fontStyle: 'italic',
+    fontWeight: '500',
   },
   // Styles pour les cartes empilées du modal
   modalCardContainer: {

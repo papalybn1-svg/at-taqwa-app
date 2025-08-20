@@ -1,14 +1,15 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Stockage local scoping par utilisateur
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { ActivityIndicator, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
 import { ChaptersData } from '../types/chapters';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
+import { isQuizUnlocked } from '../utils/quizUnlock';
 
 const chaptersData = chaptersDataRaw as ChaptersData;
 
@@ -116,6 +117,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const [favorites, setFavorites] = useState<any[]>([]);
   const [scrollProgress, setScrollProgress] = useState(0); // Ajout pour la progression verticale
   const [isScrollable, setIsScrollable] = useState(false); // Pour savoir si la page est scrollable
+  
+  // États pour la gestion des quiz
+  const [quizScores, setQuizScores] = useState<Record<string, number>>({});
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [lockedChapter, setLockedChapter] = useState<any>(null);
+  const [previousScore, setPreviousScore] = useState<number | undefined>(undefined);
 
   // useEffect pour charger le contenu du chapitre
   useEffect(() => {
@@ -128,27 +135,15 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       
       // Migration désactivée pour éviter de copier les anciennes données globales d'un autre compte
 
-      // Démarrer à la section spécifiée si on vient des favoris, sinon reprendre dernière section lue
+      // Démarrer à la section spécifiée si on vient des favoris, sinon toujours commencer par la page 1
       const loadInitialSection = async () => {
         const initialFromParams = route.params.initialSection;
         if (typeof initialFromParams === 'number') {
+          // Si on vient des favoris avec une section spécifique, utiliser cette section
           setCurrentSectionIndex(initialFromParams);
         } else {
-          // Reprise précise
-          const allChapters = getAllChapters();
-          const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
-          if (currentChapterData) {
-            const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
-            const saved = await readUserStorage<ChapterState>(user?.uid, 'chapterProgress');
-            const last = saved && saved[progressKey]?.lastSection;
-            if (typeof last === 'number') {
-              setCurrentSectionIndex(last);
-            } else {
-              setCurrentSectionIndex(0);
-            }
-          } else {
-            setCurrentSectionIndex(0);
-          }
+          // Sinon, toujours commencer par la page 1
+          setCurrentSectionIndex(0);
         }
         // Initialiser la progression si c'est la première fois qu'on lit ce chapitre
         initializeChapterProgress();
@@ -339,13 +334,25 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     }
   };
 
-  // Fonction pour initialiser la progression d'un chapitre
+  // Fonction pour gérer le retour vers la page des chapitres de cette partie
+  const handleBackPress = () => {
+    // Toujours retourner vers la page des chapitres de cette partie
+    const allChapters = getAllChapters();
+    const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+    if (currentChapterData) {
+      navigation.navigate('Books', { selectedPart: currentChapterData.partieKey });
+    } else {
+      // Fallback si on ne trouve pas la partie
+      navigation.goBack();
+    }
+  };
+
   // Gestionnaire de geste de swipe
   const onGestureEvent = (event: any) => {
     if (event.nativeEvent.state === State.END) {
       const { translationX, velocityX } = event.nativeEvent;
       if ((translationX > 50 && velocityX > 500) || translationX > 150) {
-        navigation.goBack();
+        handleBackPress();
       }
     }
   };
@@ -379,6 +386,80 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       console.error('Erreur lors de l\'initialisation de la progression:', error);
     }
   };
+
+  // Fonction pour charger les scores des quiz
+  const loadQuizScores = async () => {
+    try {
+      const scores = await readUserStorage<Record<string, number>>(user?.uid, 'quizScores');
+      if (scores) {
+        setQuizScores(scores);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des scores de quiz:', error);
+    }
+  };
+
+  // Fonction pour obtenir la clé du quiz du chapitre actuel
+  const getCurrentChapterQuizKey = () => {
+    if (!chapter) return null;
+    const allChapters = getAllChapters();
+    const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+    if (!currentChapterData) return null;
+    
+    // Utiliser le numéro du chapitre comme clé de quiz
+    return currentChapterData.chapitreIndex + 1;
+  };
+
+  // Fonction pour gérer le clic sur "Faire le quiz"
+  const handleQuizPress = () => {
+    const quizKey = getCurrentChapterQuizKey();
+    if (!quizKey) return;
+
+    // Vérifier si le quiz est débloqué
+    if (!isQuizUnlocked(quizKey.toString(), quizScores)) {
+      // Trouver le quiz précédent pour afficher son score actuel
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+      if (!currentChapterData) return;
+
+      const previousQuizKey = currentChapterData.chapitreIndex; // Quiz précédent
+      const score = quizScores[previousQuizKey.toString()];
+      
+      setLockedChapter(chapter);
+      setPreviousScore(score);
+      setShowLockModal(true);
+      return;
+    }
+    
+    // Quiz débloqué, naviguer vers le quiz avec la section actuelle pour le retour
+    navigation.navigate('OriginalQuiz', { 
+      exercicesKey: quizKey.toString(), 
+      chapterTitle: chapter.title, 
+      chapterPart: chapter.partie,
+      returnToChapter: {
+        image: chapter.image,
+        title: chapter.title,
+        section: currentSectionIndex
+      }
+    });
+  };
+
+  // useEffect pour charger les scores des quiz
+  useEffect(() => {
+    loadQuizScores();
+  }, [user?.uid]);
+
+  // Gestionnaire pour le bouton retour Android
+  useEffect(() => {
+    const onBackPress = () => {
+      handleBackPress();
+      return true; // Empêcher le comportement par défaut
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+    return () => subscription.remove();
+  }, []);
 
   // On ne retourne rien avant d'avoir appelé tous les hooks !
   if (!chapterContent) {
@@ -701,7 +782,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       {/* Boutons en premier plan */}
       {/* Bouton retour */}
       <TouchableOpacity 
-        onPress={() => navigation.goBack()}
+        onPress={handleBackPress}
         style={{
           position: 'absolute',
           top: 45,
@@ -849,18 +930,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>1/1</Text>
             </View>
             
-            {nextChapter ? (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
-                style={{ backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
-              >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre suivant</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre suivant</Text>
-              </View>
-            )}
+            <TouchableOpacity
+              onPress={handleQuizPress}
+              style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
+            </TouchableOpacity>
           </>
         ) : (
           // Navigation normale pour les chapitres multi-pages
@@ -893,18 +968,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             </View>
             
             {currentSectionIndex === totalSections - 1 ? (
-              nextChapter ? (
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
-                  style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre suivant</Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
-                </View>
-              )
+              <TouchableOpacity
+                onPress={handleQuizPress}
+                style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
+              </TouchableOpacity>
             ) : (
               <TouchableOpacity
                 onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
@@ -919,6 +988,77 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       </View>
         </View>
       </PanGestureHandler>
+      
+      {/* Modal pour les quiz verrouillés */}
+      <Modal
+        visible={showLockModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLockModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Image
+                source={require('../../assets/lock-closed.png')}
+                style={styles.modalLockIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.modalTitle}>Quiz verrouillé</Text>
+            </View>
+            
+            <Text style={styles.modalMessage}>
+              Pour débloquer ce quiz, vous devez obtenir au moins 80% au quiz précédent.
+            </Text>
+            
+            {previousScore !== undefined && (
+              <View style={styles.modalScoreContainer}>
+                <Text style={styles.modalScoreLabel}>Votre score actuel :</Text>
+                <Text style={styles.modalScoreValue}>{previousScore}%</Text>
+                <Text style={styles.modalScoreRequired}>
+                  Score requis : 80%
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalButtonSecondary}
+                onPress={() => setShowLockModal(false)}
+              >
+                <Text style={styles.modalButtonTextSecondary}>Fermer</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalButtonPrimary}
+                onPress={() => {
+                  setShowLockModal(false);
+                  // Naviguer vers le quiz précédent
+                  const allChapters = getAllChapters();
+                  const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+                  if (currentChapterData && currentChapterData.chapitreIndex > 0) {
+                    const previousChapter = allChapters.find(ch => ch.chapitreIndex === currentChapterData.chapitreIndex - 1);
+                    if (previousChapter) {
+                      navigation.navigate('OriginalQuiz', { 
+                        exercicesKey: previousChapter.chapitreIndex.toString(), 
+                        chapterTitle: previousChapter.title, 
+                        chapterPart: previousChapter.partieTitre,
+                        returnToChapter: {
+                          image: chapter.image,
+                          title: chapter.title,
+                          section: currentSectionIndex
+                        }
+                      });
+                    }
+                  }
+                }}
+              >
+                <Text style={styles.modalButtonTextPrimary}>Faire le quiz précédent</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </GestureHandlerRootView>
   );
 };
@@ -1018,6 +1158,98 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  // Styles pour le modal de quiz verrouillé
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    margin: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalLockIcon: {
+    width: 48,
+    height: 48,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#174C3C',
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  modalScoreContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalScoreLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  modalScoreValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#174C3C',
+    marginBottom: 4,
+  },
+  modalScoreRequired: {
+    fontSize: 14,
+    color: '#666',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButtonSecondary: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#174C3C',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    flex: 1,
+    marginLeft: 8,
+    alignItems: 'center',
+  },
+  modalButtonTextSecondary: {
+    color: '#666',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  modalButtonTextPrimary: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

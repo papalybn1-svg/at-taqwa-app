@@ -3,6 +3,7 @@ import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation
 import { LinearGradient } from 'expo-linear-gradient';
 import React from "react";
 import { Alert, Animated, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
@@ -289,7 +290,8 @@ export default function BooksScreen() {
                         <View style={styles.imageContainer}>
                           <Image 
                             source={imageMap[ch.image] || require('../../assets/1.png')} 
-                            style={styles.newChapterImage} 
+                            style={styles.newChapterImage}
+                            resizeMode="cover"
                           />
                         </View>
                         
@@ -673,14 +675,14 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
-    padding: 16,
+    padding: 18,
     position: 'relative',
   },
   imageContainer: {
     position: 'relative',
     marginRight: 16,
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
     borderRadius: 16,
     overflow: 'hidden',
     elevation: 3,
@@ -693,12 +695,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   newChapterImage: {
-    width: '130%',
-    height: '130%',
+    width: '100%',
+    height: '100%',
     resizeMode: 'cover',
-    minWidth: '130%',
-    minHeight: '130%',
-    transform: [{ scale: 1.3 }],
   },
   progressOverlay: {
     position: 'absolute',
