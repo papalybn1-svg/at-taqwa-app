@@ -335,9 +335,9 @@ export default function OriginalQuizScreen() {
         initialSection: returnToChapter.section
       });
     } else {
-      // Sinon, naviguer vers la page de sélection des chapitres
-      console.log('Navigation vers la sélection des chapitres');
-      navigation.navigate('QuizChapterSelect' as never);
+    // Sinon, naviguer vers la page de sélection des chapitres
+    console.log('Navigation vers la sélection des chapitres');
+    navigation.navigate('QuizChapterSelect' as never);
     }
   };
 
@@ -659,7 +659,7 @@ export default function OriginalQuizScreen() {
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-        </TouchableOpacity>
+          </TouchableOpacity>
 
         {/* Section du personnage - identique aux autres pages */}
         <View style={styles.characterSection}>

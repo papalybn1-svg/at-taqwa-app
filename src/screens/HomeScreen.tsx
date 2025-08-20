@@ -68,6 +68,7 @@ type Chapter = {
   author: string;
   image: string;
   partie: string;
+  partieTitre?: string;
   content?: string;
 };
 
@@ -152,7 +153,7 @@ export default function HomeScreen() {
   const [previewModalVisible, setPreviewModalVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter | null>(null);
   const [firestoreStatus, setFirestoreStatus] = React.useState<'connecting' | 'connected' | 'error'>('connecting');
-  const [imageLoadingStates, setImageLoadingStates] = React.useState<{ [key: string]: boolean }>({});
+
   const scrollX = React.useRef(new Animated.Value(0)).current;
 
   // Test de connexion Firestore au démarrage
@@ -216,7 +217,20 @@ export default function HomeScreen() {
 
 
 
+  // Fonction pour vérifier si un chapitre est premium
+  const isPremiumChapter = (chapter: Chapter) => {
+    const premiumParts = ['deuxieme_partie', 'troisieme_partie'];
+    return premiumParts.includes(chapter.partie);
+  };
+
   const handleChapterPress = (chapter: Chapter) => {
+    // Si le chapitre est premium, afficher un message au lieu d'ouvrir le modal
+    if (isPremiumChapter(chapter)) {
+      // Ici on pourrait afficher un modal premium ou une alerte
+      alert('Ce chapitre est disponible en version premium. Débloquez les parties 2 et 3 pour y accéder.');
+      return;
+    }
+    
     setSelectedChapter(chapter);
     setPreviewModalVisible(true);
   };
@@ -228,6 +242,13 @@ export default function HomeScreen() {
 
   const openFullChapter = () => {
     if (selectedChapter) {
+      // Si le chapitre est premium, afficher un message au lieu de naviguer
+      if (isPremiumChapter(selectedChapter)) {
+        alert('Ce chapitre est disponible en version premium. Débloquez les parties 2 et 3 pour y accéder.');
+        closePreviewModal();
+        return;
+      }
+      
       closePreviewModal();
       navigation.navigate('Chapter', { chapter: selectedChapter });
     }
@@ -432,23 +453,22 @@ export default function HomeScreen() {
 
 
 
-  // Filtrer pour ne montrer que les chapitres de la première partie (non premium)
+  // Correction : tous les chapitres doivent apparaître
   let globalChapitreIndex = 1;
-  const allChapters = Object.entries(chaptersData)
-    .filter(([partieKey, partie]: any) => partieKey === 'premiere_partie') // Seulement la première partie
-    .flatMap(([partieKey, partie]: any, partieIndex: number) =>
-      partie.chapitres.map((ch: any, chapitreIndex: number) => {
-        const currentChapitreNumber = globalChapitreIndex++;
-        const pageCount = getChapterPages(ch.image);
-        return {
-          ...ch,
-          id: `${partieIndex}-${chapitreIndex}`,
-          partie: partie.titre,
-          title: `Chapitre ${currentChapitreNumber}.`,
-          pageCount: pageCount
-        };
-      })
-    );
+  const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie]: any, partieIndex: number) =>
+    partie.chapitres.map((ch: any, chapitreIndex: number) => {
+      const currentChapitreNumber = globalChapitreIndex++;
+      const pageCount = getChapterPages(ch.image);
+      return {
+        ...ch,
+        id: `${partieIndex}-${chapitreIndex}`,
+        partie: partieKey, // Utiliser la clé de la partie au lieu du titre
+        partieTitre: partie.titre, // Garder le titre pour l'affichage
+        title: `Chapitre ${currentChapitreNumber}.`,
+        pageCount: pageCount
+      };
+    })
+  );
 
   return (
     <View style={styles.safeArea}>
@@ -553,39 +573,35 @@ export default function HomeScreen() {
               });
               return (
                 <Animated.View style={{ transform: [{ scale }], opacity, marginHorizontal: 6 }}>
-                  <TouchableOpacity style={styles.bookCardModern} onPress={() => handleChapterPress(item)}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.bookCardModern,
+                      isPremiumChapter(item) && styles.premiumCard
+                    ]} 
+                    onPress={() => handleChapterPress(item)}
+                  >
                     <View style={styles.bookImageContainer}>
-                      {imageLoadingStates[item.image] !== false && (
-                        <ActivityIndicator 
-                          size="small" 
-                          color={colors.primary} 
-                          style={styles.imageLoader}
-                        />
-                      )}
                       <Image 
                         source={getChapterImage(item.image)} 
-                        style={[
-                          styles.bookImageModern,
-                          imageLoadingStates[item.image] === false && styles.imageLoaded
-                        ]}
+                        style={styles.bookImageModern}
                         resizeMode="cover"
+                        fadeDuration={0}
                         onError={() => {
                           console.log('Erreur de chargement image:', item.image);
-                          setImageLoadingStates(prev => ({ ...prev, [item.image]: false }));
-                        }}
-                        onLoad={() => {
-                          console.log('Image chargée avec succès:', item.image);
-                          setImageLoadingStates(prev => ({ ...prev, [item.image]: false }));
-                        }}
-                        onLoadStart={() => {
-                          setImageLoadingStates(prev => ({ ...prev, [item.image]: true }));
                         }}
                       />
+                      {/* Indicateur premium pour les chapitres premium */}
+                      {isPremiumChapter(item) && (
+                        <View style={styles.premiumBadge}>
+                          <MaterialCommunityIcons name="crown" size={16} color={colors.secondary} />
+                          <Text style={styles.premiumText}>PREMIUM</Text>
+                        </View>
+                      )}
                     </View>
                     <View style={styles.bookCardContentModern}>
                       <Text style={styles.bookCardTitleModern} numberOfLines={1}>{item.title.replace(/\.\s*$/, ':')}</Text>
                       <Text style={styles.bookCardDescModern} numberOfLines={3}>{item.desc || 'Titre du chapitre'}</Text>
-                      <Text style={styles.bookCardSubtitleModern} numberOfLines={2}>{item.partie || 'Partie'}</Text>
+                      <Text style={styles.bookCardSubtitleModern} numberOfLines={2}>{item.partieTitre || 'Partie'}</Text>
                       <View style={styles.bookCardFooterModern}>
                         <View style={styles.pagesCountModern}>
                           <MaterialCommunityIcons name="book-open-page-variant" size={12} color={colors.gray} />
@@ -612,8 +628,9 @@ export default function HomeScreen() {
               <View style={styles.previewModalHeaderModern}>
                   <Image 
                     source={getChapterImage(selectedChapter.image)} 
-                    style={styles.previewModalImageModern}
+                  style={styles.previewModalImageModern}
                     resizeMode="cover"
+                    fadeDuration={0}
                     onError={() => console.log('Erreur de chargement image modal:', selectedChapter.image)}
                   />
                 <TouchableOpacity style={styles.closeButton} onPress={closePreviewModal}>
@@ -621,7 +638,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
               <Text style={styles.previewModalTitleModern}>{selectedChapter.title}</Text>
-              <Text style={styles.previewModalSubtitleModern}>{selectedChapter.partie}</Text>
+              <Text style={styles.previewModalSubtitleModern}>{selectedChapter.partieTitre}</Text>
               <Text style={styles.previewModalAuthorModern}>par {selectedChapter.author || 'Auteur inconnu'}</Text>
               <ScrollView style={styles.previewModalScrollModern} showsVerticalScrollIndicator={false}>
                 <Text style={styles.previewModalDescriptionModern}>
@@ -632,9 +649,21 @@ export default function HomeScreen() {
                   }
                   </Text>
     </ScrollView>
-              <TouchableOpacity style={styles.previewModalButtonModern} onPress={openFullChapter}>
-                  <MaterialCommunityIcons name="book-open-variant" size={20} color={colors.white} />
-                <Text style={styles.previewModalButtonTextModern}>Lire le chapitre complet</Text>
+              <TouchableOpacity 
+                style={[
+                  styles.previewModalButtonModern,
+                  isPremiumChapter(selectedChapter) && styles.previewModalButtonPremium
+                ]} 
+                onPress={openFullChapter}
+              >
+                  <MaterialCommunityIcons 
+                    name={isPremiumChapter(selectedChapter) ? "crown" : "book-open-variant"} 
+                    size={20} 
+                    color={colors.white} 
+                  />
+                <Text style={styles.previewModalButtonTextModern}>
+                  {isPremiumChapter(selectedChapter) ? 'Chapitre Premium' : 'Lire le chapitre complet'}
+                </Text>
                 </TouchableOpacity>
             </View>
           </View>
@@ -1180,15 +1209,38 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#f8f9fa',
   },
-  imageLoader: {
+  premiumBadge: {
     position: 'absolute',
-    top: '50%',
-    left: '50%',
-    marginLeft: -10,
-    marginTop: -10,
-    zIndex: 1,
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
-  imageLoaded: {
-    opacity: 1,
+  premiumText: {
+    color: colors.secondary,
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  premiumCard: {
+    borderWidth: 2,
+    borderColor: colors.secondary,
+    shadowColor: colors.secondary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  previewModalButtonPremium: {
+    backgroundColor: colors.secondary,
   },
 }); 

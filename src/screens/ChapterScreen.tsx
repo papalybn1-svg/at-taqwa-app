@@ -143,7 +143,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           setCurrentSectionIndex(initialFromParams);
         } else {
           // Sinon, toujours commencer par la page 1
-          setCurrentSectionIndex(0);
+              setCurrentSectionIndex(0);
         }
         // Initialiser la progression si c'est la première fois qu'on lit ce chapitre
         initializeChapterProgress();
@@ -930,12 +930,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>1/1</Text>
             </View>
             
-            <TouchableOpacity
+              <TouchableOpacity
               onPress={handleQuizPress}
               style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
-            >
+              >
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
           </>
         ) : (
           // Navigation normale pour les chapitres multi-pages
@@ -968,12 +968,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             </View>
             
             {currentSectionIndex === totalSections - 1 ? (
-              <TouchableOpacity
+                <TouchableOpacity
                 onPress={handleQuizPress}
                 style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-              >
+                >
                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
             ) : (
               <TouchableOpacity
                 onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}

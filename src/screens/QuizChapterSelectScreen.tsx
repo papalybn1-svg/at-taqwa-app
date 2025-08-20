@@ -10,17 +10,17 @@ import colors from '../theme/colors';
 import { migrateUnscopedKeyToUser, read as readUserStorage } from '../utils/userStorage';
 
 // Liste centralisée des fichiers d'exercices (clé = numéro de chapitre sous forme de string)
-  const exercicesFiles: { [key: string]: any[] } = {
-    '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
+const exercicesFiles: { [key: string]: any[] } = {
+  '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
     '2': require('../../data/exercices_par_chapitre/chapitre_2_exercices.json'),
     '3': require('../../data/exercices_par_chapitre/chapitre_3_exercices.json'),
     '5': require('../../data/exercices_par_chapitre/chapitre_5_exercices.json'),
     '6': require('../../data/exercices_par_chapitre/chapitre_6_exercices.json'),
     '7': require('../../data/exercices_par_chapitre/chapitre_7_exercices.json'),
     '9': require('../../data/exercices_par_chapitre/chapitre_9_execrcices.json'),
-    '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
-    '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
-  };
+  '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
+  '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
+};
 
 // SplashFamille copié depuis App.tsx
 function SplashFamille() {

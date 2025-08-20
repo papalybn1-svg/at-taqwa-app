@@ -631,10 +631,11 @@ export default function TasbihScreen() {
                   onPress={() => activeZikr && increment(activeZikr.id)}
                   activeOpacity={0.8}
                 >
-                  <Image 
-                    source={require('../../assets/Chapelet_electronique.png')} 
-                    style={styles.tasbihImage}
-                    resizeMode="contain"
+                                      <Image 
+                      source={require('../../assets/Chapelet_electronique_optimized.png')} 
+                      style={styles.tasbihImage}
+                      resizeMode="contain"
+                      fadeDuration={0}
                   />
                   {/* Écran du compteur superposé sur l'image */}
                   <View style={styles.counterScreen}>

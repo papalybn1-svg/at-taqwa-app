@@ -290,8 +290,9 @@ export default function BooksScreen() {
                         <View style={styles.imageContainer}>
                           <Image 
                             source={imageMap[ch.image] || require('../../assets/1.png')} 
-                            style={styles.newChapterImage}
+                            style={styles.newChapterImage} 
                             resizeMode="cover"
+                            fadeDuration={0}
                           />
                         </View>
                         
