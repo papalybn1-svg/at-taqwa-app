@@ -1,10 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Stockage local scoping par utilisateur
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
 import { ChaptersData } from '../types/chapters';
@@ -765,73 +763,49 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
         <View style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
-      {/* Header avec image et titre */}
-      <View style={{ position: 'relative', overflow: 'visible' }}>
-        <Image
-          source={imageMap[chapter.image] || imageMap['1']}
-          style={{
-            width: screenWidth,
-            height: 200,
-            borderBottomLeftRadius: 32,
-            borderBottomRightRadius: 32,
-            resizeMode: 'cover',
-          }}
-        />
-        <LinearGradient
-          colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.0)']}
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 120, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}
-        />
-        {/* Carte titre - descendue pour mieux montrer l'image */}
-        <View style={{ position: 'absolute', left: 20, right: 20, bottom: -40, zIndex: 10 }}>
-          <View style={{ 
-            backgroundColor: '#fff', 
-            borderRadius: 20, 
-            paddingVertical: 24, 
-            paddingHorizontal: 24, 
-            shadowColor: '#000', 
-            shadowOpacity: 0.15, 
-            shadowRadius: 12, 
-            elevation: 10, 
-            alignItems: 'center'
-          }}>
-            {/* Numéro du chapitre */}
-            <Text style={{ 
-              fontSize: 20, 
-              fontWeight: 'bold', 
-              color: '#D4AF37', 
-              textAlign: 'center', 
-              letterSpacing: 0.5, 
-              marginBottom: 4 
-            }}>
-              {chapter.title.replace(/\.\s*$/, ':')}
-            </Text>
-            {/* Nom du chapitre */}
-            <Text style={{ 
-              fontSize: 20, 
-              fontWeight: 'bold', 
-              color: '#174C3C', 
-              textAlign: 'center', 
-              lineHeight: 26,
-              marginBottom: 8
-            }}>
-              {chapterContent?.contenu?.find((item: any) => item.type === "titre")?.contenu || chapter.desc}
-            </Text>
-            {/* Affichage de la partie */}
-            <Text style={{ 
-              fontSize: 14, 
-              fontWeight: '500', 
-              color: '#666', 
-              textAlign: 'center', 
-              letterSpacing: 0.3 
-            }}>
-              {(() => {
-                const allChapters = getAllChapters();
-                const currentChapterIndex = allChapters.findIndex(ch => ch.image === chapter?.image && ch.title === chapter?.title);
-                return allChapters[currentChapterIndex]?.partieTitre || '';
-              })()}
-            </Text>
-          </View>
-        </View>
+      {/* Header simplifié sans image */}
+      <View style={{ 
+        backgroundColor: '#174C3C', 
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+        paddingBottom: 20,
+        paddingHorizontal: 20
+      }}>
+        {/* Numéro du chapitre */}
+        <Text style={{ 
+          fontSize: 18, 
+          fontWeight: 'bold', 
+          color: '#D4AF37', 
+          textAlign: 'center', 
+          letterSpacing: 0.5, 
+          marginBottom: 4 
+        }}>
+          {chapter.title.replace(/\.\s*$/, ':')}
+        </Text>
+        {/* Nom du chapitre */}
+        <Text style={{ 
+          fontSize: 18, 
+          fontWeight: 'bold', 
+          color: '#FFFFFF', 
+          textAlign: 'center', 
+          lineHeight: 24,
+          marginBottom: 8
+        }}>
+          {chapterContent?.contenu?.find((item: any) => item.type === "titre")?.contenu || chapter.desc}
+        </Text>
+        {/* Affichage de la partie */}
+        <Text style={{ 
+          fontSize: 14, 
+          fontWeight: '500', 
+          color: '#B8D4B8', 
+          textAlign: 'center', 
+          letterSpacing: 0.3 
+        }}>
+          {(() => {
+            const allChapters = getAllChapters();
+            const currentChapterIndex = allChapters.findIndex(ch => ch.image === chapter?.image && ch.title === chapter?.title);
+            return allChapters[currentChapterIndex]?.partieTitre || '';
+          })()}
+        </Text>
       </View>
       
       {/* Boutons en premier plan */}
