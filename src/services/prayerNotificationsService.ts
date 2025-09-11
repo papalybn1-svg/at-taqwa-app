@@ -64,7 +64,10 @@ export const scheduleTodayNotifications = async (timings: Record<string, string>
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Programmer les notifications pour chaque prière
+    // Trouver la prochaine prière
+    let nextPrayerKey: string | null = null;
+    let nextPrayerTime: Date | null = null;
+    
     for (const prayerKey of PRAYER_ORDER) {
       const prayerTime = timings[prayerKey];
       if (!prayerTime) continue;
@@ -78,6 +81,15 @@ export const scheduleTodayNotifications = async (timings: Record<string, string>
         notificationTime.setDate(notificationTime.getDate() + 1);
       }
       
+      // Garder la prochaine prière (la plus proche dans le temps)
+      if (!nextPrayerTime || notificationTime < nextPrayerTime) {
+        nextPrayerKey = prayerKey;
+        nextPrayerTime = notificationTime;
+      }
+    }
+    
+    // Programmer seulement la prochaine prière
+    if (nextPrayerKey && nextPrayerTime) {
       // Noms des prières en français
       const prayerNames: Record<string, string> = {
         Fajr: 'Subh',
@@ -87,25 +99,25 @@ export const scheduleTodayNotifications = async (timings: Record<string, string>
         Isha: 'Isha'
       };
       
-      const prayerName = prayerNames[prayerKey] || prayerKey;
+      const prayerName = prayerNames[nextPrayerKey] || nextPrayerKey;
       
-                           // Programmer la notification
-         await Notifications.scheduleNotificationAsync({
-           content: {
-             title: `Heure de ${prayerName}`,
-             body: `C'est l'heure de la prière de ${prayerName}`,
-             sound: 'default',
-             priority: Notifications.AndroidNotificationPriority.HIGH,
-           },
-           trigger: {
-             seconds: Math.floor((notificationTime.getTime() - Date.now()) / 1000),
-           },
-         });
+      // Programmer la notification
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Heure de ${prayerName}`,
+          body: `C'est l'heure de la prière de ${prayerName}`,
+          sound: 'default',
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: {
+          seconds: Math.floor((nextPrayerTime.getTime() - Date.now()) / 1000),
+        } as any,
+      });
       
-      console.log(`⏰ Notification programmée pour ${prayerName} à ${prayerTime}`);
+      console.log(`⏰ Notification programmée pour ${prayerName} à ${nextPrayerTime.toLocaleTimeString()}`);
     }
     
-    console.log('✅ Toutes les notifications du jour programmées');
+    console.log('✅ Notification de la prochaine prière programmée');
   } catch (error) {
     console.error('❌ Erreur programmation notifications:', error);
   }
@@ -148,6 +160,16 @@ export const rescheduleNotifications = async (timings: Record<string, string>): 
     await scheduleTodayNotifications(timings);
   } catch (error) {
     console.error('❌ Erreur replanification notifications:', error);
+  }
+};
+
+// Fonction pour programmer la notification suivante après une prière
+export const scheduleNextPrayerNotification = async (timings: Record<string, string>): Promise<void> => {
+  try {
+    console.log('⏭️ Programmation de la prochaine prière');
+    await scheduleTodayNotifications(timings);
+  } catch (error) {
+    console.error('❌ Erreur programmation prochaine prière:', error);
   }
 };
 

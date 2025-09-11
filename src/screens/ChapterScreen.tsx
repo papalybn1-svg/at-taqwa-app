@@ -1,15 +1,15 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Stockage local scoping par utilisateur
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
 import { ChaptersData } from '../types/chapters';
-import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 import { isQuizUnlocked } from '../utils/quizUnlock';
+import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
 const chaptersData = chaptersDataRaw as ChaptersData;
 
@@ -403,8 +403,37 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const getCurrentChapterQuizKey = () => {
     if (!chapter) return null;
     const allChapters = getAllChapters();
-    const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
-    if (!currentChapterData) return null;
+    
+    // Chercher par image d'abord (plus fiable)
+    let currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+    
+    // Si pas trouvé par image, essayer par titre
+    if (!currentChapterData) {
+      currentChapterData = allChapters.find(ch => ch.title === chapter.title);
+    }
+    
+    // Si toujours pas trouvé, essayer par titre modifié (cas HomeScreen)
+    if (!currentChapterData) {
+      // Extraire le numéro du titre modifié "Chapitre X."
+      const titleMatch = chapter.title?.match(/Chapitre (\d+)\./);
+      if (titleMatch) {
+        const chapterNumber = parseInt(titleMatch[1], 10);
+        currentChapterData = allChapters.find(ch => {
+          // Chercher par position dans la liste globale
+          const globalIndex = allChapters.indexOf(ch) + 1;
+          return globalIndex === chapterNumber;
+        });
+      }
+    }
+    
+    if (!currentChapterData) {
+      console.log('❌ Chapitre non trouvé pour le quiz:', { 
+        image: chapter.image, 
+        title: chapter.title,
+        availableChapters: allChapters.map(ch => ({ image: ch.image, title: ch.title }))
+      });
+      return null;
+    }
     
     // Utiliser le numéro du chapitre comme clé de quiz
     return currentChapterData.chapitreIndex + 1;
@@ -413,14 +442,38 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   // Fonction pour gérer le clic sur "Faire le quiz"
   const handleQuizPress = () => {
     const quizKey = getCurrentChapterQuizKey();
-    if (!quizKey) return;
+    if (!quizKey) {
+      console.log('❌ Impossible de déterminer la clé du quiz pour ce chapitre');
+      return;
+    }
+
+    console.log('🔍 Quiz key trouvée:', quizKey, 'pour le chapitre:', chapter.title);
 
     // Vérifier si le quiz est débloqué
     if (!isQuizUnlocked(quizKey.toString(), quizScores)) {
       // Trouver le quiz précédent pour afficher son score actuel
       const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
-      if (!currentChapterData) return;
+      
+      // Utiliser la même logique de recherche que getCurrentChapterQuizKey
+      let currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+      if (!currentChapterData) {
+        currentChapterData = allChapters.find(ch => ch.title === chapter.title);
+      }
+      if (!currentChapterData) {
+        const titleMatch = chapter.title?.match(/Chapitre (\d+)\./);
+        if (titleMatch) {
+          const chapterNumber = parseInt(titleMatch[1], 10);
+          currentChapterData = allChapters.find(ch => {
+            const globalIndex = allChapters.indexOf(ch) + 1;
+            return globalIndex === chapterNumber;
+          });
+        }
+      }
+      
+      if (!currentChapterData) {
+        console.log('❌ Chapitre non trouvé pour le déverrouillage');
+        return;
+      }
 
       const previousQuizKey = currentChapterData.chapitreIndex; // Quiz précédent
       const score = quizScores[previousQuizKey.toString()];
@@ -430,6 +483,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       setShowLockModal(true);
       return;
     }
+    
+    console.log('✅ Quiz débloqué, navigation vers OriginalQuiz');
     
     // Quiz débloqué, naviguer vers le quiz avec la section actuelle pour le retour
     navigation.navigate('OriginalQuiz', { 
