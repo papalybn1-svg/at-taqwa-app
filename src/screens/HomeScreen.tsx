@@ -525,8 +525,7 @@ export default function HomeScreen() {
         </View>
 
 
-
-        {/* Section Auteur du livre */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Auteur du livre</Text>
           <View style={styles.authorCard}>
             <View style={styles.authorHeader}>
@@ -541,7 +540,6 @@ export default function HomeScreen() {
                 Passionné de recherches sur l'islam, il rend les textes islamiques accessibles aux non arabophones.
                 Auteur d'essais sur le Hajj, la Oumra, le Jeûne de Ramadan et la vie du Prophète.
               </Text>
-            </View>
             </View>
           </View>
         </View>
