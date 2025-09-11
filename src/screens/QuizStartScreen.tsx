@@ -4,6 +4,7 @@ import React, { useCallback, useEffect } from 'react';
 import { BackHandler, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -22,6 +23,8 @@ const isLargeScreen = screenHeight > 900;
 export default function QuizStartScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
 
   // Gestion du bouton retour Android pour aller à l'accueil
   useFocusEffect(

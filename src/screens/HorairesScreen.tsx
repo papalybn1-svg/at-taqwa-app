@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import {
     initializePrayerNotifications
 } from '../services/prayerNotificationsService';
@@ -28,6 +29,8 @@ const PRAYER_LABELS = [
 ];
 
 export default function HorairesScreen() {
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
   const [loading, setLoading] = useState(true);
   const [prayerTimes, setPrayerTimes] = useState<Record<string, string> | null>(null);
   const [date, setDate] = useState('');

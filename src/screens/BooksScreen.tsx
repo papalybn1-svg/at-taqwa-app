@@ -33,6 +33,7 @@ export default function BooksScreen() {
   const { user } = useAuth();
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
+  const styles = createStyles(responsive, responsiveStyle);
   const [progress, setProgress] = React.useState<{[key:string]:number}>({});
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter|null>(null);
@@ -481,28 +482,28 @@ export default function BooksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
   // Header simple
   simpleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: responsiveStyle.spacing.xl,
+    paddingVertical: responsiveStyle.spacing.lg,
     backgroundColor: '#F8FAF9',
     borderBottomWidth: 1,
     borderBottomColor: '#E8F5E8',
   },
   simpleBackButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: responsiveStyle.component.buttonHeight,
+    height: responsiveStyle.component.buttonHeight,
+    borderRadius: responsiveStyle.component.buttonHeight / 2,
     backgroundColor: 'rgba(23, 76, 60, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   simpleHeaderTitle: {
-    fontSize: 20,
+    fontSize: responsiveStyle.fontSize['2xl'],
     fontWeight: 'bold',
     color: '#174C3C',
     letterSpacing: 0.3,
