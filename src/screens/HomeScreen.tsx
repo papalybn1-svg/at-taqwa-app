@@ -491,7 +491,7 @@ export default function HomeScreen() {
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
                   {newNotificationsCount > 99 ? '99+' : newNotificationsCount.toString()}
-              </TouchableOpacity>
+                </Text>
               </View>
             )}
           </TouchableOpacity>
@@ -527,14 +527,21 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Auteur du livre</Text>
           <View style={styles.authorCard}>
-            <Text style={styles.authorName}>Aly Anta Sow</Text>
-            <Text style={styles.authorBio}>
-              Passionné de recherches sur l'islam, il rend les textes islamiques accessibles aux non arabophones. 
-              Auteur d'essais sur le Hajj, la Oumra, le Jeûne de Ramadan et la vie du Prophète.
-            </Text>
-            <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
-              <Text style={styles.authorButtonText}>En savoir plus</Text>
-            </TouchableOpacity>
+            <View style={styles.authorHeader}>
+              <View style={styles.authorAvatar}>
+                <MaterialCommunityIcons name="account-circle" size={45} color={colors.primary} />
+              </View>
+              <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
+                <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
+                <Text style={styles.authorButtonText}>En savoir plus</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.authorDetails}>
+              <Text style={styles.authorName}>Aly Anta Sow</Text>
+              <Text style={styles.authorBio}>
+                Passionné de recherches sur l'islam, il rend les textes islamiques accessibles aux non arabophones. 
+                Auteur d'essais sur le Hajj, la Oumra, le Jeûne de Ramadan et la vie du Prophète.
+              </Text>
             </View>
           </View>
         </View>
@@ -640,7 +647,7 @@ export default function HomeScreen() {
                     :
                     selectedChapter.desc || "Ce chapitre explore les aspects fondamentaux de la prière en Islam, offrant des enseignements précieux pour enrichir votre pratique spirituelle et renforcer votre connexion avec Allah. Découvrez les secrets d'une prière authentique et transformatrice qui vous rapprochera de votre Créateur..."
                   }
-                </TouchableOpacity>
+                  </Text>
     </ScrollView>
               <TouchableOpacity 
                 style={[
@@ -656,7 +663,7 @@ export default function HomeScreen() {
                   />
                 <Text style={styles.previewModalButtonTextModern}>
                   {isPremiumChapter(selectedChapter) ? 'Chapitre Premium' : 'Lire le chapitre complet'}
-              </TouchableOpacity>
+                </Text>
                 </TouchableOpacity>
             </View>
           </View>
