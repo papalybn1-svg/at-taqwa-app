@@ -1,9 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
 
 export default function AuthorProfileScreen() {
@@ -21,7 +20,7 @@ export default function AuthorProfileScreen() {
 
   return (
     <GestureHandlerRootView style={styles.safeArea}>
-      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+      <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
         <View style={styles.safeArea}>
             <ScrollView 
               style={styles.container} 

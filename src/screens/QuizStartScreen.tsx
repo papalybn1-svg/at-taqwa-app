@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import React, { useCallback, useEffect } from 'react';
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native';
+import { BackHandler, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -67,7 +67,7 @@ export default function QuizStartScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
+      <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
     <SafeAreaView style={styles.container}>
       {/* Bouton retour */}
       <TouchableOpacity 

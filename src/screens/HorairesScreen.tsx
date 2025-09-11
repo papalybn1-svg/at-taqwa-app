@@ -191,7 +191,7 @@ export default function HorairesScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <PanGestureHandler onGestureEvent={onGestureEvent}>
+      <PanGestureHandler enabled={Platform.OS === 'ios'} onGestureEvent={onGestureEvent}>
         <View style={styles.container}>
           {/* Header moderne cohérent avec les autres pages */}
           <View style={styles.header}>
