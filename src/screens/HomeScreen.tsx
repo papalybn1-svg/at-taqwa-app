@@ -529,7 +529,6 @@ export default function HomeScreen() {
           <View style={styles.authorCard}>
             <View style={styles.authorHeader}>
               <View style={styles.authorAvatar}>
-                <MaterialCommunityIcons name="account-circle" size={45} color={colors.primary} />
               </View>
               <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
                 <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
