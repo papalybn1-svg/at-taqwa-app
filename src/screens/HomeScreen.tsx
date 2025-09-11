@@ -524,23 +524,21 @@ export default function HomeScreen() {
 
 
         {/* Section Auteur du livre */}
-        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Auteur du livre</Text>
           <View style={styles.authorCard}>
             <View style={styles.authorHeader}>
-              <View style={styles.authorAvatar}>
-              </View>
+              <Text style={styles.authorName}>Aly Anta Sow</Text>
               <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
                 <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
                 <Text style={styles.authorButtonText}>En savoir plus</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.authorDetails}>
-              <Text style={styles.authorName}>Aly Anta Sow</Text>
               <Text style={styles.authorBio}>
-                Passionné de recherches sur l'islam, il rend les textes islamiques accessibles aux non arabophones. 
+                Passionné de recherches sur l'islam, il rend les textes islamiques accessibles aux non arabophones.
                 Auteur d'essais sur le Hajj, la Oumra, le Jeûne de Ramadan et la vie du Prophète.
               </Text>
+            </View>
             </View>
           </View>
         </View>
