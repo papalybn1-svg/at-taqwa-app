@@ -6,18 +6,17 @@ import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React from 'react';
 import {
     Animated,
-    Dimensions,
     Image,
     Modal,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
-    ActivityIndicator
+    View
 } from 'react-native';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import colors from '../theme/colors';
 import { AuthContext } from './LoginScreen';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
@@ -123,30 +122,34 @@ Le vendredi est un jour béni dans l'Islam, un moment de rassemblement et de ren
 Le raccourcissement et la combinaison des prières sont permis au voyageur pour faciliter son adoration. Ces facilités témoignent de la sagesse divine qui tient compte des circonstances de la vie humaine.`
 };
 
-const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; onPress: () => void }) => (
-  <TouchableOpacity style={styles.categoryButton} onPress={onPress}>
-    <View style={styles.categoryIconCircle}>
-      <MaterialCommunityIcons 
-        name={icon} 
-        size={icon === 'hands-pray' ? 28 : 24} 
-        color={colors.primary} 
-      />
-    </View>
-    <Text 
-      style={styles.categoryButtonText}
-      numberOfLines={2}
-      ellipsizeMode="tail"
-      adjustsFontSizeToFit
-      minimumFontScale={0.9}
-    >
-      {title}
-    </Text>
-  </TouchableOpacity>
-);
-
 export default function HomeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { user } = React.useContext(AuthContext);
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const styles = createStyles(responsive, responsiveStyle);
+  
+  const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; onPress: () => void }) => (
+    <TouchableOpacity style={styles.categoryButton} onPress={onPress}>
+      <View style={styles.categoryIconCircle}>
+        <MaterialCommunityIcons 
+          name={icon} 
+          size={responsive.isLandscape ? (icon === 'hands-pray' ? 24 : 20) : (icon === 'hands-pray' ? 28 : 24)} 
+          color={colors.primary} 
+        />
+      </View>
+      <Text 
+        style={styles.categoryButtonText}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+        adjustsFontSizeToFit
+        minimumFontScale={0.9}
+      >
+        {title}
+      </Text>
+    </TouchableOpacity>
+  );
+  
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [newNotificationsCount, setNewNotificationsCount] = React.useState(0);
 
@@ -670,7 +673,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F4F7F6' },
   container: { flex: 1 },
   header: {
@@ -684,16 +687,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   bismillah: {
-    fontSize: 24,
+    fontSize: responsiveStyle.fontSize['3xl'],
     fontWeight: '800',
     color: colors.primary,
     textAlign: 'left',
     letterSpacing: 0.5,
   },
   welcomeMessage: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.base,
     color: colors.gray,
-    marginTop: 4,
+    marginTop: responsiveStyle.spacing.xs,
   },
   notificationButton: {
     padding: 8,
@@ -782,25 +785,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   categoriesGrid: {
-    flexDirection: 'row',
+    flexDirection: responsive.isLandscape ? 'row' : 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    minHeight: 100,
+    paddingHorizontal: responsiveStyle.spacing.xl,
+    minHeight: responsive.isLandscape ? 80 : 100,
+    flexWrap: responsive.isLandscape ? 'wrap' : 'nowrap',
   },
   categoryButton: {
     alignItems: 'center',
-    width: '25%',
-    minHeight: 80,
+    width: responsive.isLandscape ? '22%' : '25%',
+    minHeight: responsive.isLandscape ? 70 : 80,
+    marginBottom: responsive.isLandscape ? responsiveStyle.spacing.sm : 0,
   },
   categoryIconCircle: {
-    width: Math.min(60, Dimensions.get('window').width * 0.15),
-    height: Math.min(60, Dimensions.get('window').width * 0.15),
-    borderRadius: Math.min(30, Dimensions.get('window').width * 0.075),
+    width: responsive.isLandscape ? Math.min(50, responsive.width * 0.12) : Math.min(60, responsive.width * 0.15),
+    height: responsive.isLandscape ? Math.min(50, responsive.width * 0.12) : Math.min(60, responsive.width * 0.15),
+    borderRadius: responsive.isLandscape ? Math.min(25, responsive.width * 0.06) : Math.min(30, responsive.width * 0.075),
     backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: responsiveStyle.spacing.sm,
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.15,
@@ -808,10 +813,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   categoryButtonText: {
-    fontSize: Math.max(10, Dimensions.get('window').width * 0.03),
+    fontSize: responsive.isLandscape ? responsiveStyle.fontSize.sm : responsiveStyle.fontSize.base,
     color: colors.text,
     textAlign: 'center',
-    lineHeight: Math.max(14, Dimensions.get('window').width * 0.035),
+    lineHeight: responsive.isLandscape ? responsiveStyle.fontSize.sm * 1.2 : responsiveStyle.fontSize.base * 1.4,
   },
   bookCardModern: {
     width: 160,

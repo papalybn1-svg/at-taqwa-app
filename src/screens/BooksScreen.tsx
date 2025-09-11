@@ -3,6 +3,7 @@ import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation
 import { LinearGradient } from 'expo-linear-gradient';
 import React from "react";
 import { Alert, Animated, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
@@ -30,6 +31,8 @@ export default function BooksScreen() {
   const navigation = useNavigation<NavigationProp<any>>();
   const data = chaptersData as ChaptersData;
   const { user } = useAuth();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
   const [progress, setProgress] = React.useState<{[key:string]:number}>({});
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter|null>(null);

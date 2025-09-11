@@ -5,6 +5,7 @@ import { ActivityIndicator, Animated, BackHandler, Dimensions, Image, Modal, Pla
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import { ChaptersData } from '../types/chapters';
 import { isQuizUnlocked } from '../utils/quizUnlock';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
@@ -104,6 +105,9 @@ function getChaptersInPartie(partieKey: string) {
 const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) => {
   // TOUS LES HOOKS EN PREMIER
   const { user } = useAuth();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const styles = createStyles(responsive, responsiveStyle);
   const [textSize, setTextSize] = useState(16);
   const screenWidth = Dimensions.get('window').width;
   const scrollViewRef = useRef<ScrollView>(null);
@@ -1092,30 +1096,35 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
   sectionTitle: {
     fontWeight: 'bold',
     color: '#174C3C',
-    marginTop: 24,
-    marginBottom: 12,
+    fontSize: responsiveStyle.fontSize.xl,
+    marginTop: responsiveStyle.spacing['2xl'],
+    marginBottom: responsiveStyle.spacing.base,
     textAlign: 'left',
   },
   mainTitle: {
     fontWeight: 'bold',
     color: '#174C3C',
-    marginTop: 20,
-    marginBottom: 10,
+    fontSize: responsiveStyle.fontSize['2xl'],
+    marginTop: responsiveStyle.spacing.xl,
+    marginBottom: responsiveStyle.spacing.sm,
     textAlign: 'left',
   },
   subtitle: {
     fontWeight: 'bold',
     color: '#174C3C',
-    marginTop: 20,
-    marginBottom: 10,
+    fontSize: responsiveStyle.fontSize.lg,
+    marginTop: responsiveStyle.spacing.xl,
+    marginBottom: responsiveStyle.spacing.sm,
     textAlign: 'left',
   },
   paragraph: {
     color: '#333',
+    fontSize: responsiveStyle.fontSize.base,
+    lineHeight: responsiveStyle.fontSize.base * 1.6,
     textAlign: 'left',
   },
   arabicContainer: {
