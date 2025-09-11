@@ -576,7 +576,7 @@ export default function HomeScreen() {
                   <TouchableOpacity 
                     style={[
                       styles.bookCardModern,
-                      isPremiumChapter(item) && styles.premiumCard
+                      styles.premiumCard
                     ]} 
                     onPress={() => handleChapterPress(item)}
                   >
