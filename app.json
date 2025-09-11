@@ -4,7 +4,7 @@
     "owner": "attaqwa",
     "slug": "at-taqwa-app",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/LOGO_AT_TAQWA.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -16,8 +16,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-
-      "buildNumber": "2.0.1",
 
       "buildNumber": "2.0.1",
 
