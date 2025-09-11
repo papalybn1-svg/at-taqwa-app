@@ -1,0 +1,192 @@
+[
+  {
+    "numero": 1,
+    "question": "Un fidèle a oublié de laver un membre. Il s’en souvient après la prière. Que doit-il faire ?",
+    "reponse": "Il doit laver ledit membre immédiatement en y appliquant l’intention. La prière est nulle ; elle devra être recommencée.",
+    "fausses_reponses": [
+      "Il peut ignorer l’oubli et continuer ses prières suivantes.",
+      "Il doit juste faire une prosternation de distraction.",
+      "Il doit refaire uniquement les ablutions sans recommencer la prière."
+    ]
+  },
+  {
+    "numero": 2,
+    "question": "Vous êtes en prière ; vous vous souvenez d’une souillure, que devez-vous faire ?",
+    "reponse": "Vous devez interrompre la prière et aller vous purifier. Il est acceptable que vous continuiez la prière si vous êtes à la limite du délai imparti.",
+    "fausses_reponses": [
+      "Continuer la prière sans interruption.",
+      "Reporter la purification après toutes les prières de la journée.",
+      "Ignorer la souillure si elle est petite."
+    ]
+  },
+  {
+    "numero": 3,
+    "question": "Vous venez de terminer la prière. Vous vous souvenez d’une impureté à ce moment. Devez-vous recommencer la prière ?",
+    "reponse": "Oui, vous devez à l’instant, recommencer la prière.",
+    "fausses_reponses": [
+      "Non, il suffit de faire des ablutions pour les prochaines prières.",
+      "Non, car la prière accomplie est toujours valide.",
+      "Vous pouvez compenser avec une prière surérogatoire."
+    ]
+  },
+  {
+    "numero": 4,
+    "question": "Un fidèle fait ses ablutions. Au moment de laver la tête, il se rend compte avoir oublié de laver la bouche. Que doit-il faire ?",
+    "reponse": "Les ablutions n’étant pas encore terminées, le fidèle les termine. Ensuite il se lave la bouche qu’il avait oubliée en y appliquant l’intention.",
+    "fausses_reponses": [
+      "Recommencer entièrement les ablutions depuis le début.",
+      "Ignorer l’oubli car la bouche n’est pas importante.",
+      "Finir les ablutions et refaire la prière directement."
+    ]
+  },
+  {
+    "numero": 5,
+    "question": "Après la prière, le fidèle s’aperçoit avoir oublié de laver la bouche. Que doit-il faire ?",
+    "reponse": "Le fidèle se lave la bouche en formulant l’intention ; il ne recommence pas la prière.",
+    "fausses_reponses": [
+      "Recommencer entièrement ses ablutions et la prière.",
+      "Faire seulement une prosternation supplémentaire.",
+      "Reporter la réparation de l’oubli à la prière suivante."
+    ]
+  },
+  {
+    "numero": 6,
+    "question": "Vous venez juste de terminer les ablutions ; vous constatez avoir oublié de laver le bras droit. Que devez-vous faire ?",
+    "reponse": "Vous lavez et vous continuez les ablutions jusqu’à la fin.",
+    "fausses_reponses": [
+      "Recommencer entièrement les ablutions.",
+      "Ignorer car l’oubli n’est pas grave.",
+      "Recommencer uniquement la prière sans ablutions."
+    ]
+  },
+  {
+    "numero": 7,
+    "question": "Après la prière, le fidèle se rend compte avoir oublié de laver le visage. Que doit-il faire ?",
+    "reponse": "Il lave le visage en y appliquant l’intention. Il continue les ablutions jusqu’à la fin. La prière est nulle ; elle doit être recommencée.",
+    "fausses_reponses": [
+      "Ne rien faire car la prière reste valide.",
+      "Recommencer uniquement la prière sans laver le visage.",
+      "Reporter la correction à la prière suivante."
+    ]
+  },
+  {
+    "numero": 8,
+    "question": "Il est l’heure de faire une prière d’obligation divine. Vous avez des doutes et ne savez plus si vous avez vos ablutions ou si elles sont rompues. Que devez-vous faire ?",
+    "reponse": "Vous devez refaire les ablutions. Règle : en cas de doute, il faut refaire ses ablutions.",
+    "fausses_reponses": [
+      "Prier en considérant que vous avez toujours vos ablutions.",
+      "Faire seulement une prosternation supplémentaire.",
+      "Ignorer le doute et continuer normalement."
+    ]
+  },
+  {
+    "numero": 9,
+    "question": "Une fidèle est en période de menstrues. Une autre n’a pas encore fait ses ablutions. Peuvent-elles toutes les deux accomplir tawaf autour de la Kaaba et le parcours de Safa à Marwa ?",
+    "reponse": "Celle qui n’a pas fait ses ablutions doit les faire avant le Tawaf et le parcours de Safa/Marwa. Quant à celle qui est en menstrues, elle attendra simplement la fin de ses règles.",
+    "fausses_reponses": [
+      "Oui, elles peuvent toutes les deux faire le Tawaf sans problème.",
+      "Non, aucune ne peut faire le Tawaf.",
+      "Elles peuvent faire le Tawaf mais doivent éviter Safa et Marwa."
+    ]
+  },
+  {
+    "numero": 10,
+    "question": "Le fidèle a fait le tayammom à la prière du Maghreb. Une heure plus tard, c’est la prière d’Ichâ. A-t-il raison ou tort ?",
+    "reponse": "Il a tort. Un seul tayammom ne permet pas de faire 2 prières obligatoires.",
+    "fausses_reponses": [
+      "Il a raison, car le tayammom dure toute la journée.",
+      "Il a raison si aucune impureté n’est survenue.",
+      "Il peut prier tant qu’il garde l’intention."
+    ]
+  },
+  {
+    "numero": 11,
+    "question": "Vous avez utilisé le tayammom lors d’une prière d’obligation divine ; pouvez-vous immédiatement après, toucher et lire le Coran ?",
+    "reponse": "Oui",
+    "fausses_reponses": [
+      "Non, il faut refaire les ablutions avec de l’eau.",
+      "Non, car le tayammom ne permet que de prier.",
+      "Seulement si c’est un Coran traduit."
+    ]
+  },
+  {
+    "numero": 12,
+    "question": "Vous êtes en voyage ; il est l’heure de prier l’Asr et vous n’avez pas d’eau. Cependant, vous pensez trouver de l’eau dans une heure. Que devez-vous faire ?",
+    "reponse": "Si vous êtes certain de trouver de l’eau au moment fixé, vous attendez. Sinon, vous ferez le tayammom dès le début du temps de prière.",
+    "fausses_reponses": [
+      "Toujours attendre, même si l’eau risque de manquer.",
+      "Toujours prier avec le tayammom, même si l’eau est disponible après.",
+      "Ignorer la prière et la rattraper le lendemain."
+    ]
+  },
+  {
+    "numero": 13,
+    "question": "Le fidèle, après une souillure majeure, ne trouve pas d’eau pour la grande purification. Il utilise le Tayammom pour la prière du Subh. Après la prière du Zohr, il trouve de l’eau. Que doit-il faire ?",
+    "reponse": "Il se purifie, accomplit la prière du Zohr, mais ne refait pas celle du Subh.",
+    "fausses_reponses": [
+      "Il doit refaire toutes les prières de la journée.",
+      "Il doit uniquement refaire le Subh.",
+      "Il peut ignorer la purification et continuer."
+    ]
+  },
+  {
+    "numero": 14,
+    "question": "Même question pour la femme après ses menstrues ?",
+    "reponse": "Elle se purifie, accomplit la prière du Zohr, mais ne refait pas celle du Subh.",
+    "fausses_reponses": [
+      "Elle doit refaire toutes ses prières depuis le début de ses règles.",
+      "Elle ne peut pas prier le Zohr avant le lendemain.",
+      "Elle doit refaire uniquement le Subh."
+    ]
+  },
+  {
+    "numero": 15,
+    "question": "Le fidèle n’a pas d’eau pour les ablutions, il fait le tayammom pour le Maghreb. Avant l’heure de l’Ichâ, il trouve de l’eau. Que fait-il ?",
+    "reponse": "Il fait les ablutions et recommence la prière du Maghreb.",
+    "fausses_reponses": [
+      "Il continue sans refaire le Maghreb.",
+      "Il fait seulement les ablutions pour l’Ichâ.",
+      "Il refait toutes les prières de la journée."
+    ]
+  },
+  {
+    "numero": 16,
+    "question": "Vous venez de faire la prière du Maghreb en utilisant le tayammom. Immédiatement après, vous faites une prière surérogatoire. Avez-vous fait une faute ?",
+    "reponse": "Non, vous n’avez pas fait de faute. Avec un seul tayammom, on peut faire une prière obligatoire suivie d’une surérogatoire.",
+    "fausses_reponses": [
+      "Oui, il faut refaire un tayammom pour chaque prière.",
+      "Oui, le tayammom ne permet pas de faire plus d’une prière.",
+      "Oui, il fallait attendre avant de prier."
+    ]
+  },
+  {
+    "numero": 17,
+    "question": "Le fidèle a fait le tayammom pour la prière de Zohr. Immédiatement après, il prend son Coran et lit. Peut-il le faire ?",
+    "reponse": "Oui, il peut le faire",
+    "fausses_reponses": [
+      "Non, le tayammom n’autorise pas la lecture du Coran.",
+      "Non, il doit refaire un autre tayammom juste pour lire.",
+      "Seulement s’il lit à voix basse."
+    ]
+  },
+  {
+    "numero": 18,
+    "question": "Le fidèle n’a pas d’eau pour faire ses ablutions alors qu’il est l’heure de Zohra. La radio annonce que l’eau reviendra avant Asr. Que doit-il faire ?",
+    "reponse": "Il doit attendre l’arrivée de l’eau jusqu’à la limite. Si le délai risque d’être dépassé, il fera le tayammom et priera.",
+    "fausses_reponses": [
+      "Il doit prier immédiatement avec tayammom sans attendre.",
+      "Il doit annuler la prière et la rattraper le lendemain.",
+      "Il doit reporter toutes ses prières jusqu’au retour de l’eau."
+    ]
+  },
+  {
+    "numero": 19,
+    "question": "Même question que précédemment, mais cette fois-ci, l’eau ne reviendra que durant la nuit. Que doit-il faire ?",
+    "reponse": "Le fidèle doit prier Zohr, Asr et Maghreb en utilisant le tayammom. Pour l’Ichâ, il attendra l’arrivée de l’eau pour faire les ablutions.",
+    "fausses_reponses": [
+      "Il doit rattraper toutes les prières le lendemain.",
+      "Il peut ignorer toutes les prières jusqu’à l’eau.",
+      "Il doit prier seulement l’Ichâ avec tayammom."
+    ]
+  }
+]
