@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   },
   authorTitle: {
     fontSize: 18,
-    color: '#BB9B4E',
+    color: 'colors.secondary',
     fontWeight: '600',
     marginBottom: 6,
   },

@@ -1373,9 +1373,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   cancelCreateButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
     borderWidth: 1,
-    borderColor: '#BB9B4E',
+    borderColor: 'colors.secondary',
   },
   createButton: {
     backgroundColor: colors.primary,
@@ -1445,7 +1445,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cancelAdminButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
   },
   cancelAdminButtonText: {
     color: 'white',

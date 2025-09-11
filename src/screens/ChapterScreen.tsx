@@ -961,7 +961,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             
               <TouchableOpacity
               onPress={handleQuizPress}
-              style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+              style={{ backgroundColor: 'colors.secondary', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
               >
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
               </TouchableOpacity>
@@ -999,7 +999,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             {currentSectionIndex === totalSections - 1 ? (
                 <TouchableOpacity
                 onPress={handleQuizPress}
-                style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                style={{ backgroundColor: 'colors.secondary', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
                 >
                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
                 </TouchableOpacity>

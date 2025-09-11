@@ -373,7 +373,7 @@ export default function BooksScreen() {
                                 <MaterialCommunityIcons 
                                   name={isPremium ? "crown" : (pidx === 0 ? "book-open-variant" : "book-multiple")} 
                                   size={24} 
-                                  color={isPremium ? "#D4AF37" : "#BB9B4E"} 
+                                  color={isPremium ? "#D4AF37" : "colors.secondary"} 
                                 />
                               </View>
                               <Text style={[
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
   },
   partCardChapters: {
     fontSize: 15,
-    color: '#BB9B4E',
+    color: 'colors.secondary',
     fontWeight: '600',
     backgroundColor: 'rgba(187, 155, 78, 0.1)',
     paddingHorizontal: 12,

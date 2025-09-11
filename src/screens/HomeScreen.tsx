@@ -755,7 +755,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   bannerButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: colors.secondary,
     borderRadius: 18,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -1113,7 +1113,7 @@ const styles = StyleSheet.create({
   },
   authorTitle: {
     fontSize: 14,
-    color: '#BB9B4E',
+    color: 'colors.secondary',
     fontWeight: '600',
     marginBottom: 0,
     marginLeft: 8,
@@ -1125,7 +1125,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   authorButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: colors.secondary,
     borderRadius: 22,
     paddingVertical: 12,
     paddingHorizontal: 22,

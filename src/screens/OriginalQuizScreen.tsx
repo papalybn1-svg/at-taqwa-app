@@ -1004,7 +1004,7 @@ const styles = StyleSheet.create({
   },
 
   verifyButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
     padding: 10,
     borderRadius: 10,
     alignItems: 'center',
@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   nextButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
     padding: 10,
     borderRadius: 10,
     alignItems: 'center', 
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   restartButton: { 
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -1115,7 +1115,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   middleCard: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
     borderRadius: 30,
     height: screenHeight * 0.535,
     width: '95%',
@@ -1164,7 +1164,7 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   answerButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -1275,7 +1275,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   modalMiddleCard: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
     borderRadius: 30,
     height: screenHeight * 0.535,
     width: '89%',
@@ -1329,15 +1329,15 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 2,
-    borderColor: '#BB9B4E',
+    borderColor: 'colors.secondary',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
     backgroundColor: 'transparent',
   },
   checkboxSelected: {
-    backgroundColor: '#BB9B4E',
-    borderColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
+    borderColor: 'colors.secondary',
   },
   checkboxCorrect: {
     backgroundColor: '#174C3C',

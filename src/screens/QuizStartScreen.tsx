@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   middleCard: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
     borderRadius: getResponsiveSize(30),
     height: getResponsiveSize(isSmallScreen ? 260 : isLargeScreen ? 360 : 310, false),
     width: '95%',
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     lineHeight: getResponsiveSize(isSmallScreen ? 22 : isLargeScreen ? 28 : 24, false),
   },
   playButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: 'colors.secondary',
     paddingHorizontal: getResponsiveSize(isSmallScreen ? 40 : isLargeScreen ? 60 : 50),
     paddingVertical: getResponsiveSize(isSmallScreen ? 14 : isLargeScreen ? 18 : 16, false),
     borderRadius: getResponsiveSize(25),
