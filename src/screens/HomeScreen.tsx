@@ -528,22 +528,18 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Auteur du livre</Text>
           <View style={styles.authorCard}>
-            <View style={styles.authorHeader}>
-              <Text style={styles.authorName}>Aly Anta Sow</Text>
-              <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
-                <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
-                <Text style={styles.authorButtonText}>En savoir plus</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.authorName}>Aly Anta Sow</Text>
             <View style={styles.authorDetails}>
               <Text style={styles.authorBio}>
                 Passionné de recherches sur l'islam, il rend les textes islamiques accessibles aux non arabophones.
                 Auteur d'essais sur le Hajj, la Oumra, le Jeûne de Ramadan et la vie du Prophète.
               </Text>
             </View>
+            <TouchableOpacity style={styles.authorButtonSmall} onPress={() => navigation.navigate('AuthorProfile')}>
+              <MaterialCommunityIcons name="account-details" size={14} color={colors.white} />
+              <Text style={styles.authorButtonTextSmall}>En savoir plus</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Aperçu du Livre</Text>
           <Animated.FlatList
@@ -1143,13 +1139,24 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     fontSize: 13,
     marginLeft: 8,
   },
-  authorBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: 4,
+  authorButtonSmall: {
+    backgroundColor: colors.secondary,
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    alignSelf: 'flex-start',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  authorButtonTextSmall: {
+    color: colors.white,
+    fontWeight: '600',
+    fontSize: 11,
+    marginLeft: 6,
   },
   authorBadgeText: {
     color: colors.white,
