@@ -6,6 +6,7 @@ import { Alert, Animated, Dimensions, Image, Modal, Platform, Pressable, ScrollV
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import colors from '../theme/colors';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
@@ -330,7 +331,7 @@ export default function BooksScreen() {
                           
                           <View style={styles.chapterFooter}>
                             <View style={styles.authorContainer}>
-                              <MaterialCommunityIcons name="account-edit" size={14} color="#666" />
+                              <MaterialCommunityIcons name="account-edit" size={14} color={colors.secondary} />
                               <Text style={styles.newChapterAuthor}>{ch.author}</Text>
                             </View>
 
@@ -606,7 +607,7 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
   pageSubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: colors.secondary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -759,7 +760,7 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
   newChapterDesc: {
     fontSize: 14,
-    color: '#666',
+    color: colors.secondary,
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -780,7 +781,7 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
   newChapterAuthor: {
     fontSize: 13,
-    color: '#666',
+    color: colors.secondary,
     fontStyle: 'italic',
     marginLeft: 6,
   },

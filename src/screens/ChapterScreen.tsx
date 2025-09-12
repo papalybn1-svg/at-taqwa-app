@@ -1,14 +1,15 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Stockage local scoping par utilisateur
-import React, { useEffect, useRef, useState } from "react";
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ActivityIndicator, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
-import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import { ChaptersData } from '../types/chapters';
-import { isQuizUnlocked } from '../utils/quizUnlock';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
+import { isQuizUnlocked } from '../utils/quizUnlock';
 
 const chaptersData = chaptersDataRaw as ChaptersData;
 
@@ -105,9 +106,6 @@ function getChaptersInPartie(partieKey: string) {
 const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) => {
   // TOUS LES HOOKS EN PREMIER
   const { user } = useAuth();
-  const responsive = useResponsive();
-  const responsiveStyle = getResponsiveStyle(responsive);
-  const styles = createStyles(responsive, responsiveStyle);
   const [textSize, setTextSize] = useState(16);
   const screenWidth = Dimensions.get('window').width;
   const scrollViewRef = useRef<ScrollView>(null);
@@ -227,7 +225,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     console.log('Toggle favori pour la page:', pageId);
     
     const allChapters = getAllChapters();
-    const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+    const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
     
     // Récupérer le titre de la section actuelle
           const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
@@ -274,7 +272,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       
       // Trouver l'index du chapitre dans sa partie
       const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
       
       if (!currentChapterData) return;
       
@@ -312,7 +310,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       
       // Trouver l'index du chapitre dans sa partie
       const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
       
       if (!currentChapterData) return;
       
@@ -340,7 +338,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const handleBackPress = () => {
     // Toujours retourner vers la page des chapitres de cette partie
     const allChapters = getAllChapters();
-    const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+    const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
     if (currentChapterData) {
       navigation.navigate('Books', { selectedPart: currentChapterData.partieKey });
     } else {
@@ -368,7 +366,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       
       // Trouver l'index du chapitre dans sa partie
       const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
       
       if (!currentChapterData) return;
       
@@ -405,37 +403,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const getCurrentChapterQuizKey = () => {
     if (!chapter) return null;
     const allChapters = getAllChapters();
-    
-    // Chercher par image d'abord (plus fiable)
-    let currentChapterData = allChapters.find(ch => ch.image === chapter.image);
-    
-    // Si pas trouvé par image, essayer par titre
-    if (!currentChapterData) {
-      currentChapterData = allChapters.find(ch => ch.title === chapter.title);
-    }
-    
-    // Si toujours pas trouvé, essayer par titre modifié (cas HomeScreen)
-    if (!currentChapterData) {
-      // Extraire le numéro du titre modifié "Chapitre X."
-      const titleMatch = chapter.title?.match(/Chapitre (\d+)\./);
-      if (titleMatch) {
-        const chapterNumber = parseInt(titleMatch[1], 10);
-        currentChapterData = allChapters.find(ch => {
-          // Chercher par position dans la liste globale
-          const globalIndex = allChapters.indexOf(ch) + 1;
-          return globalIndex === chapterNumber;
-        });
-      }
-    }
-    
-    if (!currentChapterData) {
-      console.log('❌ Chapitre non trouvé pour le quiz:', { 
-        image: chapter.image, 
-        title: chapter.title,
-        availableChapters: allChapters.map(ch => ({ image: ch.image, title: ch.title }))
-      });
-      return null;
-    }
+    const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+    if (!currentChapterData) return null;
     
     // Utiliser le numéro du chapitre comme clé de quiz
     return currentChapterData.chapitreIndex + 1;
@@ -444,38 +413,14 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   // Fonction pour gérer le clic sur "Faire le quiz"
   const handleQuizPress = () => {
     const quizKey = getCurrentChapterQuizKey();
-    if (!quizKey) {
-      console.log('❌ Impossible de déterminer la clé du quiz pour ce chapitre');
-      return;
-    }
-
-    console.log('🔍 Quiz key trouvée:', quizKey, 'pour le chapitre:', chapter.title);
+    if (!quizKey) return;
 
     // Vérifier si le quiz est débloqué
     if (!isQuizUnlocked(quizKey.toString(), quizScores)) {
       // Trouver le quiz précédent pour afficher son score actuel
       const allChapters = getAllChapters();
-      
-      // Utiliser la même logique de recherche que getCurrentChapterQuizKey
-      let currentChapterData = allChapters.find(ch => ch.image === chapter.image);
-      if (!currentChapterData) {
-        currentChapterData = allChapters.find(ch => ch.title === chapter.title);
-      }
-      if (!currentChapterData) {
-        const titleMatch = chapter.title?.match(/Chapitre (\d+)\./);
-        if (titleMatch) {
-          const chapterNumber = parseInt(titleMatch[1], 10);
-          currentChapterData = allChapters.find(ch => {
-            const globalIndex = allChapters.indexOf(ch) + 1;
-            return globalIndex === chapterNumber;
-          });
-        }
-      }
-      
-      if (!currentChapterData) {
-        console.log('❌ Chapitre non trouvé pour le déverrouillage');
-        return;
-      }
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+      if (!currentChapterData) return;
 
       const previousQuizKey = currentChapterData.chapitreIndex; // Quiz précédent
       const score = quizScores[previousQuizKey.toString()];
@@ -485,8 +430,6 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       setShowLockModal(true);
       return;
     }
-    
-    console.log('✅ Quiz débloqué, navigation vers OriginalQuiz');
     
     // Quiz débloqué, naviguer vers le quiz avec la section actuelle pour le retour
     navigation.navigate('OriginalQuiz', { 
@@ -767,49 +710,73 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
         <View style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
-      {/* Header simplifié sans image */}
-      <View style={{ 
-        backgroundColor: '#174C3C', 
-        paddingTop: Platform.OS === 'ios' ? 50 : 30,
-        paddingBottom: 20,
-        paddingHorizontal: 20
-      }}>
-        {/* Numéro du chapitre */}
-        <Text style={{ 
-          fontSize: 18, 
-          fontWeight: 'bold', 
-          color: '#D4AF37', 
-          textAlign: 'center', 
-          letterSpacing: 0.5, 
-          marginBottom: 4 
-        }}>
-          {chapter.title.replace(/\.\s*$/, ':')}
-        </Text>
-        {/* Nom du chapitre */}
-        <Text style={{ 
-          fontSize: 18, 
-          fontWeight: 'bold', 
-          color: '#FFFFFF', 
-          textAlign: 'center', 
-          lineHeight: 24,
-          marginBottom: 8
-        }}>
-          {chapterContent?.contenu?.find((item: any) => item.type === "titre")?.contenu || chapter.desc}
-        </Text>
-        {/* Affichage de la partie */}
-        <Text style={{ 
-          fontSize: 14, 
-          fontWeight: '500', 
-          color: '#B8D4B8', 
-          textAlign: 'center', 
-          letterSpacing: 0.3 
-        }}>
-          {(() => {
-            const allChapters = getAllChapters();
-            const currentChapterIndex = allChapters.findIndex(ch => ch.image === chapter?.image && ch.title === chapter?.title);
-            return allChapters[currentChapterIndex]?.partieTitre || '';
-          })()}
-        </Text>
+      {/* Header avec image et titre */}
+      <View style={{ position: 'relative', overflow: 'visible' }}>
+        <Image
+          source={imageMap[chapter.image] || imageMap['1']}
+          style={{
+            width: screenWidth,
+            height: 200,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+            resizeMode: 'cover',
+          }}
+        />
+        <LinearGradient
+          colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.0)']}
+          style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 120, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}
+        />
+        {/* Carte titre - descendue pour mieux montrer l'image */}
+        <View style={{ position: 'absolute', left: 20, right: 20, bottom: -40, zIndex: 10 }}>
+          <View style={{ 
+            backgroundColor: '#fff', 
+            borderRadius: 20, 
+            paddingVertical: 24, 
+            paddingHorizontal: 24, 
+            shadowColor: '#000', 
+            shadowOpacity: 0.15, 
+            shadowRadius: 12, 
+            elevation: 10, 
+            alignItems: 'center'
+          }}>
+            {/* Numéro du chapitre */}
+            <Text style={{ 
+              fontSize: 20, 
+              fontWeight: 'bold', 
+              color: '#D4AF37', 
+              textAlign: 'center', 
+              letterSpacing: 0.5, 
+              marginBottom: 4 
+            }}>
+              {chapter.title.replace(/\.\s*$/, ':')}
+            </Text>
+            {/* Nom du chapitre */}
+            <Text style={{ 
+              fontSize: 20, 
+              fontWeight: 'bold', 
+              color: '#174C3C', 
+              textAlign: 'center', 
+              lineHeight: 26,
+              marginBottom: 8
+            }}>
+              {chapterContent?.contenu?.find((item: any) => item.type === "titre")?.contenu || chapter.desc}
+            </Text>
+            {/* Affichage de la partie */}
+            <Text style={{ 
+              fontSize: 14, 
+              fontWeight: '500', 
+              color: '#666', 
+              textAlign: 'center', 
+              letterSpacing: 0.3 
+            }}>
+              {(() => {
+                const allChapters = getAllChapters();
+                const currentChapterIndex = allChapters.findIndex(ch => ch.image === chapter?.image && ch.title === chapter?.title);
+                return allChapters[currentChapterIndex]?.partieTitre || '';
+              })()}
+            </Text>
+          </View>
+        </View>
       </View>
       
       {/* Boutons en premier plan */}
@@ -965,7 +932,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             
               <TouchableOpacity
               onPress={handleQuizPress}
-              style={{ backgroundColor: 'colors.secondary', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+              style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
               >
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
               </TouchableOpacity>
@@ -1003,7 +970,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             {currentSectionIndex === totalSections - 1 ? (
                 <TouchableOpacity
                 onPress={handleQuizPress}
-                style={{ backgroundColor: 'colors.secondary', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
                 >
                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
                 </TouchableOpacity>
@@ -1068,7 +1035,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
                   setShowLockModal(false);
                   // Naviguer vers le quiz précédent
                   const allChapters = getAllChapters();
-                  const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+                  const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
                   if (currentChapterData && currentChapterData.chapitreIndex > 0) {
                     const previousChapter = allChapters.find(ch => ch.chapitreIndex === currentChapterData.chapitreIndex - 1);
                     if (previousChapter) {
@@ -1096,35 +1063,30 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   );
 };
 
-const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
+const styles = StyleSheet.create({
   sectionTitle: {
     fontWeight: 'bold',
     color: '#174C3C',
-    fontSize: responsiveStyle.fontSize.xl,
-    marginTop: responsiveStyle.spacing['2xl'],
-    marginBottom: responsiveStyle.spacing.base,
+    marginTop: 24,
+    marginBottom: 12,
     textAlign: 'left',
   },
   mainTitle: {
     fontWeight: 'bold',
     color: '#174C3C',
-    fontSize: responsiveStyle.fontSize['2xl'],
-    marginTop: responsiveStyle.spacing.xl,
-    marginBottom: responsiveStyle.spacing.sm,
+    marginTop: 20,
+    marginBottom: 10,
     textAlign: 'left',
   },
   subtitle: {
     fontWeight: 'bold',
     color: '#174C3C',
-    fontSize: responsiveStyle.fontSize.lg,
-    marginTop: responsiveStyle.spacing.xl,
-    marginBottom: responsiveStyle.spacing.sm,
+    marginTop: 20,
+    marginBottom: 10,
     textAlign: 'left',
   },
   paragraph: {
     color: '#333',
-    fontSize: responsiveStyle.fontSize.base,
-    lineHeight: responsiveStyle.fontSize.base * 1.6,
     textAlign: 'left',
   },
   arabicContainer: {

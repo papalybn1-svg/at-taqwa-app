@@ -4,18 +4,18 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { Animated, BackHandler, Dimensions, Image, PanResponder, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import chapitre10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
-import chapitre12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
-import chapitre01 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
 import chapitre02 from '../../data/exercices_par_chapitre/chapitre_2_exercices.json';
 import chapitre03 from '../../data/exercices_par_chapitre/chapitre_3_exercices.json';
 import chapitre05 from '../../data/exercices_par_chapitre/chapitre_5_exercices.json';
 import chapitre06 from '../../data/exercices_par_chapitre/chapitre_6_exercices.json';
 import chapitre07 from '../../data/exercices_par_chapitre/chapitre_7_exercices.json';
 import chapitre09 from '../../data/exercices_par_chapitre/chapitre_9_execrcices.json';
+import chapitre10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
+import chapitre12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
+import chapitre01 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
 import { read as readUserStorage, remove as removeUserStorage, write as writeUserStorage } from '../utils/userStorage';
 import { db } from './firebaseConfig';
 import { AuthContext } from './LoginScreen';
@@ -299,7 +299,7 @@ export default function OriginalQuizScreen() {
   if (!quizData.length) {
     return (
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fff' }}>
-        <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
+        <PanGestureHandler onHandlerStateChange={onGestureEvent}>
           <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
             <Text style={{ color: '#174C3C', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
               Aucune question disponible pour ce chapitre.
@@ -335,9 +335,9 @@ export default function OriginalQuizScreen() {
         initialSection: returnToChapter.section
       });
     } else {
-    // Sinon, naviguer vers la page de sélection des chapitres
-    console.log('Navigation vers la sélection des chapitres');
-    navigation.navigate('QuizChapterSelect' as never);
+      // Sinon, naviguer vers la page de sélection des chapitres
+      console.log('Navigation vers la sélection des chapitres');
+      navigation.navigate('QuizChapterSelect' as never);
     }
   };
 
@@ -659,7 +659,7 @@ export default function OriginalQuizScreen() {
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-          </TouchableOpacity>
+        </TouchableOpacity>
 
         {/* Section du personnage - identique aux autres pages */}
         <View style={styles.characterSection}>
@@ -1004,7 +1004,7 @@ const styles = StyleSheet.create({
   },
 
   verifyButton: {
-    backgroundColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
     padding: 10,
     borderRadius: 10,
     alignItems: 'center',
@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   nextButton: {
-    backgroundColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
     padding: 10,
     borderRadius: 10,
     alignItems: 'center', 
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   restartButton: { 
-    backgroundColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -1115,7 +1115,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   middleCard: {
-    backgroundColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
     borderRadius: 30,
     height: screenHeight * 0.535,
     width: '95%',
@@ -1164,7 +1164,7 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   answerButton: {
-    backgroundColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -1275,7 +1275,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   modalMiddleCard: {
-    backgroundColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
     borderRadius: 30,
     height: screenHeight * 0.535,
     width: '89%',
@@ -1329,15 +1329,15 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 2,
-    borderColor: 'colors.secondary',
+    borderColor: '#BB9B4E',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
     backgroundColor: 'transparent',
   },
   checkboxSelected: {
-    backgroundColor: 'colors.secondary',
-    borderColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
+    borderColor: '#BB9B4E',
   },
   checkboxCorrect: {
     backgroundColor: '#174C3C',

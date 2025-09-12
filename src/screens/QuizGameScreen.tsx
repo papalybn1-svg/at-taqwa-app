@@ -10,15 +10,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const { width: screenWidth } = Dimensions.get('window');
 
 // Import des exercices
-import exercicesChap10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
-import exercicesChap12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
-import exercicesChap1 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
 import exercicesChap2 from '../../data/exercices_par_chapitre/chapitre_2_exercices.json';
 import exercicesChap3 from '../../data/exercices_par_chapitre/chapitre_3_exercices.json';
 import exercicesChap5 from '../../data/exercices_par_chapitre/chapitre_5_exercices.json';
 import exercicesChap6 from '../../data/exercices_par_chapitre/chapitre_6_exercices.json';
 import exercicesChap7 from '../../data/exercices_par_chapitre/chapitre_7_exercices.json';
 import exercicesChap9 from '../../data/exercices_par_chapitre/chapitre_9_execrcices.json';
+import exercicesChap10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
+import exercicesChap12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
+import exercicesChap1 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
 
 
 
@@ -119,7 +119,7 @@ export default function QuizGameScreen() {
   if (questions.length === 0) {
     return (
       <GestureHandlerRootView style={styles.container}>
-        <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
+        <PanGestureHandler onHandlerStateChange={onGestureEvent}>
           <SafeAreaView style={styles.container}>
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Chargement du quiz...</Text>
@@ -134,7 +134,7 @@ export default function QuizGameScreen() {
     const percentage = Math.round((score / questions.length) * 100);
     return (
       <GestureHandlerRootView style={styles.container}>
-        <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
+        <PanGestureHandler onHandlerStateChange={onGestureEvent}>
           <SafeAreaView style={styles.container}>
             <View style={styles.resultContainer}>
               <Text style={styles.resultTitle}>Quiz terminé !</Text>
@@ -163,7 +163,7 @@ export default function QuizGameScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
         <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>

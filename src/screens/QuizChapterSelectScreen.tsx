@@ -271,7 +271,7 @@ export default function QuizChapterSelectScreen() {
                           />
                           {!isUnlocked && (
                             <View style={styles.quizLockOverlay}>
-                              <MaterialCommunityIcons name="lock" size={24} color="colors.secondary" />
+                              <MaterialCommunityIcons name="lock" size={24} color="#BB9B4E" />
                             </View>
                           )}
                 </View>
@@ -353,7 +353,7 @@ export default function QuizChapterSelectScreen() {
                                 <MaterialCommunityIcons 
                                   name="target" 
                                   size={24} 
-                                  color="colors.secondary" 
+                                  color="#BB9B4E" 
                   />
                 </View>
                               <Text style={styles.partCardTitle}>Partie {pidx + 1}</Text>
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
   },
   modalButtonSecondary: {
     flex: 1,
-    backgroundColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
   },
   partCardChapters: {
     fontSize: 15,
-    color: 'colors.secondary',
+    color: '#BB9B4E',
     fontWeight: '600',
     backgroundColor: 'rgba(187, 155, 78, 0.1)',
     paddingHorizontal: 12,
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
    },
    quizAuthor: {
      fontSize: 14,
-     color: 'colors.secondary',
+     color: '#BB9B4E',
      fontWeight: '600',
    },
    quizProgressContainer: {
@@ -950,7 +950,7 @@ const styles = StyleSheet.create({
    },
    quizScoreText: {
      fontSize: 12,
-     color: 'colors.secondary',
+     color: '#BB9B4E',
      fontWeight: '600',
    },
    quizLockedContainer: {

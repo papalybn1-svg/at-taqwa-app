@@ -1,10 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import React, { useCallback, useEffect } from 'react';
-import { BackHandler, Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -23,8 +22,6 @@ const isLargeScreen = screenHeight > 900;
 export default function QuizStartScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const responsive = useResponsive();
-  const responsiveStyle = getResponsiveStyle(responsive);
 
   // Gestion du bouton retour Android pour aller à l'accueil
   useFocusEffect(
@@ -70,7 +67,7 @@ export default function QuizStartScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
+      <PanGestureHandler onHandlerStateChange={onGestureEvent}>
     <SafeAreaView style={styles.container}>
       {/* Bouton retour */}
       <TouchableOpacity 
@@ -179,7 +176,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   middleCard: {
-    backgroundColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
     borderRadius: getResponsiveSize(30),
     height: getResponsiveSize(isSmallScreen ? 260 : isLargeScreen ? 360 : 310, false),
     width: '95%',
@@ -221,7 +218,7 @@ const styles = StyleSheet.create({
     lineHeight: getResponsiveSize(isSmallScreen ? 22 : isLargeScreen ? 28 : 24, false),
   },
   playButton: {
-    backgroundColor: 'colors.secondary',
+    backgroundColor: '#BB9B4E',
     paddingHorizontal: getResponsiveSize(isSmallScreen ? 40 : isLargeScreen ? 60 : 50),
     paddingVertical: getResponsiveSize(isSmallScreen ? 14 : isLargeScreen ? 18 : 16, false),
     borderRadius: getResponsiveSize(25),
