@@ -16,12 +16,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-
-      "buildNumber": "2.0.1",
-
+      "buildNumber": "2.0.3",
       "icon": "./assets/LOGO_AT_TAQWA.png",
       "infoPlist": {
-        "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
         "NSCameraUsageDescription": "Cette application nécessite l'accès à la caméra pour certaines fonctionnalités.",
         "NSPhotoLibraryUsageDescription": "Cette application nécessite l'accès à la galerie pour certaines fonctionnalités.",
