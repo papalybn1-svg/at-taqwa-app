@@ -4,7 +4,7 @@
     "owner": "attaqwa",
     "slug": "at-taqwa-app",
     "version": "1.0.0",
-    "orientation": "default",
+    "orientation": "portrait",
     "icon": "./assets/LOGO_AT_TAQWA.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -16,9 +16,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-      "buildNumber": "2.0.3",
+
+      "buildNumber": "2.0.2",
+      
       "icon": "./assets/LOGO_AT_TAQWA.png",
       "infoPlist": {
+        "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
         "NSCameraUsageDescription": "Cette application nécessite l'accès à la caméra pour certaines fonctionnalités.",
         "NSPhotoLibraryUsageDescription": "Cette application nécessite l'accès à la galerie pour certaines fonctionnalités.",
