@@ -184,6 +184,7 @@ export default function QuizChapterSelectScreen() {
       return null;
     })
   ).filter((chapter): chapter is { id: string; partie: string; partieKey: string; exercicesKey: string; image: string; title: string; desc: string; author: string } => !!chapter);
+  console.log("📋 Chapitres détectés avec quiz:", allChapters.map(ch => ch.exercicesKey));
 
   // Obtenir les chapitres d'une partie spécifique
   const getChaptersInPartie = (partieKey: string) => {
