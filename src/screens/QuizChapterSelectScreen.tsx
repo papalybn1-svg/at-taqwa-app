@@ -161,6 +161,9 @@ export default function QuizChapterSelectScreen() {
 
   // Génère la liste plate de tous les chapitres, sans doublon, avec association fiable
   const seen: { [key: string]: boolean } = {};
+  console.log("🔍 Test chapitre 4:", exercicesFiles["4"]);
+  console.log("🔍 Test chapitre 8:", exercicesFiles["8"]);
+  console.log("🔍 Test chapitre 11:", exercicesFiles["11"]);
   const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie], partieIndex) =>
     partie.chapitres.map((ch, chapitreIndex) => {
       // On tente d'associer le chapitre à son fichier d'exercices par numéro
