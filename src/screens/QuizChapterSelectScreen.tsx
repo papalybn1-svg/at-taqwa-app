@@ -168,6 +168,7 @@ export default function QuizChapterSelectScreen() {
     partie.chapitres.map((ch, chapitreIndex) => {
       // On tente d'associer le chapitre à son fichier d'exercices par numéro
       const num = ch.image || (ch as any).numero || `${chapitreIndex + 1}`;
+      if (ch.image === "4" || ch.image === "8" || ch.image === "11") {\        console.log("🔍 Chapitre spécial détecté:", ch.image, "num:", num, "numKey:", numKey, "exercices:", exercices ? "✅" : "❌");\      }
       const numKey = String(parseInt(num, 10)); // '01' -> '1', '10' -> '10'
       const exercices = exercicesFiles[numKey];
       if (Array.isArray(exercices) && exercices.length > 0 && !seen[numKey]) {
