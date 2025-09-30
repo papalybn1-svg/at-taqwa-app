@@ -161,14 +161,11 @@ export default function QuizChapterSelectScreen() {
 
   // Génère la liste plate de tous les chapitres, sans doublon, avec association fiable
   const seen: { [key: string]: boolean } = {};
-  console.log("📚 exercicesFiles disponibles:", Object.keys(exercicesFiles));
   const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie], partieIndex) =>
     partie.chapitres.map((ch, chapitreIndex) => {
       // On tente d'associer le chapitre à son fichier d'exercices par numéro
-      const num = (ch as any).numero || ch.image || `${chapitreIndex + 1}`;
-      console.log("🔍 Debug num:", num, "type:", typeof num, "ch.image:", ch.image);
-      console.log("🔍 Chapitre détecté:", ch.image, "numKey:", numKey, "exercices:", exercices ? "✅" : "❌");
-      const numKey = String(parseInt(num, 10) || 0); // '01' -> '1', '10' -> '10'
+      const num = ch.image || (ch as any).numero || `${chapitreIndex + 1}`;
+      const numKey = String(parseInt(num, 10)); // '01' -> '1', '10' -> '10'
       const exercices = exercicesFiles[numKey];
       if (Array.isArray(exercices) && exercices.length > 0 && !seen[numKey]) {
         seen[numKey] = true;
