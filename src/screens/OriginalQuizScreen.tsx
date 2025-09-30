@@ -622,7 +622,7 @@ export default function OriginalQuizScreen() {
     console.log('📍 Quiz actuel:', exercicesKey, 'dans la partie:', currentPartieKey);
     
     // Obtenir tous les chapitres de la partie actuelle qui ont des quiz
-    const availableChapters = ['1', '2', '3', '5', '6', '7', '9', '10', '12'];
+    const availableChapters = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
     const partieChapters = chaptersData[currentPartieKey].chapitres
       .map((ch: any) => {
         const num = (ch as any).numero || ch.image || '1';
