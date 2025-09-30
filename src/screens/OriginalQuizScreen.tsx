@@ -9,11 +9,14 @@ import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-g
 import { SafeAreaView } from 'react-native-safe-area-context';
 import chapitre02 from '../../data/exercices_par_chapitre/chapitre_2_exercices.json';
 import chapitre03 from '../../data/exercices_par_chapitre/chapitre_3_exercices.json';
+import chapitre04 from '../../data/exercices_par_chapitre/chapitre_4_exercices.json';
 import chapitre05 from '../../data/exercices_par_chapitre/chapitre_5_exercices.json';
 import chapitre06 from '../../data/exercices_par_chapitre/chapitre_6_exercices.json';
 import chapitre07 from '../../data/exercices_par_chapitre/chapitre_7_exercices.json';
+import chapitre08 from '../../data/exercices_par_chapitre/chapitre_8_exercices.json';
 import chapitre09 from '../../data/exercices_par_chapitre/chapitre_9_execrcices.json';
 import chapitre10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
+import chapitre11 from '../../data/exercices_par_chapitre/chapitre_11_exercices.json';
 import chapitre12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
 import chapitre01 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
 import { read as readUserStorage, remove as removeUserStorage, write as writeUserStorage } from '../utils/userStorage';
@@ -27,11 +30,14 @@ const chapterMap: Record<string, { question: string, reponse?: string, contenu?:
   '01': chapitre01,
   '02': chapitre02,
   '03': chapitre03,
+  '04': chapitre04,
   '05': chapitre05,
   '06': chapitre06,
   '07': chapitre07,
+  '08': chapitre08,
   '09': chapitre09,
   '10': chapitre10,
+  '11': chapitre11,
   '12': chapitre12,
 };
 

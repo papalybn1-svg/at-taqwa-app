@@ -12,11 +12,14 @@ const { width: screenWidth } = Dimensions.get('window');
 // Import des exercices
 import exercicesChap2 from '../../data/exercices_par_chapitre/chapitre_2_exercices.json';
 import exercicesChap3 from '../../data/exercices_par_chapitre/chapitre_3_exercices.json';
+import exercicesChap4 from '../../data/exercices_par_chapitre/chapitre_4_exercices.json';
 import exercicesChap5 from '../../data/exercices_par_chapitre/chapitre_5_exercices.json';
 import exercicesChap6 from '../../data/exercices_par_chapitre/chapitre_6_exercices.json';
 import exercicesChap7 from '../../data/exercices_par_chapitre/chapitre_7_exercices.json';
+import exercicesChap8 from '../../data/exercices_par_chapitre/chapitre_8_exercices.json';
 import exercicesChap9 from '../../data/exercices_par_chapitre/chapitre_9_execrcices.json';
 import exercicesChap10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
+import exercicesChap11 from '../../data/exercices_par_chapitre/chapitre_11_exercices.json';
 import exercicesChap12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
 import exercicesChap1 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
 
@@ -43,11 +46,14 @@ export default function QuizGameScreen() {
       ...exercicesChap1,
       ...exercicesChap2.slice(0, 5), // Limiter le nombre de questions
       ...exercicesChap3.slice(0, 3),
+      ...exercicesChap4.slice(0, 3),
       ...exercicesChap5.slice(0, 5),
       ...exercicesChap6.slice(0, 5),
       ...exercicesChap7.slice(0, 3),
+      ...exercicesChap8.slice(0, 3),
       ...exercicesChap9.slice(0, 3),
       ...exercicesChap10.slice(0, 3),
+      ...exercicesChap11.slice(0, 3),
       ...exercicesChap12.slice(0, 3)
     ].filter(q => q.question && q.question.trim() !== '' && ((q as any).reponse && (q as any).reponse.trim() !== '' || (q as any).contenu && (q as any).contenu.trim() !== ''));
 
@@ -90,11 +96,14 @@ export default function QuizGameScreen() {
       ...exercicesChap1,
       ...exercicesChap2.slice(0, 5),
       ...exercicesChap3.slice(0, 3),
+      ...exercicesChap4.slice(0, 3),
       ...exercicesChap5.slice(0, 5),
       ...exercicesChap6.slice(0, 5),
       ...exercicesChap7.slice(0, 3),
+      ...exercicesChap8.slice(0, 3),
       ...exercicesChap9.slice(0, 3),
       ...exercicesChap10.slice(0, 3),
+      ...exercicesChap11.slice(0, 3),
       ...exercicesChap12.slice(0, 3)
          ].filter(q => q.question && q.question.trim() !== '' && ((q as any).reponse && (q as any).reponse.trim() !== '' || (q as any).contenu && (q as any).contenu.trim() !== ''));
      
