@@ -5,6 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React from 'react';
 import {
+    Alert,
     Animated,
     Image,
     Modal,
@@ -18,6 +19,7 @@ import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import colors from '../theme/colors';
+import { useEntitlements } from '../contexts/EntitlementsContext';
 import { AuthContext } from './LoginScreen';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
 
@@ -124,6 +126,7 @@ Le raccourcissement et la combinaison des prières sont permis au voyageur pour 
 
 export default function HomeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const { entitlements } = useEntitlements();
   const { user } = React.useContext(AuthContext);
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
@@ -220,17 +223,39 @@ export default function HomeScreen() {
 
 
 
-  // Fonction pour vérifier si un chapitre est premium
+  // Fonction pour vérifier si un chapitre est premium et non débloqué
   const isPremiumChapter = (chapter: Chapter) => {
     const premiumParts = ['deuxieme_partie', 'troisieme_partie'];
-    return premiumParts.includes(chapter.partie);
+    if (!premiumParts.includes(chapter.partie)) {
+      return false; // Pas une partie premium
+    }
+    
+    // Vérifier si l'utilisateur a accès à cette partie premium
+    if (chapter.partie === 'deuxieme_partie' && entitlements.part2) {
+      return false; // Partie 2 débloquée
+    }
+    if (chapter.partie === 'troisieme_partie' && entitlements.part3) {
+      return false; // Partie 3 débloquée
+    }
+    
+    return true; // Partie premium non débloquée
   };
 
   const handleChapterPress = (chapter: Chapter) => {
     // Si le chapitre est premium, afficher un message au lieu d'ouvrir le modal
     if (isPremiumChapter(chapter)) {
-      // Ici on pourrait afficher un modal premium ou une alerte
-      alert('Ce chapitre est disponible en version premium. Débloquez les parties 2 et 3 pour y accéder.');
+      const partieNumero = chapter.partie === 'deuxieme_partie' ? '2' : '3';
+      Alert.alert(
+        'Contenu Premium',
+        `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Voir les parties', 
+            onPress: () => navigation.navigate('Books' as never)
+          }
+        ]
+      );
       return;
     }
     
@@ -245,10 +270,23 @@ export default function HomeScreen() {
 
   const openFullChapter = () => {
     if (selectedChapter) {
-      // Si le chapitre est premium, afficher un message au lieu de naviguer
+      // Vérifier si c'est un chapitre premium non débloqué
       if (isPremiumChapter(selectedChapter)) {
-        alert('Ce chapitre est disponible en version premium. Débloquez les parties 2 et 3 pour y accéder.');
-        closePreviewModal();
+        const partieNumero = selectedChapter.partie === 'deuxieme_partie' ? '2' : '3';
+        Alert.alert(
+          'Contenu Premium',
+          `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
+          [
+            { text: 'Annuler', style: 'cancel' },
+            { 
+              text: 'Voir les parties', 
+              onPress: () => {
+                closePreviewModal();
+                navigation.navigate('Books' as never);
+              }
+            }
+          ]
+        );
         return;
       }
       
@@ -1068,9 +1106,9 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
   authorCard: {
     backgroundColor: colors.white,
-    borderRadius: 18,
-    padding: 20,
-    marginHorizontal: 24,
+    borderRadius: responsive.isLandscape ? 16 : 18,
+    padding: responsive.isLandscape ? 16 : 20,
+    marginHorizontal: responsive.isLandscape ? 16 : 24,
     elevation: 6,
     shadowColor: '#000',
     shadowOpacity: 0.12,
@@ -1080,10 +1118,11 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     borderColor: colors.secondary,
   },
   authorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: responsive.isLandscape ? 'column' : 'row',
+    alignItems: responsive.isLandscape ? 'flex-start' : 'center',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    marginBottom: responsive.isLandscape ? 12 : 15,
+    gap: responsive.isLandscape ? 8 : 0,
   },
   authorAvatar: {
     width: 65,
@@ -1106,10 +1145,11 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     marginBottom: 8,
   },
   authorName: {
-    fontSize: 16,
+    fontSize: responsive.isLandscape ? 14 : 16,
     fontWeight: '700',
     color: colors.primary,
-    marginBottom: 8,
+    marginBottom: responsive.isLandscape ? 6 : 8,
+    flex: responsive.isLandscape ? 0 : 1, // Ne pas prendre tout l'espace en mode paysage
   },
   authorTitle: {
     fontSize: 14,
@@ -1145,9 +1185,9 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
   authorButtonSmall: {
     backgroundColor: colors.secondary,
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    borderRadius: responsive.isLandscape ? 16 : 18,
+    paddingVertical: responsive.isLandscape ? 6 : 8,
+    paddingHorizontal: responsive.isLandscape ? 12 : 16,
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -1155,12 +1195,14 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 4,
+    maxWidth: responsive.width * 0.4, // Limiter la largeur maximale
   },
   authorButtonTextSmall: {
     color: colors.white,
     fontWeight: '600',
-    fontSize: 11,
-    marginLeft: 6,
+    fontSize: responsive.isLandscape ? 10 : 11,
+    marginLeft: responsive.isLandscape ? 4 : 6,
+    flexShrink: 1, // Permettre au texte de se réduire si nécessaire
   },
   authorBadge: {
     backgroundColor: colors.primary,

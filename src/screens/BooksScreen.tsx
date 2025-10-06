@@ -11,6 +11,7 @@ import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
 import { usePaymentService } from '../lib/paymentService';
+import { useEntitlements } from '../contexts/EntitlementsContext';
 import { Chapter, ChaptersData } from '../types/chapters';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
@@ -40,23 +41,14 @@ export default function BooksScreen() {
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter|null>(null);
   const [selectedPart, setSelectedPart] = React.useState<string|null>(null);
   const [isLoadingPayment, setIsLoadingPayment] = React.useState(false);
-  const [userEntitlements, setUserEntitlements] = React.useState<{part2: boolean; part3: boolean}>({part2: false, part3: false});
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   // Service de paiement
-  const { checkEntitlements, createPayment, openPayDunyaCheckout } = usePaymentService();
+  const { createPayment, openPayDunyaCheckout } = usePaymentService();
+  
+  // Entitlements globaux
+  const { entitlements: userEntitlements } = useEntitlements();
 
-  // Charger les entitlements utilisateur
-  const loadEntitlements = async () => {
-    if (!user?.uid) return;
-    
-    try {
-      const entitlements = await checkEntitlements();
-      setUserEntitlements(entitlements);
-    } catch (error) {
-      console.error('Erreur chargement entitlements:', error);
-    }
-  };
 
   // Charger la progression utilisateur
   const loadProgress = async () => {
@@ -80,14 +72,12 @@ export default function BooksScreen() {
   // Charger la progression au montage et quand l'utilisateur change
   React.useEffect(() => {
     loadProgress();
-    loadEntitlements();
   }, [user?.uid]);
 
   // Recharger la progression quand l'écran redevient actif
   useFocusEffect(
     React.useCallback(() => {
       loadProgress();
-      loadEntitlements();
     }, [user?.uid])
   );
 

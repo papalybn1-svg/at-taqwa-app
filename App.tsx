@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from './src/hooks/useAuth';
 import { usePaymentService } from './src/lib/paymentService';
+import { useEntitlements, EntitlementsProvider } from './src/contexts/EntitlementsContext';
 import AdminTabNavigator from './src/navigation/AdminTabNavigator';
 import TabNavigator from './src/navigation/TabNavigator';
 import ChapterScreen from './src/screens/ChapterScreen';
@@ -124,6 +125,7 @@ export default function App() {
   const [splashStep, setSplashStep] = useState(0);
   const { user, loading, setUser } = useAuth();
   const { checkEntitlements } = usePaymentService();
+  const { refreshEntitlements } = useEntitlements();
   
   useEffect(() => {
     // Séquence splash par défaut à chaque ouverture
@@ -147,8 +149,15 @@ export default function App() {
               const token = parsed.queryParams?.token;
               console.log('🔑 Token reçu:', token);
               
-              // Re-vérifier les entitlements
+              // Re-vérifier les entitlements avec un délai pour laisser le temps au backend
               try {
+                // Attendre 2 secondes pour laisser le temps au backend de traiter le paiement
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Rafraîchir les entitlements globalement
+                await refreshEntitlements();
+                
+                // Vérifier à nouveau pour l'alert
                 const entitlements = await checkEntitlements();
                 console.log('🎯 Entitlements après paiement:', entitlements);
                 
@@ -280,10 +289,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
     <AuthContext.Provider value={{ user, setUser }}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
-          <StatusBar barStyle="dark-content" backgroundColor="#F3F5F7" />
-          <NavigationContainer>
+      <EntitlementsProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
+            <StatusBar barStyle="dark-content" backgroundColor="#F3F5F7" />
+            <NavigationContainer>
               <Stack.Navigator 
               screenOptions={{ 
                 headerShown: false,
@@ -301,9 +311,10 @@ export default function App() {
               <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
               <Stack.Screen name="Chapter" component={ChapterScreen} options={{ gestureEnabled: false }} />
             </Stack.Navigator>
-          </NavigationContainer>
-        </SafeAreaView>
-      </GestureHandlerRootView>
+            </NavigationContainer>
+          </SafeAreaView>
+        </GestureHandlerRootView>
+      </EntitlementsProvider>
     </AuthContext.Provider>
     </SafeAreaProvider>
   );

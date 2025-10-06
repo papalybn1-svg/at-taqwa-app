@@ -2,11 +2,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Stockage local scoping par utilisateur
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { ActivityIndicator, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
+import { useEntitlements } from '../contexts/EntitlementsContext';
 import { ChaptersData } from '../types/chapters';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 import { isQuizUnlocked } from '../utils/quizUnlock';
@@ -106,11 +107,42 @@ function getChaptersInPartie(partieKey: string) {
 const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) => {
   // TOUS LES HOOKS EN PREMIER
   const { user } = useAuth();
+  const { entitlements } = useEntitlements();
   const [textSize, setTextSize] = useState(16);
   const screenWidth = Dimensions.get('window').width;
   const scrollViewRef = useRef<ScrollView>(null);
   const { chapter } = route.params;
   const [chapterContent, setChapterContent] = useState<any>(null);
+  
+  // Vérifier si l'utilisateur a accès à ce chapitre premium
+  const hasAccessToChapter = () => {
+    if (!chapter) return false;
+    
+    // Trouver la partie du chapitre
+    const allChapters = getAllChapters();
+    const currentChapter = allChapters.find(
+      (ch) => ch.image === chapter.image && ch.title === chapter.title
+    );
+    
+    if (!currentChapter) return false;
+    
+    // Si c'est la partie 1, accès libre
+    if (currentChapter.partieKey === 'premiere_partie') {
+      return true;
+    }
+    
+    // Si c'est la partie 2, vérifier l'entitlement
+    if (currentChapter.partieKey === 'deuxieme_partie') {
+      return entitlements.part2;
+    }
+    
+    // Si c'est la partie 3, vérifier l'entitlement
+    if (currentChapter.partieKey === 'troisieme_partie') {
+      return entitlements.part3;
+    }
+    
+    return false;
+  };
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // 0 = première section
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [isFavorite, setIsFavorite] = useState(false);
@@ -402,12 +434,10 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   // Fonction pour obtenir la clé du quiz du chapitre actuel
   const getCurrentChapterQuizKey = () => {
     if (!chapter) return null;
-    const allChapters = getAllChapters();
-    const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
-    if (!currentChapterData) return null;
     
-    // Utiliser le numéro du chapitre comme clé de quiz
-    return currentChapterData.chapitreIndex + 1;
+    // Utiliser directement l'image du chapitre comme clé de quiz
+    // L'image correspond au numéro global du chapitre (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
+    return chapter.image;
   };
 
   // Fonction pour gérer le clic sur "Faire le quiz"
@@ -417,13 +447,10 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
 
     // Vérifier si le quiz est débloqué
     if (!isQuizUnlocked(quizKey.toString(), quizScores)) {
-      // Trouver le quiz précédent pour afficher son score actuel
-      const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
-      if (!currentChapterData) return;
-
-      const previousQuizKey = currentChapterData.chapitreIndex; // Quiz précédent
-      const score = quizScores[previousQuizKey.toString()];
+      // Calculer le quiz précédent basé sur le numéro global du chapitre
+      const currentChapterNumber = parseInt(quizKey);
+      const previousQuizKey = (currentChapterNumber - 1).toString();
+      const score = quizScores[previousQuizKey];
       
       setLockedChapter(chapter);
       setPreviousScore(score);
@@ -460,6 +487,36 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
 
     return () => subscription.remove();
   }, []);
+
+  // Vérifier l'accès au chapitre premium
+  if (!hasAccessToChapter()) {
+    // Rediriger vers l'écran des livres avec un message
+    useEffect(() => {
+      const allChapters = getAllChapters();
+      const currentChapter = allChapters.find(
+        (ch) => ch.image === chapter.image && ch.title === chapter.title
+      );
+      
+      const partieNumero = currentChapter?.partieKey === 'deuxieme_partie' ? '2' : '3';
+      Alert.alert(
+        'Contenu Premium',
+        `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Vous allez être redirigé vers l'écran des livres.`,
+        [
+          { 
+            text: 'OK', 
+            onPress: () => navigation.navigate('Books' as never)
+          }
+        ]
+      );
+    }, []);
+    
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F5F7' }}>
+        <ActivityIndicator size="large" color="#174C3C" />
+        <Text style={{ marginTop: 20, color: '#666' }}>Redirection en cours...</Text>
+      </View>
+    );
+  }
 
   // On ne retourne rien avant d'avoir appelé tous les hooks !
   if (!chapterContent) {

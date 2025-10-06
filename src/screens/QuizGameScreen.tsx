@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 
 
 
@@ -34,6 +35,9 @@ interface Question {
 
 export default function QuizGameScreen() {
   const navigation = useNavigation();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const styles = createStyles(responsive, responsiveStyle);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -256,7 +260,7 @@ export default function QuizGameScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#174C3C',
@@ -401,9 +405,10 @@ const styles = StyleSheet.create({
   },
   showAnswerText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: responsive.isLandscape ? 16 : 18,
     fontWeight: 'bold',
-    marginLeft: 8,
+    marginLeft: responsive.isLandscape ? 6 : 8,
+    flexShrink: 1, // Permettre au texte de se réduire si nécessaire
   },
   resultContainer: {
     flex: 1,

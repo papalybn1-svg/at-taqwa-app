@@ -7,8 +7,9 @@ Implémenter un système de progression où les quiz sont débloqués séquentie
 
 ### ✅ Système de Déverrouillage
 - **Quiz 1** : Toujours débloqué (point d'entrée)
-- **Quiz suivants** : Débloqués seulement si le quiz précédent dans la liste est complété avec **80%**
-- **Gestion des chapitres manquants** : Si un chapitre n'existe pas (ex: pas de chapitre 4), le système passe au suivant
+- **Quiz suivants** : Débloqués seulement si le quiz précédent dans la séquence est complété avec **80%**
+- **Séquence complète** : Tous les quiz 1-12 sont maintenant disponibles avec une progression séquentielle
+- **Logique centralisée** : Utilisation de `quizUnlock.ts` pour une cohérence entre tous les écrans
 - **Exigence équilibrée** : Progression possible avec un bon niveau de maîtrise
 
 ### ✅ Affichage Visuel
@@ -33,11 +34,23 @@ Implémenter un système de progression où les quiz sont débloqués séquentie
 
 ## 📁 Fichiers Modifiés
 
+### `src/utils/quizUnlock.ts`
+- Logique centralisée de déverrouillage des quiz
+- Séquence séquentielle 1-12 pour tous les chapitres
+- Fonction `isQuizUnlocked` utilisée par tous les écrans
+
 ### `src/screens/QuizChapterSelectScreen.tsx`
+- Utilisation de la logique centralisée `quizUnlock.ts`
 - Ajout du système de cadenas
-- Logique de déverrouillage
+- Logique de déverrouillage cohérente
 - Affichage conditionnel des scores
 - Styles pour les états verrouillés/débloqués
+
+### `src/screens/ChapterScreen.tsx`
+- Correction de la logique de calcul de la clé du quiz
+- Utilisation directe de `chapter.image` comme clé de quiz
+- Utilisation de la logique centralisée `quizUnlock.ts`
+- Calcul correct du quiz précédent pour le déverrouillage
 
 ### `src/screens/OriginalQuizScreen.tsx`
 - Sauvegarde automatique du score à la fin du quiz
