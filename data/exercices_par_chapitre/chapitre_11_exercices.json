@@ -1,0 +1,105 @@
+{
+    "quiz": [
+      {
+        "numero": 1,
+        "question": "Selon le Coran (s.4, v.101), qu’est-il permis de faire lorsqu’on est en voyage ?",
+        "reponse": "Il est permis d’écourter la prière.",
+        "fausses_reponses": [
+          "Il est permis de regrouper toutes les prières en une seule.",
+          "Il est permis de ne pas prier pendant le voyage.",
+          "Il est permis de remplacer les prières par des invocations."
+        ]
+      },
+      {
+        "numero": 2,
+        "question": "Pourquoi le Prophète (PSL) a-t-il maintenu le raccourcissement de la prière en voyage, même sans menace d’ennemis ?",
+        "reponse": "Parce que c’est une faveur qu’Allah a accordée aux croyants.",
+        "fausses_reponses": [
+          "Parce que c’était une obligation stricte du Coran.",
+          "Parce que les voyages étaient rares à son époque.",
+          "Parce que cela permettait d’attirer plus de fidèles."
+        ]
+      },
+      {
+        "numero": 3,
+        "question": "Quelle est la distance minimale de voyage qui autorise le raccourcissement des prières ?",
+        "reponse": "80 km.",
+        "fausses_reponses": [
+          "40 km.",
+          "100 km.",
+          "120 km."
+        ]
+      },
+      {
+        "numero": 4,
+        "question": "Quelles prières doivent être raccourcies à 2 rakas pendant le voyage ?",
+        "reponse": "Zohr, Asr et Ichâ.",
+        "fausses_reponses": [
+          "Subh, Maghreb et Ichâ.",
+          "Toutes les prières obligatoires sans exception.",
+          "Uniquement la prière du vendredi."
+        ]
+      },
+      {
+        "numero": 5,
+        "question": "Combien de rakas reste la prière du Maghreb pendant le voyage ?",
+        "reponse": "3 rakas.",
+        "fausses_reponses": [
+          "2 rakas.",
+          "4 rakas.",
+          "Elle n’est pas obligatoire en voyage."
+        ]
+      },
+      {
+        "numero": 6,
+        "question": "Si un voyageur prie derrière un imam résident, que doit-il faire ?",
+        "reponse": "Il doit compléter sa prière comme l’imam résident.",
+        "fausses_reponses": [
+          "Il peut raccourcir sa prière même derrière l’imam résident.",
+          "Il doit quitter la prière et prier seul.",
+          "Il n’a pas le droit de prier derrière un résident."
+        ]
+      },
+      {
+        "numero": 7,
+        "question": "Combien de jours un voyageur peut-il raccourcir ses prières à Mbour selon le rite malikite ?",
+        "reponse": "Moins de 5 jours.",
+        "fausses_reponses": [
+          "Moins de 10 jours.",
+          "Moins de 15 jours.",
+          "Moins de 20 jours."
+        ]
+      },
+      {
+        "numero": 8,
+        "question": "Comment doit être remboursée une prière non faite avant le départ en voyage ?",
+        "reponse": "Elle doit être remboursée comme elle était due, c’est-à-dire en 4 rakas.",
+        "fausses_reponses": [
+          "Elle doit être remboursée en 2 rakas car le fidèle est en voyage.",
+          "Elle peut être remplacée par une prière surérogatoire.",
+          "Elle n’a pas besoin d’être rattrapée."
+        ]
+      },
+      {
+        "numero": 9,
+        "question": "Quels nafilas (prières surérogatoires) peut-on garder en voyage ?",
+        "reponse": "Les 2 rakas de fajr et la raka de witr.",
+        "fausses_reponses": [
+          "Toutes les prières surérogatoires habituelles.",
+          "Uniquement les prières de dhuha.",
+          "Aucune, il est interdit de faire des nafilas en voyage."
+        ]
+      },
+      {
+        "numero": 10,
+        "question": "Le marin est-il autorisé à raccourcir la prière comme le voyageur ?",
+        "reponse": "Non, il est considéré comme résident.",
+        "fausses_reponses": [
+          "Oui, il peut toujours raccourcir.",
+          "Uniquement si son trajet dépasse 80 km en mer.",
+          "Uniquement lorsqu’il dort à bord du navire."
+        ]
+      }
+    ]
+  }
+  
