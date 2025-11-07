@@ -1,6 +1,6 @@
   import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import {
@@ -13,6 +13,7 @@ import {
     getHijriDate,
     getNextPrayerInfo
 } from '../services/prayerTimesService';
+import { searchCities, CitySearchResult } from '../services/citySearchService';
 import colors from '../theme/colors';
 
 // Récupération des dimensions de l'écran
@@ -28,6 +29,104 @@ const PRAYER_LABELS = [
   { key: 'Isha', label: 'Isha', icon: 'weather-night', color: '#7E57C2' },
 ];
 
+// Liste complète des pays du monde organisés par continents
+const WORLD_COUNTRIES = [
+  {
+    continent: 'Afrique',
+    countries: [
+      { name: 'Sénégal', cities: ['Dakar', 'Saint-Louis', 'Thiès', 'Kaolack', 'Ziguinchor', 'Touba', 'Mbour', 'Rufisque'] },
+      { name: 'Maroc', cities: ['Casablanca', 'Rabat', 'Fès', 'Marrakech', 'Tanger', 'Agadir', 'Meknès', 'Oujda'] },
+      { name: 'Algérie', cities: ['Alger', 'Oran', 'Constantine', 'Annaba', 'Blida', 'Sétif', 'Tlemcen', 'Béjaïa'] },
+      { name: 'Tunisie', cities: ['Tunis', 'Sfax', 'Sousse', 'Kairouan', 'Bizerte', 'Gabès', 'Gafsa', 'Monastir'] },
+      { name: 'Mali', cities: ['Bamako', 'Sikasso', 'Mopti', 'Kayes', 'Gao', 'Kidal', 'Tombouctou'] },
+      { name: 'Côte d\'Ivoire', cities: ['Abidjan', 'Yamoussoukro', 'Bouaké', 'San-Pédro', 'Korhogo', 'Man', 'Daloa'] },
+      { name: 'Burkina Faso', cities: ['Ouagadougou', 'Bobo-Dioulasso', 'Koudougou', 'Ouahigouya', 'Banfora'] },
+      { name: 'Niger', cities: ['Niamey', 'Zinder', 'Maradi', 'Agadez', 'Tahoua'] },
+      { name: 'Mauritanie', cities: ['Nouakchott', 'Nouadhibou', 'Rosso', 'Kaédi', 'Atar'] },
+      { name: 'Guinée', cities: ['Conakry', 'Kankan', 'Kindia', 'Labé', 'N\'Zérékoré'] },
+      { name: 'Gambie', cities: ['Banjul', 'Serekunda', 'Brikama', 'Bakau', 'Farafenni'] },
+      { name: 'Guinée-Bissau', cities: ['Bissau', 'Bafatá', 'Gabú', 'Cacheu'] },
+      { name: 'Tchad', cities: ['N\'Djamena', 'Moundou', 'Sarh', 'Abéché'] },
+      { name: 'Cameroun', cities: ['Douala', 'Yaoundé', 'Garoua', 'Bafoussam', 'Bamenda'] },
+      { name: 'Nigeria', cities: ['Lagos', 'Abuja', 'Kano', 'Ibadan', 'Port Harcourt', 'Kaduna'] },
+      { name: 'Ghana', cities: ['Accra', 'Kumasi', 'Tamale', 'Takoradi', 'Cape Coast'] },
+      { name: 'Égypte', cities: ['Le Caire', 'Alexandrie', 'Gizeh', 'Louxor', 'Assouan', 'Port-Saïd'] },
+      { name: 'Soudan', cities: ['Khartoum', 'Omdurman', 'Port-Soudan', 'Kassala'] },
+      { name: 'Éthiopie', cities: ['Addis-Abeba', 'Dire Dawa', 'Mekele', 'Gondar'] },
+      { name: 'Kenya', cities: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru'] },
+      { name: 'Tanzanie', cities: ['Dar es Salaam', 'Dodoma', 'Zanzibar', 'Arusha'] },
+      { name: 'Ouganda', cities: ['Kampala', 'Gulu', 'Mbarara', 'Jinja'] },
+      { name: 'Afrique du Sud', cities: ['Johannesburg', 'Le Cap', 'Pretoria', 'Durban', 'Port Elizabeth'] },
+    ]
+  },
+  {
+    continent: 'Europe',
+    countries: [
+      { name: 'France', cities: ['Paris', 'Lyon', 'Marseille', 'Lille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg'] },
+      { name: 'Espagne', cities: ['Madrid', 'Barcelone', 'Valence', 'Séville', 'Bilbao', 'Malaga'] },
+      { name: 'Italie', cities: ['Rome', 'Milan', 'Naples', 'Turin', 'Palerme', 'Gênes', 'Florence'] },
+      { name: 'Allemagne', cities: ['Berlin', 'Munich', 'Hambourg', 'Francfort', 'Cologne', 'Stuttgart'] },
+      { name: 'Royaume-Uni', cities: ['Londres', 'Manchester', 'Birmingham', 'Glasgow', 'Liverpool', 'Édimbourg'] },
+      { name: 'Belgique', cities: ['Bruxelles', 'Anvers', 'Gand', 'Charleroi', 'Liège'] },
+      { name: 'Pays-Bas', cities: ['Amsterdam', 'Rotterdam', 'La Haye', 'Utrecht', 'Eindhoven'] },
+      { name: 'Suisse', cities: ['Zurich', 'Genève', 'Bâle', 'Berne', 'Lausanne'] },
+      { name: 'Portugal', cities: ['Lisbonne', 'Porto', 'Coimbra', 'Braga', 'Faro'] },
+      { name: 'Grèce', cities: ['Athènes', 'Thessalonique', 'Patras', 'Héraklion'] },
+      { name: 'Turquie', cities: ['Istanbul', 'Ankara', 'Izmir', 'Bursa', 'Antalya', 'Gaziantep'] },
+      { name: 'Pologne', cities: ['Varsovie', 'Cracovie', 'Wrocław', 'Gdańsk', 'Poznań'] },
+      { name: 'Russie', cities: ['Moscou', 'Saint-Pétersbourg', 'Novossibirsk', 'Ekaterinbourg', 'Kazan'] },
+    ]
+  },
+  {
+    continent: 'Asie',
+    countries: [
+      { name: 'Arabie Saoudite', cities: ['Riyad', 'Djeddah', 'La Mecque', 'Médine', 'Dammam', 'Tabuk'] },
+      { name: 'Émirats Arabes Unis', cities: ['Dubaï', 'Abou Dabi', 'Charjah', 'Al Ain', 'Ras el Khaïmah'] },
+      { name: 'Qatar', cities: ['Doha', 'Al Rayyan', 'Al Wakrah', 'Dukhan'] },
+      { name: 'Koweït', cities: ['Koweït', 'Al Ahmadi', 'Hawalli', 'Farwaniya'] },
+      { name: 'Bahreïn', cities: ['Manama', 'Riffa', 'Muharraq', 'Hamad Town'] },
+      { name: 'Oman', cities: ['Mascate', 'Salalah', 'Sohar', 'Nizwa'] },
+      { name: 'Yémen', cities: ['Sanaa', 'Aden', 'Taizz', 'Hodeïda'] },
+      { name: 'Jordanie', cities: ['Amman', 'Irbid', 'Zarqa', 'Aqaba'] },
+      { name: 'Liban', cities: ['Beyrouth', 'Tripoli', 'Sidon', 'Tyr'] },
+      { name: 'Syrie', cities: ['Damas', 'Alep', 'Homs', 'Lattaquié'] },
+      { name: 'Irak', cities: ['Bagdad', 'Bassorah', 'Mossoul', 'Erbil', 'Kirkouk'] },
+      { name: 'Iran', cities: ['Téhéran', 'Ispahan', 'Chiraz', 'Tabriz', 'Mashhad'] },
+      { name: 'Pakistan', cities: ['Karachi', 'Lahore', 'Islamabad', 'Faisalabad', 'Rawalpindi'] },
+      { name: 'Bangladesh', cities: ['Dacca', 'Chittagong', 'Khulna', 'Rajshahi'] },
+      { name: 'Inde', cities: ['New Delhi', 'Mumbai', 'Bangalore', 'Calcutta', 'Chennai', 'Hyderabad'] },
+      { name: 'Indonésie', cities: ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Semarang'] },
+      { name: 'Malaisie', cities: ['Kuala Lumpur', 'George Town', 'Ipoh', 'Johor Bahru', 'Malacca'] },
+      { name: 'Singapour', cities: ['Singapour'] },
+      { name: 'Thaïlande', cities: ['Bangkok', 'Chiang Mai', 'Pattaya', 'Phuket'] },
+      { name: 'Philippines', cities: ['Manille', 'Cebu', 'Davao', 'Zamboanga'] },
+      { name: 'Chine', cities: ['Pékin', 'Shanghai', 'Guangzhou', 'Shenzhen', 'Chengdu'] },
+      { name: 'Japon', cities: ['Tokyo', 'Osaka', 'Yokohama', 'Nagoya', 'Kyoto'] },
+      { name: 'Corée du Sud', cities: ['Séoul', 'Busan', 'Incheon', 'Daegu'] },
+    ]
+  },
+  {
+    continent: 'Amérique',
+    countries: [
+      { name: 'États-Unis', cities: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Miami', 'Boston'] },
+      { name: 'Canada', cities: ['Toronto', 'Montréal', 'Vancouver', 'Calgary', 'Ottawa', 'Edmonton'] },
+      { name: 'Mexique', cities: ['Mexico', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana'] },
+      { name: 'Brésil', cities: ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza'] },
+      { name: 'Argentine', cities: ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza'] },
+      { name: 'Colombie', cities: ['Bogotá', 'Medellín', 'Cali', 'Barranquilla'] },
+      { name: 'Chili', cities: ['Santiago', 'Valparaíso', 'Concepción', 'Antofagasta'] },
+      { name: 'Pérou', cities: ['Lima', 'Arequipa', 'Trujillo', 'Chiclayo'] },
+    ]
+  },
+  {
+    continent: 'Océanie',
+    countries: [
+      { name: 'Australie', cities: ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adélaïde'] },
+      { name: 'Nouvelle-Zélande', cities: ['Auckland', 'Wellington', 'Christchurch', 'Hamilton'] },
+    ]
+  }
+];
+
 export default function HorairesScreen() {
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
@@ -38,6 +137,11 @@ export default function HorairesScreen() {
   const [city, setCity] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [cityInput, setCityInput] = useState('');
+  const [countryInput, setCountryInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<CitySearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [enabledNotifications, setEnabledNotifications] = useState<{ [key: string]: boolean }>({});
   const [dimensions, setDimensions] = useState({ width: screenWidth, height: screenHeight });
   const [lastUpdate, setLastUpdate] = useState<string>('');
@@ -116,15 +220,50 @@ export default function HorairesScreen() {
     };
   }, []); // Dépendances vides pour ne charger qu'une fois
 
+  // Fonction pour rechercher des villes en temps réel
+  useEffect(() => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timeout = setTimeout(async () => {
+      try {
+        const results = await searchCities(searchQuery, 15);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('❌ Erreur recherche:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500); // Délai de 500ms pour éviter trop de requêtes
+
+    setSearchTimeout(timeout);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [searchQuery]);
+
   // Fonction pour changer de ville
-  const handleCityChange = async () => {
-    if (!cityInput.trim()) return;
+  const handleCityChange = async (selectedCity?: CitySearchResult) => {
+    const city = selectedCity ? selectedCity.name : cityInput.trim();
+    const country = selectedCity ? selectedCity.country : (countryInput.trim() || 'Senegal');
+    
+    if (!city) return;
     
     try {
       setLoading(true);
       setOfflineMode(false);
       
-      const result = await fetchPrayerTimes(cityInput.trim());
+      const result = await fetchPrayerTimes(city, country);
       setPrayerTimes(result.timings);
       setCity(result.city);
       setLastUpdate(result.lastUpdate);
@@ -147,9 +286,17 @@ export default function HorairesScreen() {
       
       setModalVisible(false);
       setCityInput('');
+      setCountryInput('');
+      setSearchQuery('');
+      setSearchResults([]);
       
     } catch (error) {
       console.log('❌ Erreur lors du changement de ville:', error);
+      Alert.alert(
+        'Erreur',
+        'Impossible de récupérer les horaires pour cette ville. Veuillez vérifier le nom de la ville et du pays.',
+        [{ text: 'OK' }]
+      );
       setOfflineMode(true);
     } finally {
       setLoading(false);
@@ -314,43 +461,145 @@ export default function HorairesScreen() {
       {/* Modal choix ville */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Choisir une ville</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Entrer une ville (ex: Dakar)"
-              value={cityInput}
-              onChangeText={setCityInput}
-              placeholderTextColor="#999"
-            />
-            
-            {/* Liste des villes disponibles */}
-            <View style={styles.availableCitiesContainer}>
-              <Text style={styles.availableCitiesTitle}>Villes principales du Sénégal :</Text>
-              <View style={styles.availableCitiesList}>
-                {[
-                  'Dakar', 'Saint-Louis', 'Thiès', 'Kaolack', 'Ziguinchor',
-                  'Touba', 'Mbour', 'Rufisque', 'Diourbel', 'Louga',
-                  'Tambacounda', 'Kolda', 'Fatick', 'Kaffrine', 'Sédhiou'
-                ].map((cityName) => (
-                  <TouchableOpacity
-                    key={cityName}
-                    style={styles.cityOption}
-                    onPress={() => {
-                      setCityInput(cityName);
-                    }}
-                  >
-                    <Text style={styles.cityOptionText}>{cityName}</Text>
+          <View style={styles.modalWrapper}>
+            <ScrollView 
+              style={styles.modalScrollView}
+              contentContainerStyle={styles.modalScrollContainer}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+            >
+              <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Choisir une ville</Text>
+              
+              {/* Barre de recherche */}
+              <View style={styles.searchContainer}>
+                <MaterialCommunityIcons name="magnify" size={20} color="#999" style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Rechercher un pays ou une ville..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor="#999"
+                  autoCapitalize="words"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchButton}>
+                    <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
                   </TouchableOpacity>
-                ))}
+                )}
               </View>
-            </View>
+              
+              <Text style={styles.inputHint}>
+                Recherchez n'importe quelle ville dans le monde. Les résultats apparaîtront ci-dessous.
+              </Text>
+              
+              {/* Résultats de recherche en temps réel */}
+              {isSearching && (
+                <View style={styles.searchingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.searchingText}>Recherche en cours...</Text>
+                </View>
+              )}
+              
+              {!isSearching && searchResults.length > 0 && (
+                <View style={styles.searchResultsContainer}>
+                  <Text style={styles.searchResultsTitle}>
+                    {searchResults.length} résultat{searchResults.length > 1 ? 's' : ''} trouvé{searchResults.length > 1 ? 's' : ''}
+                  </Text>
+                  {searchResults.map((result, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.searchResultItem}
+                      onPress={() => {
+                        setCityInput(result.name);
+                        setCountryInput(result.country);
+                        handleCityChange(result);
+                      }}
+                    >
+                      <MaterialCommunityIcons name="map-marker" size={20} color={colors.primary} />
+                      <View style={styles.searchResultTextContainer}>
+                        <Text style={styles.searchResultCity}>{result.name}</Text>
+                        <Text style={styles.searchResultCountry}>{result.country}</Text>
+                      </View>
+                      <MaterialCommunityIcons name="chevron-right" size={20} color="#999" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              
+              {!isSearching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+                <View style={styles.noResultsContainer}>
+                  <MaterialCommunityIcons name="map-search-outline" size={48} color="#999" />
+                  <Text style={styles.noResultsText}>Aucun résultat trouvé</Text>
+                  <Text style={styles.noResultsHint}>
+                    Essayez avec un nom de ville différent ou vérifiez l'orthographe
+                  </Text>
+                </View>
+              )}
+              
+              {/* Liste des pays populaires (affichée seulement si pas de recherche) */}
+              {!searchQuery.trim() && (
+                <View style={styles.availableCitiesContainer}>
+                  <Text style={styles.availableCitiesTitle}>Pays populaires :</Text>
+                  <View style={styles.availableCitiesList}>
+                    {WORLD_COUNTRIES.map((continent) => (
+                      <View key={continent.continent} style={styles.continentSection}>
+                        <Text style={styles.continentName}>{continent.continent}</Text>
+                        {continent.countries.map((country) => (
+                          <View key={country.name} style={styles.countrySection}>
+                            <Text style={styles.countryName}>{country.name}</Text>
+                            <View style={styles.citiesRow}>
+                              {country.cities.map((cityName) => (
+                                <TouchableOpacity
+                                  key={cityName}
+                                  style={styles.cityOption}
+                                  onPress={() => {
+                                    setCityInput(cityName);
+                                    setCountryInput(country.name);
+                                    setSearchQuery(`${cityName}, ${country.name}`);
+                                  }}
+                                >
+                                  <Text style={styles.cityOptionText}>{cityName}</Text>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+              </View>
+            </ScrollView>
             
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisible(false)}>
+            {/* Boutons fixes en bas */}
+            <View style={styles.modalButtonsContainer}>
+                <TouchableOpacity style={styles.modalCancelButton} onPress={() => {
+                  setModalVisible(false);
+                  setCityInput('');
+                  setCountryInput('');
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                    setSearchTimeout(null);
+                  }
+                }}>
                 <Text style={styles.modalCancelText}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalConfirmButton} onPress={handleCityChange}>
+              <TouchableOpacity 
+                style={[styles.modalConfirmButton, (!cityInput.trim() && searchResults.length === 0) && styles.modalConfirmButtonDisabled]} 
+                onPress={() => {
+                  if (searchResults.length > 0) {
+                    // Utiliser le premier résultat si disponible
+                    handleCityChange(searchResults[0]);
+                  } else if (cityInput.trim()) {
+                    handleCityChange();
+                  }
+                }}
+                disabled={!cityInput.trim() && searchResults.length === 0}
+              >
                 <Text style={styles.modalConfirmText}>Valider</Text>
               </TouchableOpacity>
             </View>
@@ -602,17 +851,99 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContainer: {
-    backgroundColor: '#FFFFFF',
+  modalWrapper: {
+    width: isTablet ? '70%' : '90%',
+    maxWidth: isTablet ? 600 : 400,
+    maxHeight: '90%',
     borderRadius: isTablet ? 24 : 20,
-    padding: isTablet ? 32 : 24,
-    width: isTablet ? '70%' : '85%',
-    maxWidth: isTablet ? 500 : 300,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
+    flexShrink: 1,
+  },
+  modalScrollView: {
+    maxHeight: '100%',
+  },
+  modalScrollContainer: {
+    paddingVertical: 20,
+    paddingHorizontal: 0,
+    paddingBottom: 80, // Espace pour les boutons fixes
+  },
+  modalContainer: {
+    padding: isTablet ? 32 : 24,
+    width: '100%',
+  },
+  modalButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: isTablet ? 32 : 24,
+    paddingVertical: isTablet ? 16 : 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderBottomLeftRadius: isTablet ? 24 : 20,
+    borderBottomRightRadius: isTablet ? 24 : 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  inputLabel: {
+    fontSize: isTablet ? 16 : (isSmallScreen ? 13 : 14),
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: isTablet ? 8 : 6,
+    marginTop: isTablet ? 16 : 12,
+  },
+  inputHint: {
+    fontSize: isTablet ? 13 : (isSmallScreen ? 11 : 12),
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: isTablet ? 4 : 2,
+    marginBottom: isTablet ? 16 : 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: isTablet ? 16 : 12,
+    paddingHorizontal: isTablet ? 16 : 12,
+    marginBottom: isTablet ? 20 : 15,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  searchIcon: {
+    marginRight: isTablet ? 8 : 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: isTablet ? 16 : (isSmallScreen ? 14 : 15),
+    paddingVertical: isTablet ? 12 : 10,
+    color: '#333',
+  },
+  clearSearchButton: {
+    padding: isTablet ? 4 : 2,
+  },
+  continentSection: {
+    marginBottom: isTablet ? 20 : 16,
+  },
+  continentName: {
+    fontSize: isTablet ? 18 : (isSmallScreen ? 15 : 16),
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginBottom: isTablet ? 12 : 10,
+    marginTop: isTablet ? 12 : 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   modalTitle: {
     fontSize: isTablet ? 22 : (isSmallScreen ? 16 : 18),
@@ -627,12 +958,8 @@ const styles = StyleSheet.create({
     borderRadius: isTablet ? 16 : 12,
     padding: isTablet ? 16 : 12,
     fontSize: isTablet ? 18 : (isSmallScreen ? 15 : 16),
-    marginBottom: isTablet ? 24 : 20,
+    marginBottom: isTablet ? 8 : 6,
     backgroundColor: '#F8F9FA',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
   },
   modalCancelButton: {
     flex: 1,
@@ -671,20 +998,113 @@ const styles = StyleSheet.create({
     marginBottom: isTablet ? 12 : 8,
   },
   availableCitiesList: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#F8F9FA',
     borderRadius: isTablet ? 14 : 10,
     paddingVertical: isTablet ? 12 : 8,
     paddingHorizontal: isTablet ? 14 : 10,
   },
+  countrySection: {
+    marginBottom: isTablet ? 16 : 12,
+  },
+  countryName: {
+    fontSize: isTablet ? 15 : (isSmallScreen ? 13 : 14),
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginBottom: isTablet ? 8 : 6,
+    marginTop: isTablet ? 8 : 6,
+  },
+  citiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
   cityOption: {
-    paddingVertical: isTablet ? 10 : 8,
-    paddingHorizontal: isTablet ? 14 : 10,
+    paddingVertical: isTablet ? 8 : 6,
+    paddingHorizontal: isTablet ? 12 : 10,
     borderRadius: isTablet ? 10 : 8,
-    marginVertical: isTablet ? 3 : 2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginBottom: isTablet ? 6 : 4,
+    marginRight: isTablet ? 8 : 6,
   },
   cityOptionText: {
-    fontSize: isTablet ? 15 : (isSmallScreen ? 12 : 13),
+    fontSize: isTablet ? 14 : (isSmallScreen ? 11 : 12),
     color: '#333',
+    fontWeight: '500',
+  },
+  modalConfirmButtonDisabled: {
+    opacity: 0.5,
+  },
+  searchingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: isTablet ? 20 : 16,
+    marginBottom: isTablet ? 16 : 12,
+  },
+  searchingText: {
+    marginLeft: isTablet ? 12 : 8,
+    fontSize: isTablet ? 16 : (isSmallScreen ? 13 : 14),
+    color: colors.primary,
+  },
+  searchResultsContainer: {
+    marginTop: isTablet ? 16 : 12,
+    marginBottom: isTablet ? 16 : 12,
+  },
+  searchResultsTitle: {
+    fontSize: isTablet ? 16 : (isSmallScreen ? 13 : 14),
+    fontWeight: 'bold',
+    color: '#555',
+    marginBottom: isTablet ? 12 : 8,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: isTablet ? 14 : 12,
+    paddingHorizontal: isTablet ? 16 : 12,
+    borderRadius: isTablet ? 12 : 10,
+    marginBottom: isTablet ? 8 : 6,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  searchResultTextContainer: {
+    flex: 1,
+    marginLeft: isTablet ? 12 : 10,
+  },
+  searchResultCity: {
+    fontSize: isTablet ? 16 : (isSmallScreen ? 14 : 15),
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: isTablet ? 2 : 1,
+  },
+  searchResultCountry: {
+    fontSize: isTablet ? 14 : (isSmallScreen ? 12 : 13),
+    color: '#666',
+  },
+  noResultsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: isTablet ? 40 : 32,
+    marginTop: isTablet ? 20 : 16,
+  },
+  noResultsText: {
+    fontSize: isTablet ? 18 : (isSmallScreen ? 15 : 16),
+    fontWeight: '600',
+    color: '#666',
+    marginTop: isTablet ? 16 : 12,
+  },
+  noResultsHint: {
+    fontSize: isTablet ? 14 : (isSmallScreen ? 12 : 13),
+    color: '#999',
+    marginTop: isTablet ? 8 : 6,
+    textAlign: 'center',
+    paddingHorizontal: isTablet ? 32 : 24,
   },
   // Styles pour la prochaine prière
   nextPrayerRow: {

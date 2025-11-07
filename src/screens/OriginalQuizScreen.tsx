@@ -591,14 +591,21 @@ export default function OriginalQuizScreen() {
     }
 
     // Obtenir tous les chapitres de la partie actuelle qui ont des quiz
-    const availableChapters = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+    // Filtrer uniquement les chapitres qui ont réellement des exercices
     const partieChapters = chaptersData[currentPartieKey].chapitres
       .map((ch: any) => {
         const num = (ch as any).numero || ch.image || '1';
         const numKey = String(parseInt(num, 10));
         return numKey;
       })
-      .filter((numKey: string) => availableChapters.includes(numKey));
+      .filter((numKey: string) => {
+        // Vérifier que le chapitre a réellement des exercices
+        const exercices = exercicesFiles[numKey];
+        const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
+                       (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
+                        Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
+        return hasQuiz;
+      });
 
     // Trouver l'index du quiz actuel dans sa partie
     const currentIndexInPartie = partieChapters.indexOf(exercicesKey);
@@ -699,14 +706,21 @@ export default function OriginalQuizScreen() {
     console.log('📍 Quiz actuel:', exercicesKey, 'dans la partie:', currentPartieKey);
     
     // Obtenir tous les chapitres de la partie actuelle qui ont des quiz
-    const availableChapters = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+    // Filtrer uniquement les chapitres qui ont réellement des exercices
     const partieChapters = chaptersData[currentPartieKey].chapitres
       .map((ch: any) => {
         const num = (ch as any).numero || ch.image || '1';
         const numKey = String(parseInt(num, 10));
         return numKey;
       })
-      .filter((numKey: string) => availableChapters.includes(numKey));
+      .filter((numKey: string) => {
+        // Vérifier que le chapitre a réellement des exercices
+        const exercices = exercicesFiles[numKey];
+        const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
+                       (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
+                        Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
+        return hasQuiz;
+      });
     
     console.log('📚 Chapitres de la partie avec quiz:', partieChapters);
     
@@ -841,14 +855,21 @@ export default function OriginalQuizScreen() {
                     isPremiumLock = true;
                   }
 
-                  const availableChapters = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+                  // Filtrer uniquement les chapitres qui ont réellement des exercices
                   const partieChapters = chaptersData[currentPartieKey].chapitres
                     .map((ch: any) => {
                       const num = (ch as any).numero || ch.image || '1';
                       const numKey = String(parseInt(num, 10));
                       return numKey;
                     })
-                    .filter((numKey: string) => availableChapters.includes(numKey));
+                    .filter((numKey: string) => {
+                      // Vérifier que le chapitre a réellement des exercices
+                      const exercices = exercicesFiles[numKey];
+                      const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
+                                     (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
+                                      Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
+                      return hasQuiz;
+                    });
 
                   const currentIndexInPartie = partieChapters.indexOf(exercicesKey);
                   if (currentIndexInPartie !== -1 && currentIndexInPartie < partieChapters.length - 1) {

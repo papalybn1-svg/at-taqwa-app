@@ -203,9 +203,11 @@ export default function QuizChapterSelectScreen() {
   };
 
   // Génère la liste plate de tous les chapitres avec association fiable
-  console.log("🔍 Test chapitre 4:", exercicesFiles["4"]);
-  console.log("🔍 Test chapitre 8:", exercicesFiles["8"]);
-  console.log("🔍 Test chapitre 11:", exercicesFiles["11"]);
+  // Vérification des exercices ajoutés (chapitres 4, 8, 11)
+  console.log("🔍 Test chapitre 4:", exercicesFiles["4"] ? "✅ Trouvé" : "❌ Manquant");
+  console.log("🔍 Test chapitre 8:", exercicesFiles["8"] ? "✅ Trouvé" : "❌ Manquant");
+  console.log("🔍 Test chapitre 11:", exercicesFiles["11"] ? "✅ Trouvé" : "❌ Manquant");
+  
   const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie], partieIndex) =>
     partie.chapitres.map((ch, chapitreIndex) => {
       // On tente d'associer le chapitre à son fichier d'exercices par numéro
@@ -229,7 +231,14 @@ export default function QuizChapterSelectScreen() {
       return null;
     })
   ).filter((chapter): chapter is { id: string; partie: string; partieKey: string; exercicesKey: string; image: string; title: string; desc: string; author: string } => !!chapter);
-  console.log("📋 Chapitres détectés avec quiz:", allChapters.map(ch => ch.exercicesKey));
+  
+  // Logs détaillés par partie
+  console.log("📋 Chapitres détectés avec quiz:", allChapters.map(ch => `${ch.exercicesKey} (${ch.partieKey})`));
+  console.log("📊 Répartition par partie:");
+  Object.keys(chaptersData).forEach(partieKey => {
+    const chapitresPartie = allChapters.filter(ch => ch.partieKey === partieKey);
+    console.log(`  - ${partieKey}: ${chapitresPartie.length} chapitres (${chapitresPartie.map(ch => ch.exercicesKey).join(', ')})`);
+  });
 
   // Obtenir les chapitres d'une partie spécifique
   const getChaptersInPartie = (partieKey: string) => {

@@ -127,7 +127,7 @@ const getHijriDate = (): string => {
 };
 
 // Fonction principale pour récupérer les horaires de prière
-export const fetchPrayerTimes = async (cityName?: string): Promise<{
+export const fetchPrayerTimes = async (cityName?: string, countryName?: string): Promise<{
   timings: Record<string, string>;
   date: any;
   city: string;
@@ -135,7 +135,7 @@ export const fetchPrayerTimes = async (cityName?: string): Promise<{
   lastUpdate: string;
 }> => {
   const today = getTodayDate();
-  const cacheKey = getCacheKey(today, MALIKITE_CONFIG.timezone, MALIKITE_CONFIG.method, MALIKITE_CONFIG.school, cityName);
+  const cacheKey = getCacheKey(today, MALIKITE_CONFIG.timezone, MALIKITE_CONFIG.method, MALIKITE_CONFIG.school, cityName ? `${cityName}_${countryName || 'Senegal'}` : undefined);
   
   try {
     // Essayer de récupérer du cache d'abord
@@ -154,7 +154,7 @@ export const fetchPrayerTimes = async (cityName?: string): Promise<{
     // Si pas de cache, faire l'appel API
     let url: string;
     let city = cityName || 'Dakar';
-    let country = 'Senegal';
+    let country = countryName || 'Senegal';
 
     if (cityName) {
       url = buildApiUrl({ city, country });
@@ -203,7 +203,7 @@ export const fetchPrayerTimes = async (cityName?: string): Promise<{
     const result = {
       timings: data.data.timings,
       date: data.data.date,
-      city: city,
+      city: countryName ? `${city}, ${country}` : city,
       nextPrayer: getNextPrayer(data.data.timings),
       lastUpdate: new Date().toISOString()
     };

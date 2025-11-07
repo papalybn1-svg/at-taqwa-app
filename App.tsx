@@ -121,18 +121,11 @@ function SplashFamille() {
   );
 }
 
-export default function App() {
-  const [splashStep, setSplashStep] = useState(0);
-  const { user, loading, setUser } = useAuth();
+// Composant interne pour gérer les deep links PayDunya (doit être dans EntitlementsProvider)
+function PayDunyaDeepLinkHandler() {
   const { checkEntitlements } = usePaymentService();
   const { refreshEntitlements } = useEntitlements();
-  
-  useEffect(() => {
-    // Séquence splash par défaut à chaque ouverture
-    setSplashStep(0);
-  }, []);
 
-  // Gestion des deep links PayDunya
   useEffect(() => {
     const handleDeepLink = async (url: string) => {
       console.log('🔗 Deep link reçu:', url);
@@ -235,7 +228,19 @@ export default function App() {
     return () => {
       subscription?.remove();
     };
-  }, [checkEntitlements]);
+  }, [refreshEntitlements, checkEntitlements]);
+
+  return null;
+}
+
+export default function App() {
+  const [splashStep, setSplashStep] = useState(0);
+  const { user, loading, setUser } = useAuth();
+  
+  useEffect(() => {
+    // Séquence splash par défaut à chaque ouverture
+    setSplashStep(0);
+  }, []);
 
   useEffect(() => {
     if (splashStep === 0) {
@@ -290,6 +295,7 @@ export default function App() {
     <SafeAreaProvider>
     <AuthContext.Provider value={{ user, setUser }}>
       <EntitlementsProvider>
+        <PayDunyaDeepLinkHandler />
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
             <StatusBar barStyle="dark-content" backgroundColor="#F3F5F7" />

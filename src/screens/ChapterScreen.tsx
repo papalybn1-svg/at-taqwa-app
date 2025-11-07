@@ -1091,13 +1091,15 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
                 onPress={() => {
                   setShowLockModal(false);
                   // Naviguer vers le quiz précédent
-                  const allChapters = getAllChapters();
-                  const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
-                  if (currentChapterData && currentChapterData.chapitreIndex > 0) {
-                    const previousChapter = allChapters.find(ch => ch.chapitreIndex === currentChapterData.chapitreIndex - 1);
+                  // Calculer le quiz précédent basé sur le numéro global du chapitre
+                  const currentChapterNumber = parseInt(chapter.image);
+                  if (currentChapterNumber > 1) {
+                    const previousQuizKey = (currentChapterNumber - 1).toString();
+                    const allChapters = getAllChapters();
+                    const previousChapter = allChapters.find(ch => ch.image === previousQuizKey);
                     if (previousChapter) {
                       navigation.navigate('OriginalQuiz', { 
-                        exercicesKey: previousChapter.chapitreIndex.toString(), 
+                        exercicesKey: previousQuizKey, 
                         chapterTitle: previousChapter.title, 
                         chapterPart: previousChapter.partieTitre,
                         returnToChapter: {
