@@ -42,8 +42,8 @@
       },
       {
         "numero": 5,
-        "question": "Combien de rakas reste la prière du Maghreb pendant le voyage ?",
-        "reponse": "3 rakas.",
+        "question": "La prière du Maghreb est-elle réduite pendant le voyage ?",
+        "reponse": "Non, elle reste fixée à 3 rakas.",
         "fausses_reponses": [
           "2 rakas.",
           "4 rakas.",
@@ -62,8 +62,8 @@
       },
       {
         "numero": 7,
-        "question": "Combien de jours un voyageur peut-il raccourcir ses prières à Mbour selon le rite malikite ?",
-        "reponse": "Moins de 5 jours.",
+        "question": "Durant combien de jours un voyageur peut-il raccourcir la prière ?",
+        "reponse": "Durant 4 jours selon le rite malikite.",
         "fausses_reponses": [
           "Moins de 10 jours.",
           "Moins de 15 jours.",

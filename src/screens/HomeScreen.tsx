@@ -225,6 +225,12 @@ export default function HomeScreen() {
 
   // Fonction pour vérifier si un chapitre est premium et non débloqué
   const isPremiumChapter = (chapter: Chapter) => {
+    // Les chapitres de la première partie ne sont jamais premium
+    if (chapter.partie === 'premiere_partie') {
+      return false;
+    }
+    
+    // Seules les parties 2 et 3 peuvent être premium
     const premiumParts = ['deuxieme_partie', 'troisieme_partie'];
     if (!premiumParts.includes(chapter.partie)) {
       return false; // Pas une partie premium
@@ -269,30 +275,38 @@ export default function HomeScreen() {
   };
 
   const openFullChapter = () => {
-    if (selectedChapter) {
-      // Vérifier si c'est un chapitre premium non débloqué
-      if (isPremiumChapter(selectedChapter)) {
-        const partieNumero = selectedChapter.partie === 'deuxieme_partie' ? '2' : '3';
-        Alert.alert(
-          'Contenu Premium',
-          `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
-          [
-            { text: 'Annuler', style: 'cancel' },
-            { 
-              text: 'Voir les parties', 
-              onPress: () => {
-                closePreviewModal();
-                navigation.navigate('Books' as never);
-              }
-            }
-          ]
-        );
-        return;
-      }
-      
+    if (!selectedChapter) return;
+    
+    // Vérification explicite : les chapitres de la première partie s'ouvrent toujours
+    if (selectedChapter.partie === 'premiere_partie') {
       closePreviewModal();
-      navigation.navigate('Chapter', { chapter: selectedChapter });
+      (navigation as any).navigate('Chapter', { chapter: selectedChapter });
+      return;
     }
+    
+    // Vérifier si c'est un chapitre premium non débloqué
+    if (isPremiumChapter(selectedChapter)) {
+      const partieNumero = selectedChapter.partie === 'deuxieme_partie' ? '2' : '3';
+      Alert.alert(
+        'Contenu Premium',
+        `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Voir les parties', 
+            onPress: () => {
+              closePreviewModal();
+              navigation.navigate('Books' as never);
+            }
+          }
+        ]
+      );
+      return;
+    }
+    
+    // Chapitre premium débloqué ou partie non-premium, on peut l'ouvrir
+    closePreviewModal();
+    (navigation as any).navigate('Chapter', { chapter: selectedChapter });
   };
 
   const loadNotifications = React.useCallback(async () => {
@@ -570,7 +584,14 @@ export default function HomeScreen() {
               <Text style={styles.authorName}>Aly Anta Sow</Text>
               <TouchableOpacity style={styles.authorButtonSmall} onPress={() => navigation.navigate('AuthorProfile')}>
                 <MaterialCommunityIcons name="account-details" size={14} color={colors.white} />
-                <Text style={styles.authorButtonTextSmall}>En savoir plus</Text>
+                <Text 
+                  style={styles.authorButtonTextSmall}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit={true}
+                  minimumFontScale={0.85}
+                >
+                  Voir plus
+                </Text>
               </TouchableOpacity>
             </View>
             <View style={styles.authorDetails}>
@@ -1186,8 +1207,8 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   authorButtonSmall: {
     backgroundColor: colors.secondary,
     borderRadius: responsive.isLandscape ? 16 : 18,
-    paddingVertical: responsive.isLandscape ? 6 : 8,
-    paddingHorizontal: responsive.isLandscape ? 12 : 16,
+    paddingVertical: responsive.isLandscape ? 6 : (responsive.isSmallScreen ? 6 : 8),
+    paddingHorizontal: responsive.isLandscape ? 12 : (responsive.isSmallScreen ? 10 : 16),
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -1195,13 +1216,13 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 4,
-    maxWidth: responsive.width * 0.4, // Limiter la largeur maximale
+    maxWidth: responsive.isSmallScreen ? responsive.width * 0.35 : responsive.width * 0.4, // Plus restrictif sur petits écrans
   },
   authorButtonTextSmall: {
     color: colors.white,
     fontWeight: '600',
-    fontSize: responsive.isLandscape ? 10 : 11,
-    marginLeft: responsive.isLandscape ? 4 : 6,
+    fontSize: responsive.isLandscape ? 10 : (responsive.isSmallScreen ? 10 : 11),
+    marginLeft: responsive.isLandscape ? 4 : (responsive.isSmallScreen ? 4 : 6),
     flexShrink: 1, // Permettre au texte de se réduire si nécessaire
   },
   authorBadge: {

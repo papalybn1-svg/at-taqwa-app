@@ -1,7 +1,7 @@
   import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import {
     initializePrayerNotifications
@@ -150,6 +150,20 @@ export default function HorairesScreen() {
 
   // Ajout navigation pour bouton retour
   const navigation = require('@react-navigation/native').useNavigation();
+
+  // Gestion du swipe pour revenir en arrière (depuis le bord gauche)
+  const swipeGesture = Gesture.Pan()
+    .minDistance(10)
+    .activeOffsetX(10)
+    .failOffsetY([-20, 20])
+    .onEnd((event) => {
+      // Détecter un swipe horizontal vers la droite depuis le bord gauche
+      if (event.translationX > 80 || (event.translationX > 50 && event.velocityX > 500)) {
+        if (Math.abs(event.translationY) < 100) {
+          navigation.goBack();
+        }
+      }
+    });
 
   // Gestion des changements de dimensions d'écran
   useEffect(() => {
@@ -303,15 +317,6 @@ export default function HorairesScreen() {
     }
   };
 
-  // Gestionnaire de geste de swipe
-  const onGestureEvent = (event: any) => {
-    if (event.nativeEvent.state === State.END) {
-      const { translationX, velocityX } = event.nativeEvent;
-      if ((translationX > 50 && velocityX > 500) || translationX > 150) {
-        navigation.goBack();
-      }
-    }
-  };
 
   // Formater l'heure de dernière mise à jour
   const formatLastUpdate = (timestamp: string) => {
@@ -341,7 +346,7 @@ export default function HorairesScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <PanGestureHandler enabled={Platform.OS === 'ios'} onGestureEvent={onGestureEvent}>
+      <GestureDetector gesture={swipeGesture}>
         <View style={styles.container}>
           {/* Header moderne cohérent avec les autres pages */}
           <View style={styles.header}>
@@ -398,6 +403,8 @@ export default function HorairesScreen() {
               style={styles.prayerListContent}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.prayerListContentContainer}
+              bounces={true}
+              scrollEventThrottle={16}
             >
               {PRAYER_LABELS.map((item, index) => {
                 const isNextPrayer = nextPrayerInfo?.key === item.key;
@@ -456,7 +463,7 @@ export default function HorairesScreen() {
             </ScrollView>
           </View>
         </View>
-      </PanGestureHandler>
+      </GestureDetector>
 
       {/* Modal choix ville */}
       <Modal visible={modalVisible} transparent animationType="fade">

@@ -118,29 +118,42 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const hasAccessToChapter = () => {
     if (!chapter) return false;
     
-    // Trouver la partie du chapitre
-    const allChapters = getAllChapters();
-    const currentChapter = allChapters.find(
-      (ch) => ch.image === chapter.image && ch.title === chapter.title
-    );
+    // Vérifier d'abord si le chapitre a directement la propriété partie (depuis HomeScreen)
+    let chapterPartie = (chapter as any).partie || (chapter as any).partieKey;
     
-    if (!currentChapter) return false;
+    // Si pas de propriété partie, chercher dans getAllChapters en utilisant l'image
+    if (!chapterPartie && chapter.image) {
+      const allChapters = getAllChapters();
+      const currentChapter = allChapters.find(
+        (ch) => ch.image === chapter.image
+      );
+      
+      if (currentChapter) {
+        chapterPartie = currentChapter.partieKey;
+      }
+    }
     
-    // Si c'est la partie 1, accès libre
-    if (currentChapter.partieKey === 'premiere_partie') {
+    // Si c'est la partie 1, accès libre (toujours accessible)
+    if (chapterPartie === 'premiere_partie') {
       return true;
     }
     
     // Si c'est la partie 2, vérifier l'entitlement
-    if (currentChapter.partieKey === 'deuxieme_partie') {
+    if (chapterPartie === 'deuxieme_partie') {
       return entitlements.part2;
     }
     
     // Si c'est la partie 3, vérifier l'entitlement
-    if (currentChapter.partieKey === 'troisieme_partie') {
+    if (chapterPartie === 'troisieme_partie') {
       return entitlements.part3;
     }
     
+    // Si on ne trouve pas la partie, vérifier par l'image (chapitres 1, 2, 3 = première partie)
+    if (chapter.image && ['1', '2', '3'].includes(chapter.image)) {
+      return true; // Les 3 premiers chapitres sont toujours accessibles
+    }
+    
+    // Par défaut, refuser l'accès si on ne peut pas déterminer la partie
     return false;
   };
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // 0 = première section
@@ -438,6 +451,13 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     // Utiliser directement l'image du chapitre comme clé de quiz
     // L'image correspond au numéro global du chapitre (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
     return chapter.image;
+  };
+
+  // Fonction pour vérifier si le quiz actuel est débloqué
+  const isCurrentQuizUnlocked = () => {
+    const quizKey = getCurrentChapterQuizKey();
+    if (!quizKey) return false;
+    return isQuizUnlocked(quizKey.toString(), quizScores);
   };
 
   // Fonction pour gérer le clic sur "Faire le quiz"
@@ -987,12 +1007,21 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>1/1</Text>
             </View>
             
-              <TouchableOpacity
-              onPress={handleQuizPress}
-              style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
-              >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
-              </TouchableOpacity>
+              {isCurrentQuizUnlocked() ? (
+                <TouchableOpacity
+                  onPress={handleQuizPress}
+                  style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleQuizPress}
+                  style={{ backgroundColor: '#CCCCCC', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12, opacity: 0.7 }}
+                >
+                  <Text style={{ color: '#666', fontWeight: 'bold', fontSize: 14 }}>Quiz verrouillé</Text>
+                </TouchableOpacity>
+              )}
           </>
         ) : (
           // Navigation normale pour les chapitres multi-pages
@@ -1025,12 +1054,21 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             </View>
             
             {currentSectionIndex === totalSections - 1 ? (
-                <TouchableOpacity
-                onPress={handleQuizPress}
-                style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-                >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
-                </TouchableOpacity>
+                isCurrentQuizUnlocked() ? (
+                  <TouchableOpacity
+                    onPress={handleQuizPress}
+                    style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    onPress={handleQuizPress}
+                    style={{ backgroundColor: '#CCCCCC', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18, opacity: 0.7 }}
+                  >
+                    <Text style={{ color: '#666', fontWeight: 'bold', fontSize: 16 }}>Quiz verrouillé</Text>
+                  </TouchableOpacity>
+                )
             ) : (
               <TouchableOpacity
                 onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
