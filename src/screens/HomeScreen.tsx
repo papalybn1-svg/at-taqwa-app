@@ -22,15 +22,13 @@ import colors from '../theme/colors';
 import { useEntitlements } from '../contexts/EntitlementsContext';
 import { AuthContext } from './LoginScreen';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
+import { usePaymentService } from '../lib/paymentService';
 
 // Fonction utilitaire pour obtenir l'image d'un chapitre avec fallback
 const getChapterImage = (imageKey: string) => {
-  console.log('🔍 Tentative de chargement image:', imageKey);
   if (imageMap[imageKey]) {
-    console.log('✅ Image trouvée dans le mapping:', imageKey);
     return imageMap[imageKey];
   }
-  console.log('⚠️ Image non trouvée, utilisation du fallback:', imageKey);
   // Fallback vers l'image par défaut
   return imageMap['1'] || require('../../assets/1.png');
 };
@@ -128,9 +126,11 @@ export default function HomeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { entitlements } = useEntitlements();
   const { user } = React.useContext(AuthContext);
+  const { checkEntitlements: fetchEntitlements } = usePaymentService();
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
   const styles = createStyles(responsive, responsiveStyle);
+  const [freshEntitlements, setFreshEntitlements] = React.useState<{ part2: boolean; part3: boolean } | null>(null);
   
   const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; onPress: () => void }) => (
     <TouchableOpacity style={styles.categoryButton} onPress={onPress}>
@@ -223,6 +223,22 @@ export default function HomeScreen() {
 
 
 
+  // Rafraîchir les droits quand l'écran (Home) reprend le focus pour éviter un état obsolète après paiement
+  const { refreshEntitlements } = useEntitlements();
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshEntitlements(true).catch(()=>{});
+      (async () => {
+        try {
+          const latest = await fetchEntitlements();
+          setFreshEntitlements(latest);
+        } catch {
+          // silencieux
+        }
+      })();
+    }, [])
+  );
+
   // Fonction pour vérifier si un chapitre est premium et non débloqué
   const isPremiumChapter = (chapter: Chapter) => {
     const premiumParts = ['deuxieme_partie', 'troisieme_partie'];
@@ -231,19 +247,32 @@ export default function HomeScreen() {
     }
     
     // Vérifier si l'utilisateur a accès à cette partie premium
-    if (chapter.partie === 'deuxieme_partie' && entitlements.part2) {
+    const source = freshEntitlements ?? entitlements;
+    if (chapter.partie === 'deuxieme_partie' && source.part2) {
       return false; // Partie 2 débloquée
     }
-    if (chapter.partie === 'troisieme_partie' && entitlements.part3) {
+    if (chapter.partie === 'troisieme_partie' && source.part3) {
       return false; // Partie 3 débloquée
     }
     
     return true; // Partie premium non débloquée
   };
 
-  const handleChapterPress = (chapter: Chapter) => {
-    // Si le chapitre est premium, afficher un message au lieu d'ouvrir le modal
-    if (isPremiumChapter(chapter)) {
+  const handleChapterPress = async (chapter: Chapter) => {
+    // Forcer un refresh avant la décision
+    try { await refreshEntitlements(true); } catch {}
+    // Lire un snapshot frais côté backend pour éviter un état obsolète
+    let latest = entitlements;
+    try { latest = await fetchEntitlements(); } catch {}
+
+    const isPremium = chapter.partie === 'deuxieme_partie' || chapter.partie === 'troisieme_partie';
+    const hasAccess = !isPremium
+      ? true
+      : chapter.partie === 'deuxieme_partie'
+        ? latest.part2
+        : latest.part3;
+
+    if (isPremium && !hasAccess) {
       const partieNumero = chapter.partie === 'deuxieme_partie' ? '2' : '3';
       Alert.alert(
         'Contenu Premium',
@@ -268,31 +297,38 @@ export default function HomeScreen() {
     setSelectedChapter(null);
   };
 
-  const openFullChapter = () => {
-    if (selectedChapter) {
-      // Vérifier si c'est un chapitre premium non débloqué
-      if (isPremiumChapter(selectedChapter)) {
-        const partieNumero = selectedChapter.partie === 'deuxieme_partie' ? '2' : '3';
-        Alert.alert(
-          'Contenu Premium',
-          `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
-          [
-            { text: 'Annuler', style: 'cancel' },
-            { 
-              text: 'Voir les parties', 
-              onPress: () => {
-                closePreviewModal();
-                navigation.navigate('Books' as never);
-              }
+  const openFullChapter = async () => {
+    if (!selectedChapter) return;
+    // Rafraîchir et relire les droits auprès du backend avant décision
+    try { await refreshEntitlements(true); } catch {}
+    let latest = entitlements;
+    try { latest = await fetchEntitlements(); } catch {}
+    const isPremium = selectedChapter.partie === 'deuxieme_partie' || selectedChapter.partie === 'troisieme_partie';
+    const hasAccess = !isPremium
+      ? true
+      : selectedChapter.partie === 'deuxieme_partie'
+        ? latest.part2
+        : latest.part3;
+    if (isPremium && !hasAccess) {
+      const partieNumero = selectedChapter.partie === 'deuxieme_partie' ? '2' : '3';
+      Alert.alert(
+        'Contenu Premium',
+        `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Voir les parties', 
+            onPress: () => {
+              closePreviewModal();
+              navigation.navigate('Books' as never);
             }
-          ]
-        );
-        return;
-      }
-      
-      closePreviewModal();
-      navigation.navigate('Chapter', { chapter: selectedChapter });
+          }
+        ]
+      );
+      return;
     }
+    closePreviewModal();
+    navigation.navigate('Chapter', { chapter: selectedChapter });
   };
 
   const loadNotifications = React.useCallback(async () => {
@@ -548,6 +584,7 @@ export default function HomeScreen() {
           <Image 
             source={require('../../assets/femme-transformer.png')} 
             style={styles.bannerImage}
+            pointerEvents="none"
             defaultSource={require('../../assets/femme-transformer.png')}
           />
       </View>
@@ -627,12 +664,23 @@ export default function HomeScreen() {
                         }}
                       />
                       {/* Indicateur premium pour les chapitres premium */}
-                      {isPremiumChapter(item) && (
-                        <View style={styles.premiumBadge}>
-                          <MaterialCommunityIcons name="crown" size={16} color={colors.secondary} />
-                          <Text style={styles.premiumText}>PREMIUM</Text>
-                        </View>
-                      )}
+                      {(() => {
+                        const isPremium = item.partie === 'deuxieme_partie' || item.partie === 'troisieme_partie';
+                        const source = freshEntitlements ?? entitlements;
+                        if (!isPremium) return null;
+                        const unlocked = item.partie === 'deuxieme_partie' ? source.part2 : source.part3;
+                        return (
+                          <View style={[
+                            styles.premiumBadge,
+                            unlocked ? { backgroundColor: '#4CAF50' } : {}
+                          ]}>
+                            <MaterialCommunityIcons name="crown" size={16} color={unlocked ? '#fff' : colors.secondary} />
+                            <Text style={[styles.premiumText, unlocked ? { color: '#fff' } : {}]}>
+                              {unlocked ? 'DÉBLOQUÉ' : 'PREMIUM'}
+                            </Text>
+                          </View>
+                        );
+                      })()}
                     </View>
                     <View style={styles.bookCardContentModern}>
                       <Text style={styles.bookCardTitleModern} numberOfLines={1}>{item.title.replace(/\.\s*$/, ':')}</Text>
@@ -777,6 +825,7 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     shadowRadius: 10,
     marginBottom: 20,
     position: 'relative',
+    overflow: 'hidden', // éviter que l'image absolue capture les touches en dehors
   },
   bannerTextContainer: {
     flex: 1,

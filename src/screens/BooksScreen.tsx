@@ -6,14 +6,14 @@ import { Alert, Animated, Dimensions, Image, Modal, Platform, Pressable, ScrollV
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import colors from '../theme/colors';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
+import { useEntitlements } from '../contexts/EntitlementsContext';
 import { useAuth } from '../hooks/useAuth';
 import { usePaymentService } from '../lib/paymentService';
-import { useEntitlements } from '../contexts/EntitlementsContext';
+import colors from '../theme/colors';
 import { Chapter, ChaptersData } from '../types/chapters';
-import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
+import { ChapterState, read as readKV, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -44,10 +44,11 @@ export default function BooksScreen() {
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   // Service de paiement
-  const { createPayment, openPayDunyaCheckout } = usePaymentService();
+  const { createPayment, openPayDunyaCheckout, checkPaymentStatus, checkEntitlements: fetchEntitlements } = usePaymentService();
   
   // Entitlements globaux
-  const { entitlements: userEntitlements } = useEntitlements();
+  const { entitlements: userEntitlements, refreshEntitlements } = useEntitlements();
+  const [freshEntitlements, setFreshEntitlements] = React.useState<{ part2: boolean; part3: boolean } | null>(null);
 
 
   // Charger la progression utilisateur
@@ -78,6 +79,17 @@ export default function BooksScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadProgress();
+      // Rafraîchir les droits à chaque retour (respecte le cooldown côté contexte)
+      refreshEntitlements(true).catch(()=>{});
+      // Lire un snapshot frais côté backend pour l'affichage des badges
+      (async () => {
+        try {
+          const latest = await fetchEntitlements();
+          setFreshEntitlements(latest);
+        } catch {
+          // garder l'état actuel en cas d'erreur réseau
+        }
+      })();
     }, [user?.uid])
   );
 
@@ -119,7 +131,11 @@ export default function BooksScreen() {
     
     // Vérifier si la partie nécessite un paiement (Partie 2 et 3 seulement)
     if (partieKey === 'deuxieme_partie' || partieKey === 'troisieme_partie') {
-      const hasAccess = partieKey === 'deuxieme_partie' ? userEntitlements.part2 : userEntitlements.part3;
+      // Forcer une vérification immédiate des droits et lire un snapshot frais
+      try { await refreshEntitlements(true); } catch {}
+      let fresh = userEntitlements;
+      try { fresh = await fetchEntitlements(); } catch {}
+      const hasAccess = partieKey === 'deuxieme_partie' ? fresh.part2 : fresh.part3;
       if (!hasAccess) {
         showPaywallModal(partieKey);
         return;
@@ -136,24 +152,12 @@ export default function BooksScreen() {
     (navigation as any).navigate('Chapter', { chapter, initialSection });
   };
 
-  // Afficher le modal de paywall
-  const showPaywallModal = (partieKey: string) => {
-    const partieTitre = data[partieKey as keyof ChaptersData].titre;
-    const partieNumero = partieKey === 'deuxieme_partie' ? '2' : '3';
-    const planId = partieKey === 'deuxieme_partie' ? 'BOOK_PART_2' : 'BOOK_PART_3';
-    
-    Alert.alert(
-      'Contenu Premium',
-      `La Partie ${partieNumero} "${partieTitre}" nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Débloquer maintenant', 
-          onPress: () => handlePayment(planId, partieTitre)
-        }
-      ]
-    );
-  };
+  // Paywall état/UI
+  const [paywallOpen, setPaywallOpen] = React.useState<{ open: boolean; partKey?: string }>(
+    { open: false, partKey: undefined }
+  );
+  const showPaywallModal = (partieKey: string) => setPaywallOpen({ open: true, partKey: partieKey });
+  const closePaywall = () => setPaywallOpen({ open: false, partKey: undefined });
 
   // Gérer le paiement
   const handlePayment = async (planId: 'BOOK_PART_2' | 'BOOK_PART_3', partieTitre: string) => {
@@ -172,11 +176,53 @@ export default function BooksScreen() {
         console.log('✅ Paiement créé, ouverture PayDunya...');
         await openPayDunyaCheckout(result.checkoutUrl);
         
-        Alert.alert(
-          'Paiement en cours',
-          `Vous allez être redirigé vers PayDunya pour finaliser votre paiement.${'\n\n'}Une fois le paiement effectué, vous serez automatiquement redirigé vers l'application.`,
-          [{ text: 'Compris' }]
-        );
+        // Info silencieuse: suppression des alertes de succès/information
+        closePaywall();
+
+        // Démarrer un polling léger du statut à la reprise de l'app
+        // Utilise le payment_token stocké par createPayment
+        let attempts = 0;
+        const maxAttempts = 12;       // ~20s si baseDelay=1700
+        const baseDelayMs = 1700;
+        const pollOnce = async () => {
+          attempts++;
+          try {
+            const token = await readKV(user.uid, 'payment_token');
+            if (!token || typeof token !== 'string') {
+              if (attempts < maxAttempts) setTimeout(pollOnce, baseDelayMs);
+              return;
+            }
+            const res = await checkPaymentStatus(token);
+            const s = (res.status || '').toString().toUpperCase();
+            if (s === 'COMPLETED') {
+              // Actualise les entitlements immédiatement
+              try { await refreshEntitlements(true); } catch {}
+              // Forcer rechargement soft: on rappelle refreshEntitlements via Navigation event
+              // ou simplement re-monter l’écran:
+              setTimeout(()=> {
+                // Best effort: on redessine la page, EntitlementsProvider rechargera selon cooldown
+                setSelectedPart(null);
+              }, 300);
+              return;
+            }
+            if (s === 'FAILED' || s === 'CANCELLED') {
+              Alert.alert('Paiement échoué', 'Le paiement a été annulé/échoué.');
+              return;
+            }
+            if (attempts < maxAttempts) {
+              setTimeout(pollOnce, baseDelayMs);
+            } else {
+              Alert.alert('Traitement en cours', 'Le paiement est en cours de confirmation. Réessayez dans quelques instants.');
+            }
+          } catch (e) {
+            if (attempts < maxAttempts) {
+              setTimeout(pollOnce, baseDelayMs);
+            } else {
+              console.warn('Polling status erreur:', e);
+            }
+          }
+        };
+        setTimeout(pollOnce, baseDelayMs);
       } else {
         console.error('❌ Erreur création paiement:', result.error);
         Alert.alert(
@@ -199,6 +245,24 @@ export default function BooksScreen() {
 
   const handlePartPress = (partKey: string) => {
     setSelectedPart(partKey);
+  };
+
+  const handlePartCardPress = async (partie: string) => {
+    const isPremium = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
+    if (!isPremium) {
+      handlePartPress(partie);
+      return;
+    }
+    // Rafraîchir et relire les droits pour éviter toute latence d'état
+    try { await refreshEntitlements(true); } catch {}
+    let fresh = userEntitlements;
+    try { fresh = await fetchEntitlements(); } catch {}
+    const isUnlocked = (partie === 'deuxieme_partie' && fresh.part2) || (partie === 'troisieme_partie' && fresh.part3);
+    if (isUnlocked) {
+      handlePartPress(partie);
+    } else {
+      showPaywallModal(partie);
+    }
   };
 
   // Gestion du swipe gesture
@@ -351,14 +415,15 @@ export default function BooksScreen() {
               <View>
                 {Object.keys(data).map((partie, pidx) => {
                   const isPremium = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
-                  const isUnlocked = (partie === 'deuxieme_partie' && userEntitlements.part2) || 
-                                    (partie === 'troisieme_partie' && userEntitlements.part3);
+                  const source = freshEntitlements ?? userEntitlements;
+                  const isUnlocked = (partie === 'deuxieme_partie' && source.part2) || 
+                                    (partie === 'troisieme_partie' && source.part3);
                   return (
                     <View key={pidx} style={{ marginBottom: 16 }}>
                       {/* Carte de partie */}
                       <TouchableOpacity 
                         style={[styles.partCard, isPremium && styles.premiumCard]}
-                        onPress={() => handlePartPress(partie)}
+                        onPress={() => { handlePartCardPress(partie); }}
                         activeOpacity={0.95}
                       >
                         <View style={styles.partCardContent}>
@@ -407,6 +472,51 @@ export default function BooksScreen() {
               </View>
             )}
           </ScrollView>
+
+          {/* Modal Paywall harmonisé */}
+          <Modal visible={paywallOpen.open} transparent animationType="fade" onRequestClose={closePaywall}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+              <View style={{ width: '100%', maxWidth: 420 }}>
+                <LinearGradient colors={['#174C3C', '#1F5F4F']} style={{ borderRadius: 20, padding: 20 }}>
+                  <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>
+                    Débloquer le contenu premium
+                  </Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.9)', marginBottom: 16 }}>
+                    Accès complet et illimité. Montant: 3000 F CFA.
+                  </Text>
+                  <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                    <Text style={{ color: '#174C3C', fontWeight: 'bold', marginBottom: 4 }}>
+                      Partie concernée
+                    </Text>
+                    <Text style={{ color: '#174C3C' }}>
+                      {paywallOpen.partKey ? data[paywallOpen.partKey as keyof ChaptersData].titre : ''}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <TouchableOpacity
+                      onPress={closePaywall}
+                      style={{ flex: 1, paddingVertical: 12, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}
+                    >
+                      <Text style={{ color: 'white', fontWeight: '600' }}>Annuler</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const planId = paywallOpen.partKey === 'deuxieme_partie' ? 'BOOK_PART_2' : 'BOOK_PART_3';
+                        const titre = paywallOpen.partKey ? data[paywallOpen.partKey as keyof ChaptersData].titre : '';
+                        handlePayment(planId as any, titre);
+                      }}
+                      disabled={isLoadingPayment}
+                      style={{ flex: 1, paddingVertical: 12, backgroundColor: 'white', opacity: isLoadingPayment ? 0.6 : 1, borderRadius: 12, alignItems: 'center' }}
+                    >
+                      <Text style={{ color: '#174C3C', fontWeight: '700' }}>
+                        {isLoadingPayment ? 'Traitement…' : 'Débloquer 3000 F'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </View>
+            </View>
+          </Modal>
 
           {/* Drawer latéral redesigné */}
           <Modal visible={drawerVisible} transparent animationType="slide">

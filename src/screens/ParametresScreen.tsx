@@ -4,6 +4,7 @@ import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import React, { useContext, useState } from 'react';
 import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as Linking from 'expo-linking';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
 import { auth, db } from './firebaseConfig';
@@ -264,6 +265,15 @@ export default function ParametresScreen() {
           <MaterialCommunityIcons name="account-edit" size={22} color={colors.primary} />
           <Text style={styles.rowText}>Modifier le profil</Text>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => Linking.openURL('https://attaqwa-confidentialite.vercel.app/contact.html')}
+        >
+          <MaterialCommunityIcons name="lifebuoy" size={22} color={colors.primary} />
+          <Text style={styles.rowText}>Assistance / Contact</Text>
+          <MaterialCommunityIcons name="open-in-new" size={20} color={colors.placeholder} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.row} onPress={handleSendResetEmail} disabled={sendingReset}>

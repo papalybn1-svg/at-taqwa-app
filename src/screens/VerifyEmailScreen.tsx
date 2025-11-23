@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { sendEmailVerification } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { auth, db } from './firebaseConfig';
@@ -8,6 +8,46 @@ import { auth, db } from './firebaseConfig';
 export default function VerifyEmailScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState(auth.currentUser?.email || '');
+  const [confirmEnabled, setConfirmEnabled] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+  
+  // Auto-polling: recharger l'état emailVerified toutes les 3s pour rediriger automatiquement
+  React.useEffect(() => {
+    let mounted = true;
+    let timer: any;
+    const tick = async () => {
+      try {
+        await auth.currentUser?.reload();
+        if (mounted && auth.currentUser?.emailVerified) {
+          navigation.navigate('Main' as never);
+          return;
+        }
+      } finally {
+        timer = setTimeout(tick, 3000);
+      }
+    };
+    tick();
+    return () => {
+      mounted = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  // Anti-mauvais clic: activer le bouton "J'ai vérifié" après 5s
+  React.useEffect(() => {
+    let sec = 5;
+    setCountdown(sec);
+    setConfirmEnabled(false);
+    const tick = setInterval(() => {
+      sec -= 1;
+      setCountdown(sec);
+      if (sec <= 0) {
+        setConfirmEnabled(true);
+        clearInterval(tick);
+      }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   const handleResendEmail = async () => {
     if (!auth.currentUser) {
@@ -38,20 +78,30 @@ export default function VerifyEmailScreen({ navigation }: any) {
     }
 
     try {
-      // Marquer l'email comme vérifié dans Firestore
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        emailVerified: true
-      });
+      // Recharger l'utilisateur Firebase pour récupérer l'état réel
+      await auth.currentUser.reload();
+      const isVerified = !!auth.currentUser.emailVerified;
+      if (isVerified) {
+        // Optionnel: synchroniser un champ informatif côté Firestore
+        try {
+          await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+            emailVerified: true
+          });
+        } catch {}
+      }
       
       Alert.alert(
-        'Vérification réussie !',
-        'Votre email a été vérifié. Vous allez être redirigé vers l\'application.',
+        isVerified ? 'Vérification réussie !' : 'Vérification non détectée',
+        isVerified 
+          ? 'Votre email a été vérifié. Vous allez être redirigé vers l\'application.'
+          : 'Nous ne détectons pas encore la vérification. Réessayez dans quelques secondes après avoir cliqué sur le lien de l’email.',
         [
           { 
-            text: 'Continuer', 
+            text: isVerified ? 'Continuer' : 'Réessayer', 
             onPress: () => {
-              // L'utilisateur est maintenant vérifié, il peut rester connecté
-              navigation.navigate('Main' as never);
+              if (isVerified) {
+                navigation.navigate('Main' as never);
+              }
             }
           }
         ]
@@ -70,6 +120,32 @@ export default function VerifyEmailScreen({ navigation }: any) {
             }
           }
         ]
+      );
+    }
+  };
+
+  const handleDeleteUnverifiedAccount = async () => {
+    if (!auth.currentUser) {
+      Alert.alert('Erreur', 'Aucun utilisateur connecté');
+      return;
+    }
+    try {
+      // Supprimer éventuel doc Firestore
+      try {
+        await deleteDoc(doc(db, 'users', auth.currentUser.uid));
+      } catch {}
+      // Supprimer le compte Firebase (nécessite une session récente: OK juste après inscription)
+      await auth.currentUser.delete();
+      Alert.alert(
+        'Compte supprimé',
+        'Votre compte non vérifié a été supprimé. Vous pouvez recommencer l’inscription.',
+        [{ text: 'OK', onPress: () => {} }]
+      );
+    } catch (e: any) {
+      Alert.alert(
+        'Suppression impossible',
+        'Nous n’avons pas pu supprimer le compte. Essayez de vous reconnecter puis de relancer la suppression.',
+        [{ text: 'OK' }]
       );
     }
   };
@@ -110,11 +186,22 @@ export default function VerifyEmailScreen({ navigation }: any) {
         </Text>
 
         <TouchableOpacity 
-          style={[styles.button, styles.verifiedButton]} 
+          style={[styles.button, styles.verifiedButton, { opacity: confirmEnabled ? 1 : 0.6 }]} 
           onPress={handleIveVerified}
+          disabled={!confirmEnabled || loading}
         >
           <MaterialCommunityIcons name="check-circle" size={20} color="white" />
-          <Text style={styles.buttonText}>J'ai vérifié mon email</Text>
+          <Text style={styles.buttonText}>
+            {confirmEnabled ? "J'ai vérifié mon email" : `Disponible dans ${countdown}s`}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: '#B00020' }]} 
+          onPress={handleDeleteUnverifiedAccount}
+        >
+          <MaterialCommunityIcons name="trash-can" size={20} color="white" />
+          <Text style={styles.buttonText}>Supprimer mon compte (non vérifié)</Text>
         </TouchableOpacity>
       </View>
 
