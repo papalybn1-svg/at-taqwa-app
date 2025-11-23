@@ -1,6 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Linking from 'expo-linking';
+import { AppState } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 import React, { useEffect, useState } from 'react';
 import { Alert, Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
@@ -16,6 +17,9 @@ import ChapterScreen from './src/screens/ChapterScreen';
 import LoginScreen, { AuthContext } from './src/screens/LoginScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import VerifyEmailScreen from './src/screens/VerifyEmailScreen';
+import { auth, db } from './src/screens/firebaseConfig';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { applyActionCode } from 'firebase/auth';
 
 type RootStackParamList = {
   Main: undefined;
@@ -125,6 +129,13 @@ function SplashFamille() {
 function PayDunyaDeepLinkHandler() {
   const { checkEntitlements } = usePaymentService();
   const { refreshEntitlements } = useEntitlements();
+  const { user, setUser } = React.useContext(AuthContext);
+
+  // Stabiliser les références pour ne pas recréer l'écouteur en boucle
+  const refreshRef = React.useRef(refreshEntitlements);
+  const checkRef = React.useRef(checkEntitlements);
+  React.useEffect(() => { refreshRef.current = refreshEntitlements; }, [refreshEntitlements]);
+  React.useEffect(() => { checkRef.current = checkEntitlements; }, [checkEntitlements]);
 
   useEffect(() => {
     const handleDeepLink = async (url: string) => {
@@ -148,10 +159,10 @@ function PayDunyaDeepLinkHandler() {
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 
                 // Rafraîchir les entitlements globalement
-                await refreshEntitlements();
+                await refreshRef.current();
                 
                 // Vérifier à nouveau pour l'alert
-                const entitlements = await checkEntitlements();
+                const entitlements = await checkRef.current();
                 console.log('🎯 Entitlements après paiement:', entitlements);
                 
                 if (entitlements.part2 || entitlements.part3) {
@@ -206,6 +217,45 @@ function PayDunyaDeepLinkHandler() {
             default:
               console.log('❓ Deep link PayDunya inconnu:', parsed.path);
           }
+        } else if (parsed?.hostname === 'verify-email') {
+          // Gestion retour vérification email: attaqwa://verify-email/success
+          if (parsed.path === 'success') {
+            try {
+              const oob = (parsed.queryParams?.oobCode as string) || '';
+              if (oob) {
+                console.log('📧 applyActionCode avec oobCode reçu via deep link');
+                await applyActionCode(auth, oob);
+              }
+              await auth.currentUser?.reload();
+              const isVerified = !!auth.currentUser?.emailVerified;
+              console.log('📧 Retour verify-email: emailVerified=', isVerified);
+              if (isVerified && auth.currentUser) {
+                // Créer le doc utilisateur si absent, puis positionner le contexte
+                try {
+                  const ref = doc(db, 'users', auth.currentUser.uid);
+                  const snap = await getDoc(ref);
+                  if (!snap.exists()) {
+                    await setDoc(ref, {
+                      email: auth.currentUser.email,
+                      role: 'user',
+                      emailVerified: true,
+                      createdAt: new Date(),
+                      displayName: auth.currentUser.displayName || '',
+                    });
+                  }
+                  const role = (snap.data() as any)?.role || 'user';
+                  setUser?.({ ...(auth.currentUser as any), role });
+                } catch {
+                  setUser?.({ ...(auth.currentUser as any), role: 'user' });
+                }
+                Alert.alert('E‑mail vérifié', 'Votre adresse e‑mail est confirmée.', [{ text: 'OK' }]);
+              } else {
+                Alert.alert('Vérification en cours', 'Nous ne détectons pas encore la vérification. Réessayez dans quelques instants.');
+              }
+            } catch (e) {
+              console.error('Erreur verify-email via deep link:', e);
+            }
+          }
         }
       } catch (error) {
         console.error('❌ Erreur traitement deep link:', error);
@@ -225,10 +275,29 @@ function PayDunyaDeepLinkHandler() {
       }
     });
 
+    // Reload emailVerified quand l’app revient au premier plan
+    const appStateSub = AppState.addEventListener('change', async (state) => {
+      if (state === 'active') {
+        try {
+          await auth.currentUser?.reload();
+          if (auth.currentUser?.emailVerified && auth.currentUser) {
+            try {
+              const snap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+              const role = (snap.data() as any)?.role || 'user';
+              setUser?.({ ...(auth.currentUser as any), role });
+            } catch {
+              setUser?.({ ...(auth.currentUser as any), role: 'user' });
+            }
+          }
+        } catch {}
+      }
+    });
+
     return () => {
       subscription?.remove();
+      appStateSub?.remove();
     };
-  }, [refreshEntitlements, checkEntitlements]);
+  }, []); // ne pas recréer l'écouteur à chaque re-render
 
   return null;
 }
@@ -308,12 +377,13 @@ export default function App() {
             >
               {!user ? (
                 <Stack.Screen name="Login" component={LoginScreen} />
+              ) : !user.emailVerified ? (
+                <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
               ) : user.role === 'admin' ? (
                 <Stack.Screen name="Admin" component={AdminTabNavigator} options={{ headerShown: false }} />
               ) : (
                 <Stack.Screen name="Main" component={TabNavigator} />
               )}
-              <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
               <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
               <Stack.Screen name="Chapter" component={ChapterScreen} options={{ gestureEnabled: false }} />
             </Stack.Navigator>

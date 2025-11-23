@@ -56,10 +56,6 @@ export function useAuth() {
       return userData?.role || 'user';
     } catch (error) {
       console.error('❌ Erreur récupération rôle Firestore:', error);
-      // Fallback pour les comptes administrateurs connus
-      if (user.email === 'papalybn@gmail.com') {
-        return 'admin';
-      }
       return 'user';
     }
   };
@@ -97,21 +93,8 @@ export function useAuth() {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           const userData = userDoc.data();
           
-          // Si l'utilisateur n'existe pas en base ET que l'email n'est pas vérifié
-          if (!userData && !firebaseUser.emailVerified) {
-            console.log('⚠️ Nouvel utilisateur non vérifié:', firebaseUser.email);
-            if (isMounted) {
-              setUser(null);
-              setLoading(false);
-              if (initializing) setInitializing(false);
-            }
-            return;
-          }
-          
-          // Si l'utilisateur existe en base, on considère qu'il est vérifié
-          if (userData && !firebaseUser.emailVerified) {
-            console.log('✅ Utilisateur existant, email considéré comme vérifié:', firebaseUser.email);
-          }
+          // Si l'email n'est pas vérifié, on conserve la session pour permettre la redirection automatique
+          // L'interface se chargera d'afficher l'écran de vérification (App.tsx) au lieu de déconnecter.
           
           // Récupérer le rôle depuis Firestore
           const freshRole = await fetchUserRoleFromFirestore(firebaseUser);

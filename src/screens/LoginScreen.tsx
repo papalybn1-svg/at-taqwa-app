@@ -175,8 +175,9 @@ export default function LoginScreen({ navigation }: any) {
         let userData = userDoc.data();
         
         if (!userCred.user.emailVerified && !userData) {
-          showToast('Veuillez vérifier votre email avant de vous connecter.', 'error');
+          showToast('Veuillez vérifier votre email. Nous vous redirigeons…', 'success');
           setLoading(false);
+          navigation.navigate('VerifyEmail' as never);
           return;
         }
 

@@ -11,6 +11,7 @@ import { useEntitlements } from '../contexts/EntitlementsContext';
 import { ChaptersData } from '../types/chapters';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 import { isQuizUnlocked } from '../utils/quizUnlock';
+import { usePaymentService } from '../lib/paymentService';
 
 const chaptersData = chaptersDataRaw as ChaptersData;
 
@@ -107,55 +108,43 @@ function getChaptersInPartie(partieKey: string) {
 const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) => {
   // TOUS LES HOOKS EN PREMIER
   const { user } = useAuth();
-  const { entitlements } = useEntitlements();
+  const { entitlements, refreshEntitlements } = useEntitlements();
+  const { checkEntitlements: fetchEntitlements } = usePaymentService();
   const [textSize, setTextSize] = useState(16);
   const screenWidth = Dimensions.get('window').width;
   const scrollViewRef = useRef<ScrollView>(null);
   const { chapter } = route.params;
   const [chapterContent, setChapterContent] = useState<any>(null);
+  const [accessStatus, setAccessStatus] = useState<'pending'|'granted'|'denied'>('pending');
   
-  // Vérifier si l'utilisateur a accès à ce chapitre premium
-  const hasAccessToChapter = () => {
-    if (!chapter) return false;
-    
-    // Vérifier d'abord si le chapitre a directement la propriété partie (depuis HomeScreen)
-    let chapterPartie = (chapter as any).partie || (chapter as any).partieKey;
-    
-    // Si pas de propriété partie, chercher dans getAllChapters en utilisant l'image
-    if (!chapterPartie && chapter.image) {
+  // Vérifier l'accès de façon fiable (refresh + relecture serveur) avant d'afficher quoi que ce soit
+  useEffect(() => {
+    let cancelled = false;
+    const verify = async () => {
+      setAccessStatus('pending');
       const allChapters = getAllChapters();
-      const currentChapter = allChapters.find(
-        (ch) => ch.image === chapter.image
-      );
-      
-      if (currentChapter) {
-        chapterPartie = currentChapter.partieKey;
+      const currentChapter = allChapters.find((ch) => ch.image === chapter?.image);
+      if (!currentChapter) {
+        if (!cancelled) setAccessStatus('granted');
+        return;
       }
-    }
-    
-    // Si c'est la partie 1, accès libre (toujours accessible)
-    if (chapterPartie === 'premiere_partie') {
-      return true;
-    }
-    
-    // Si c'est la partie 2, vérifier l'entitlement
-    if (chapterPartie === 'deuxieme_partie') {
-      return entitlements.part2;
-    }
-    
-    // Si c'est la partie 3, vérifier l'entitlement
-    if (chapterPartie === 'troisieme_partie') {
-      return entitlements.part3;
-    }
-    
-    // Si on ne trouve pas la partie, vérifier par l'image (chapitres 1, 2, 3 = première partie)
-    if (chapter.image && ['1', '2', '3'].includes(chapter.image)) {
-      return true; // Les 3 premiers chapitres sont toujours accessibles
-    }
-    
-    // Par défaut, refuser l'accès si on ne peut pas déterminer la partie
-    return false;
-  };
+      if (currentChapter.partieKey === 'premiere_partie') {
+        if (!cancelled) setAccessStatus('granted');
+        return;
+      }
+      try { await refreshEntitlements(true); } catch {}
+      let latest = entitlements;
+      try { latest = await fetchEntitlements(); } catch {}
+      const allowed = currentChapter.partieKey === 'deuxieme_partie'
+        ? latest.part2
+        : currentChapter.partieKey === 'troisieme_partie'
+          ? latest.part3
+          : true;
+      if (!cancelled) setAccessStatus(allowed ? 'granted' : 'denied');
+    };
+    verify();
+    return () => { cancelled = true; };
+  }, [chapter?.image, user?.uid]);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // 0 = première section
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [isFavorite, setIsFavorite] = useState(false);
@@ -488,15 +477,20 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     return () => subscription.remove();
   }, []);
 
-  // Vérifier l'accès au chapitre premium
-  if (!hasAccessToChapter()) {
+  // Attente / refus d'accès
+  if (accessStatus === 'pending') {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F5F7' }}>
+        <ActivityIndicator size="large" color="#174C3C" />
+        <Text style={{ marginTop: 20, color: '#666' }}>Vérification de l'accès…</Text>
+      </View>
+    );
+  }
+  if (accessStatus === 'denied') {
     // Rediriger vers l'écran des livres avec un message
     useEffect(() => {
       const allChapters = getAllChapters();
-      const currentChapter = allChapters.find(
-        (ch) => ch.image === chapter.image && ch.title === chapter.title
-      );
-      
+      const currentChapter = allChapters.find((ch) => ch.image === chapter.image);
       const partieNumero = currentChapter?.partieKey === 'deuxieme_partie' ? '2' : '3';
       Alert.alert(
         'Contenu Premium',
@@ -509,7 +503,6 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         ]
       );
     }, []);
-    
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F5F7' }}>
         <ActivityIndicator size="large" color="#174C3C" />
