@@ -3,7 +3,7 @@
       {
         "numero": 1,
         "question": "Quelle est la différence principale entre l’adhan et l’iqama ?",
-        "reponse": "L’adhan est l’appel avant l’heure de la prière avec toutes les phrases doublées, tandis que l’iqama se dit une seule fois juste avant la prière et seule la phrase « qad qâmatissalât » est doublée.",
+        "reponse": "L’adhan est l’appel avant l’heure de la prière avec toutes les phrases répétées, tandis que l’iqama se dit une seule fois juste avant la prière et seule la phrase « qad qâmatissalât » est doublée.",
         "fausses_reponses": [
           "L’adhan est dit par l’imam et l’iqama par le muezzin.",
           "L’adhan se dit avant chaque raka et l’iqama à la fin de la prière.",
@@ -13,7 +13,7 @@
       {
         "numero": 2,
         "question": "Quel est le premier takbir qui marque l’entrée en prière et la sacralisation ?",
-        "reponse": "Le takbiratul ihram en disant « Allahu akbar » en levant les mains à hauteur des épaules.",
+        "reponse": "Le takbiratul ihram consiste à dire « Allahu akbar » en levant les mains à hauteur des épaules.",
         "fausses_reponses": [
           "Le takbir du rukû.",
           "Le takbir de la sujûd.",
@@ -32,7 +32,7 @@
       },
       {
         "numero": 4,
-        "question": "Que dit-on en rukû (inclination) en posant les mains sur les genoux ?",
+        "question": "Qu'est-ce qui est conseillé de dire en position de rukû ?",
         "reponse": "« Subhâna rabbil azîm » (Gloire à mon Seigneur le Très Grand).",
         "fausses_reponses": [
           "« Sami allahu liman hamida »",
@@ -62,17 +62,17 @@
       },
       {
         "numero": 7,
-        "question": "Combien de fois doit-on dire « Subhanallah, Alhamdulillah, Allahu akbar » après chaque prière ?",
-        "reponse": "33 fois chacun, soit 99 au total, puis compléter par une centième glorification.",
+        "question": "Après le salut final dans la prière d'obligation divine, quelles sont les invocations conseillées ?",
+        "reponse": "« Subhanallah, Alhamdulillah, Allahu akbar » (33 fois) puis compléter par « La ilaha illallah wahdahu la sharika lahu, lahul mulku wa lahul hamdu, wa huwa ‘ala kulli shay’in qadir ».",
         "fausses_reponses": [
-          "10 fois chacun.",
-          "100 fois chacun.",
-          "Une seule fois chacun."
+          "« Subhanallah, Alhamdulillah, Allahu akbar » (10 fois).",
+          "« Subhanallah, Alhamdulillah, Allahu akbar » (100 fois).",
+          "« La ilaha illallah wahdahu la sharika lahu, lahul mulku wa lahul hamdu, wa huwa ‘ala kulli shay’in qadir »."
         ]
       },
       {
         "numero": 8,
-        "question": "Quelle est la formule qui clôture les 99 glorifications après la prière ?",
+        "question": "Par quelles invocations est-il conseillé de clôturer ces invocations ?",
         "reponse": "« La ilaha illallah, wahdahu la sharika lahu, lahul mulku wa lahul hamdu, wa huwa ‘ala kulli shay’in qadir ».",
         "fausses_reponses": [
           "« La hawla wa la quwwata illa billahi al-‘aliyyi al-‘azim ».",

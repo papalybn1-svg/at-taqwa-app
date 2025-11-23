@@ -140,11 +140,23 @@ export default function OriginalQuizScreen() {
   }, [user?.uid]);
 
   // Reprise automatique d'une session de quiz en cours
+  // Utiliser un ref pour éviter que la reprise ne se déclenche plusieurs fois
+  const hasResumedSession = React.useRef(false);
+  // Utiliser un ref pour éviter de sauvegarder pendant la reprise initiale
+  const isResuming = React.useRef(false);
+  
   useEffect(() => {
     const resumeSession = async () => {
       // Attendre que les données du quiz soient chargées
       if (!quizData.length) {
         console.log('⏳ Données du quiz pas encore chargées, attente...');
+        return;
+      }
+
+      // Ne reprendre la session qu'une seule fois au chargement initial
+      // Si on a déjà repris la session ou si on est déjà en train de jouer, ne pas réinitialiser
+      if (hasResumedSession.current || (currentQuestionIndex > 0 || score > 0)) {
+        console.log('⏭️ Session déjà reprise ou quiz en cours, pas de nouvelle reprise');
         return;
       }
 
@@ -158,6 +170,9 @@ export default function OriginalQuizScreen() {
         currentIndex: currentQuestionIndex
       });
 
+      // Marquer qu'on est en train de reprendre pour éviter que la sauvegarde écrase
+      isResuming.current = true;
+      
       // Vérifier si la session est valide
       if (saved && typeof saved.index === 'number') {
         if (saved.index < quizData.length) {
@@ -167,6 +182,7 @@ export default function OriginalQuizScreen() {
           setCurrentQuestionIndex(saved.index);
           setScore(limitedScore);
           setShowQuestionPage(true);
+          hasResumedSession.current = true;
         } else {
           console.log(`⚠️ Session invalide pour chapitre ${chapterKey}: index ${saved.index} >= ${quizData.length}`);
           // Nettoyer la session invalide
@@ -174,23 +190,60 @@ export default function OriginalQuizScreen() {
           console.log(`🗑️ Session invalide supprimée pour chapitre ${chapterKey}`);
           setCurrentQuestionIndex(0);
           setShowQuestionPage(true);
+          hasResumedSession.current = true;
         }
       } else {
         console.log(`🆕 Nouvelle session pour chapitre ${chapterKey} (question 0)`);
         setCurrentQuestionIndex(0);
         setShowQuestionPage(true);
+        hasResumedSession.current = true;
       }
+      
+      // Réinitialiser le flag après un court délai pour permettre à la sauvegarde de fonctionner
+      setTimeout(() => {
+        isResuming.current = false;
+      }, 100);
     };
     resumeSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercicesKey, quizData.length, user?.uid]);
+  
+  // Réinitialiser les flags de reprise quand on change de chapitre
+  useEffect(() => {
+    hasResumedSession.current = false;
+    isResuming.current = false;
+  }, [exercicesKey]);
 
   // Sauvegarder la session au fil de l'eau
   useEffect(() => {
+    // Ne pas sauvegarder si on est en train de reprendre la session initiale
+    if (isResuming.current) {
+      console.log('⏸️ Sauvegarde ignorée: reprise en cours');
+      return;
+    }
+    
+    // Ne pas sauvegarder si la session n'a pas encore été reprise ET qu'on est à l'état initial
+    // (évite d'écraser une session existante avec score=0, index=0)
+    if (!hasResumedSession.current && currentQuestionIndex === 0 && score === 0) {
+      console.log('⏸️ Sauvegarde ignorée: session pas encore reprise, état initial');
+      return;
+    }
+    
     const persist = async () => {
       const chapterKey = exercicesKey;
       const sessionKey = `quizSession:${chapterKey}`;
-      await writeUserStorage(user?.uid, sessionKey, { index: currentQuestionIndex, score: score, answers: [] });
+      // Calculer le score en pourcentage en temps réel
+      const scorePercentage = quizData.length > 0 ? Math.round((score / quizData.length) * 100) : 0;
+      
+      console.log(`💾 Sauvegarde session: index=${currentQuestionIndex}, score=${score}, scorePercentage=${scorePercentage}%`);
+      
+      // Sauvegarder avec le score brut (pour reprise) et le pourcentage (pour affichage)
+      await writeUserStorage(user?.uid, sessionKey, { 
+        index: currentQuestionIndex, 
+        score: score, // Score brut (nombre de bonnes réponses)
+        scorePercentage: scorePercentage, // Score en pourcentage pour affichage
+        answers: [] 
+      });
       // Maintenir un index des sessions pour l'écran Quiz initial
       const indexKey = 'quizSessionsIndex';
       const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
@@ -199,7 +252,7 @@ export default function OriginalQuizScreen() {
     };
     persist();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentQuestionIndex, score, exercicesKey]);
+  }, [currentQuestionIndex, score, exercicesKey, quizData.length]);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showQuestionPage, setShowQuestionPage] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(1));
@@ -470,7 +523,13 @@ export default function OriginalQuizScreen() {
     
     // Incrémenter le score seulement si c'est correct ET si on n'a pas déjà vérifié
     if (correct) {
-      setScore(prev => prev + 1);
+      setScore(prev => {
+        const newScore = prev + 1;
+        console.log(`✅ Réponse correcte ! Score: ${prev} → ${newScore}`);
+        return newScore;
+      });
+    } else {
+      console.log(`❌ Réponse incorrecte. Score reste: ${score}`);
     }
   };
 

@@ -11,6 +11,8 @@ import { migrateUnscopedKeyToUser, read as readUserStorage } from '../utils/user
 import { isQuizUnlocked } from '../utils/quizUnlock';
 import { usePaymentService } from '../lib/paymentService';
 import { useEntitlements } from '../contexts/EntitlementsContext';
+import { getQuizProfile, loadQuizSession } from '../utils/quizSession';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Liste centralisée des fichiers d'exercices (clé = numéro de chapitre sous forme de string)
 const exercicesFiles: { [key: string]: any[] | { quiz: any[] } } = {
@@ -60,6 +62,8 @@ export default function QuizChapterSelectScreen() {
   const route = useRoute();
   const { user } = useAuth();
   const [quizScores, setQuizScores] = useState<{ [key: string]: number }>({});
+  const [quizBestScores, setQuizBestScores] = useState<{ [key: string]: number }>({});
+  const [quizPartialScores, setQuizPartialScores] = useState<{ [key: string]: number }>({});
   const [showLockModal, setShowLockModal] = useState(false);
   const [lockedChapter, setLockedChapter] = useState<any>(null);
   const [previousScore, setPreviousScore] = useState<number | undefined>(undefined);
@@ -78,23 +82,135 @@ export default function QuizChapterSelectScreen() {
   // Recharger les scores quand l'écran redevient actif
   useFocusEffect(
     useCallback(() => {
+      console.log('🔄 QuizChapterSelectScreen: rechargement des scores...');
       loadQuizScores();
     }, [user?.uid])
   );
 
   const loadQuizScores = async () => {
     try {
+      console.log('📥 Chargement des scores de quiz...');
       await migrateUnscopedKeyToUser(user?.uid, 'quizScores');
       const scores = await readUserStorage<Record<string, number>>(user?.uid, 'quizScores');
-      if (scores) setQuizScores(scores);
+      if (scores) {
+        console.log('✅ Scores finaux chargés:', scores);
+        setQuizScores(scores);
+      }
+      
+      // Charger aussi les meilleurs scores depuis le profil
+      if (user?.uid) {
+        const profile = await getQuizProfile(user.uid);
+        if (profile.bestScores) {
+          setQuizBestScores(profile.bestScores);
+        }
+        
+        // Charger les scores partiels depuis les sessions en cours
+        const partialScores: Record<string, number> = {};
+        
+        // Vérifier les sessions dans AsyncStorage (nouveau système)
+        const allKeys = await AsyncStorage.getAllKeys();
+        const sessionKeys = allKeys.filter(key => key.startsWith(`quiz:session:${user.uid}:`));
+        
+        for (const sessionKey of sessionKeys) {
+          try {
+            const sessionData = await AsyncStorage.getItem(sessionKey);
+            if (sessionData) {
+              const session = JSON.parse(sessionData);
+              if (session.exercicesKey) {
+                // Utiliser le score calculé dans la session (mis à jour après chaque réponse)
+                if (session.score !== undefined) {
+                  partialScores[session.exercicesKey] = session.score;
+                } else if (session.answers) {
+                  // Fallback : calculer le score si pas encore calculé dans la session
+                  const totalQuestions = session.questionIds?.length || 0;
+                  if (totalQuestions > 0) {
+                    const correctAnswers = Object.values(session.answers).filter((ans: any) => ans.correct === true).length;
+                    const partialScore = Math.round((correctAnswers / totalQuestions) * 100);
+                    partialScores[session.exercicesKey] = partialScore;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Erreur chargement session:', e);
+          }
+        }
+        
+        // Vérifier aussi les anciennes sessions dans userStorage
+        // Normaliser les clés pour s'assurer qu'elles correspondent (ex: "01" -> "1", "10" -> "10")
+        const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie]) =>
+          partie.chapitres.map((ch) => {
+            const imageKey = ch.image;
+            // Normaliser la clé : "01" -> "1", "1" -> "1", "10" -> "10"
+            const normalizedKey = String(parseInt(imageKey, 10));
+            return { imageKey, normalizedKey };
+          })
+        );
+        
+        // Créer un map pour éviter les doublons
+        const uniqueChapters = new Map<string, string>();
+        allChapters.forEach(({ imageKey, normalizedKey }) => {
+          if (!uniqueChapters.has(normalizedKey)) {
+            uniqueChapters.set(normalizedKey, imageKey);
+          }
+        });
+        
+        // Vérifier les sessions avec les clés normalisées ET les clés originales
+        for (const [normalizedKey, imageKey] of uniqueChapters.entries()) {
+          try {
+            // Essayer d'abord avec la clé normalisée (format utilisé dans OriginalQuizScreen)
+            let sessionKey = `quizSession:${normalizedKey}`;
+            let saved = await readUserStorage<{ index: number; score: number; scorePercentage?: number; answers: Array<number|null> }>(user.uid, sessionKey);
+            
+            // Si pas trouvé, essayer avec la clé originale (format image)
+            if (!saved && imageKey !== normalizedKey) {
+              sessionKey = `quizSession:${imageKey}`;
+              saved = await readUserStorage<{ index: number; score: number; scorePercentage?: number; answers: Array<number|null> }>(user.uid, sessionKey);
+            }
+            
+            if (saved) {
+              let scorePercentage: number | undefined = undefined;
+              
+              // Priorité au scorePercentage s'il existe (nouveau format)
+              if (saved.scorePercentage !== undefined) {
+                scorePercentage = saved.scorePercentage;
+              } else if (saved.score !== undefined) {
+                // Fallback : calculer le pourcentage depuis le score brut (ancien format)
+                const exercicesData = exercicesFiles[normalizedKey];
+                let totalQuestions = 0;
+                if (Array.isArray(exercicesData)) {
+                  totalQuestions = exercicesData.length;
+                } else if (exercicesData && typeof exercicesData === 'object' && 'quiz' in exercicesData) {
+                  totalQuestions = Array.isArray((exercicesData as any).quiz) ? (exercicesData as any).quiz.length : 0;
+                }
+                
+                if (totalQuestions > 0) {
+                  // Calculer le pourcentage : (bonnes réponses / total questions) * 100
+                  scorePercentage = Math.round((saved.score / totalQuestions) * 100);
+                }
+              }
+              
+              // Utiliser la clé normalisée pour stocker le score (correspond à exercicesKey)
+              if (scorePercentage !== undefined && (!partialScores[normalizedKey] || scorePercentage > partialScores[normalizedKey])) {
+                partialScores[normalizedKey] = scorePercentage;
+                console.log(`📊 Score partiel chargé pour chapitre ${normalizedKey}: ${scorePercentage}%`);
+              }
+            }
+          } catch (e) {
+            console.error(`Erreur chargement session pour chapitre ${normalizedKey}:`, e);
+          }
+        }
+        
+        setQuizPartialScores(partialScores);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des scores:', error);
     }
   };
 
 
-  // Vérifier si un quiz est débloqué en utilisant la logique centralisée
-  const isQuizUnlockedLocal = (chapterKey: string, partieKey?: string) => {
+  // Vérifier si un quiz est accessible (uniquement vérification premium)
+  const isQuizAccessible = (partieKey?: string) => {
     // Vérifier l'accès à la partie si c'est une partie payante
     if (partieKey === 'deuxieme_partie' && !userEntitlements.part2) {
       return false; // Pas d'accès à la partie 2
@@ -103,7 +219,8 @@ export default function QuizChapterSelectScreen() {
       return false; // Pas d'accès à la partie 3
     }
     
-    return isQuizUnlocked(chapterKey, quizScores);
+    // Tous les quiz sont accessibles (sauf premium non payé)
+    return true;
   };
 
   // Gestionnaire de geste de swipe
@@ -149,35 +266,16 @@ export default function QuizChapterSelectScreen() {
 
   // Gérer le clic sur un chapitre
   const handleChapterPress = (chapter: any) => {
-    if (!isQuizUnlockedLocal(chapter.exercicesKey, chapter.partieKey)) {
-      // Vérifier si c'est un problème d'accès à la partie payante
-      let isPremiumLock = false;
-      if (chapter.partieKey === 'deuxieme_partie' && !userEntitlements.part2) {
-        isPremiumLock = true;
-      }
-      if (chapter.partieKey === 'troisieme_partie' && !userEntitlements.part3) {
-        isPremiumLock = true;
-      }
-
-      if (isPremiumLock) {
-        // Verrouillage par accès payant
-        setLockedChapter(chapter);
-        setPreviousScore(undefined);
-        setShowLockModal(true);
-      } else {
-        // Verrouillage par score insuffisant
-        const allChapterKeys = allChapters.map(ch => ch.exercicesKey).sort((a, b) => parseInt(a) - parseInt(b));
-        const currentIndex = allChapterKeys.indexOf(chapter.exercicesKey);
-        const previousChapterKey = allChapterKeys[currentIndex - 1];
-        const score = quizScores[previousChapterKey];
-        
-        setLockedChapter(chapter);
-        setPreviousScore(score);
-        setShowLockModal(true);
-      }
+    // Vérifier uniquement l'accès premium
+    if (!isQuizAccessible(chapter.partieKey)) {
+      // Verrouillage par accès payant
+      setLockedChapter(chapter);
+      setPreviousScore(undefined);
+      setShowLockModal(true);
       return;
     }
     
+    // Ouvrir directement le quiz (plus de vérification de score)
     (navigation as any).navigate('OriginalQuiz', { 
       exercicesKey: chapter.exercicesKey, 
       chapterTitle: chapter.title, 
@@ -291,7 +389,12 @@ export default function QuizChapterSelectScreen() {
             <Text style={styles.headerTitle}>
               Quiz
             </Text>
-            <View style={styles.headerSpacer} />
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Certificate' as never)}
+              style={styles.certificateButton}
+            >
+              <MaterialCommunityIcons name="certificate" size={24} color="#174C3C" />
+            </TouchableOpacity>
           </View>
 
           <ScrollView 
@@ -308,17 +411,28 @@ export default function QuizChapterSelectScreen() {
                 {/* Liste des quiz de la partie */}
                 <View style={{ marginTop: 20 }}>
                   {getChaptersInPartie(selectedPart).map((ch, idx) => {
-                    const isUnlocked = isQuizUnlockedLocal(ch.exercicesKey, ch.partieKey);
-                    const score = quizScores[ch.exercicesKey];
+                    const isAccessible = isQuizAccessible(ch.partieKey);
+                    // Récupérer le score depuis plusieurs sources : quizScores, bestScores, et scores partiels
+                    const scoreFromStorage = quizScores[ch.exercicesKey];
+                    const bestScore = quizBestScores[ch.exercicesKey];
+                    const partialScore = quizPartialScores[ch.exercicesKey];
+                    
+                    // Prendre le meilleur score disponible (priorité : scoreFromStorage > bestScore > partialScore)
+                    let score: number | undefined = undefined;
+                    const scores = [scoreFromStorage, bestScore, partialScore].filter(s => s !== undefined) as number[];
+                    if (scores.length > 0) {
+                      // Prendre le meilleur score et s'assurer qu'il est entre 0 et 100
+                      score = Math.max(0, Math.min(100, Math.max(...scores)));
+                    }
           return (
               <TouchableOpacity
                         key={idx} 
                 style={[
                           styles.quizCard,
                           { 
-                            opacity: isUnlocked ? 1 : 0.6,
-                            shadowColor: isUnlocked ? '#D4AF37' : '#000',
-                            shadowOpacity: isUnlocked ? 0.15 : 0.08,
+                            opacity: isAccessible ? 1 : 0.6,
+                            shadowColor: isAccessible ? '#D4AF37' : '#000',
+                            shadowOpacity: isAccessible ? 0.15 : 0.08,
                           }
                 ]}
                         onPress={() => handleChapterPress(ch)}
@@ -330,7 +444,7 @@ export default function QuizChapterSelectScreen() {
                             source={imageMap[ch.image] || require('../../assets/1.png')} 
                             style={styles.quizImage} 
                           />
-                          {!isUnlocked && (
+                          {!isAccessible && (
                             <View style={styles.quizLockOverlay}>
                               <MaterialCommunityIcons name="lock" size={24} color="#BB9B4E" />
                             </View>
@@ -342,49 +456,49 @@ export default function QuizChapterSelectScreen() {
                           <View style={styles.quizHeader}>
                             <Text style={[
                               styles.quizTitle,
-                              !isUnlocked && styles.lockedText
+                              !isAccessible && styles.lockedText
                             ]}>
                               {ch.title && ch.title.trim() !== '' ? `Quiz du ${ch.title.replace('.', '')}:` : `Quiz du chapitre ${ch.exercicesKey}:`}
                             </Text>
                   <Text style={[
                               styles.quizDesc,
-                    !isUnlocked && styles.lockedText
+                    !isAccessible && styles.lockedText
                   ]}>
                               {ch.desc}
                   </Text>
                   <Text style={[
                               styles.quizAuthor,
-                    !isUnlocked && styles.lockedText
+                    !isAccessible && styles.lockedText
                   ]}>
                               {ch.author}
                   </Text>
                           </View>
 
-                          {/* Barre de progression moderne */}
+                          {/* Barre de progression moderne - toujours affichée */}
                           <View style={styles.quizProgressContainer}>
                             <View style={styles.quizProgressBg}>
                               <View 
                                 style={[
                                   styles.quizProgressFill,
                                   { 
-                                    width: `${isUnlocked && score !== undefined ? score : 0}%`,
-                                    backgroundColor: isUnlocked && score !== undefined && score >= 80 ? '#D4AF37' : '#174C3C'
+                                    width: score !== undefined ? `${score}%` : '0%',
+                                    backgroundColor: score !== undefined && score >= 80 ? '#D4AF37' : '#174C3C'
                                   }
                                 ]} 
                               />
                             </View>
                           </View>
 
-                          {/* Score ou message verrouillé */}
-                          {isUnlocked && score !== undefined ? (
+                          {/* Score - toujours affiché pour les quiz accessibles */}
+                          {isAccessible ? (
                             <View style={styles.quizScoreContainer}>
-                              <Text style={styles.quizScoreText}>Score: {score}%</Text>
+                              <Text style={styles.quizScoreText}>Score: {score !== undefined ? `${Math.round(score)}%` : '0%'}</Text>
                             </View>
-                          ) : !isUnlocked ? (
+                          ) : (
                             <View style={styles.quizLockedContainer}>
-                              <Text style={styles.quizLockedText}>Quiz verrouillé</Text>
+                              <Text style={styles.quizLockedText}>Contenu Premium</Text>
                             </View>
-                          ) : null}
+                          )}
                     </View>
                       </TouchableOpacity>
                     );
@@ -397,7 +511,7 @@ export default function QuizChapterSelectScreen() {
                 <Text style={styles.title}>Choisissez une partie pour le quiz</Text>
                 {Object.keys(chaptersData).map((partie, pidx) => {
                   const partieChapters = getChaptersInPartie(partie);
-                  const unlockedChapters = partieChapters.filter(ch => isQuizUnlockedLocal(ch.exercicesKey));
+                  // Tous les quiz sont accessibles (sauf premium)
                   
                   // Vérifier si c'est une partie premium et si l'utilisateur y a accès
                   const isPremiumPart = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
@@ -447,7 +561,7 @@ export default function QuizChapterSelectScreen() {
                           ]}>
                             {!hasAccessToPart && isPremiumPart 
                               ? "Débloquez cette partie pour accéder aux quiz"
-                              : `${unlockedChapters.length}/${partieChapters.length} quiz disponibles`
+                              : `${partieChapters.length} quiz disponibles`
                             }
                           </Text>
                         </View>
@@ -476,56 +590,31 @@ export default function QuizChapterSelectScreen() {
                 style={styles.modalLockIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.modalTitle}>Quiz verrouillé</Text>
+              <Text style={styles.modalTitle}>Contenu Premium</Text>
               </View>
               
-                {previousScore === undefined ? (
-                  <Text style={styles.modalMessage}>
-                    Ce quiz fait partie d'une section premium. Débloquez l'accès à cette partie pour continuer.
-                  </Text>
-                ) : (
-                  <>
-                    <Text style={styles.modalMessage}>
-                      Pour débloquer ce quiz, vous devez obtenir au moins 80% au quiz précédent.
-                    </Text>
-                    
-                    <View style={styles.modalScoreContainer}>
-                      <Text style={styles.modalScoreLabel}>Votre score actuel :</Text>
-                      <Text style={styles.modalScoreValue}>{previousScore}%</Text>
-                      <Text style={styles.modalScoreRequired}>
-                        Score requis : 80%
-                      </Text>
-                    </View>
-                  </>
-                )}
+              <Text style={styles.modalMessage}>
+                Ce quiz fait partie d'une section premium. Débloquez l'accès à cette partie pour continuer.
+              </Text>
               
               <View style={styles.modalButtons}>
                 <TouchableOpacity 
-                style={styles.modalButtonSecondary}
+                  style={styles.modalButtonSecondary}
                   onPress={() => setShowLockModal(false)}
                 >
-                <Text style={styles.modalButtonTextSecondary}>Fermer</Text>
+                  <Text style={styles.modalButtonTextSecondary}>Fermer</Text>
                 </TouchableOpacity>
                 
-                {previousScore === undefined ? (
-                  <TouchableOpacity 
-                    style={styles.modalButtonPrimary}
-                    onPress={() => {
-                      setShowLockModal(false);
-                      navigation.navigate('Books' as never);
-                    }}
-                  >
-                    <Text style={styles.modalButtonTextPrimary}>Voir les parties</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity 
-                    style={styles.modalButtonPrimary}
-                    onPress={goToPreviousChapter}
-                  >
-                    <Text style={styles.modalButtonTextPrimary}>Revoir le chapitre</Text>
-                  </TouchableOpacity>
-                )}
-            </View>
+                <TouchableOpacity 
+                  style={styles.modalButtonPrimary}
+                  onPress={() => {
+                    setShowLockModal(false);
+                    navigation.navigate('Books' as never);
+                  }}
+                >
+                  <Text style={styles.modalButtonTextPrimary}>Voir les parties</Text>
+                </TouchableOpacity>
+              </View>
           </View>
         </View>
       </Modal>
@@ -557,6 +646,9 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
+  },
+  certificateButton: {
+    padding: 8,
   },
   scrollView: {
     flex: 1,
@@ -1036,9 +1128,11 @@ const styles = StyleSheet.create({
      marginBottom: 8,
    },
    quizProgressBg: {
+     width: '100%',
      height: '100%',
      borderRadius: 4,
      backgroundColor: '#E0E0E0',
+     overflow: 'hidden',
    },
    quizProgressFill: {
      height: '100%',

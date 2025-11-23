@@ -93,13 +93,13 @@ export default function QuizStartScreen() {
         <View style={styles.backCard} />
         <View style={styles.middleCard} />
         <View style={styles.whiteCard}>
-          <Text style={styles.cardTitle}>Testez vos connaissances</Text>
+          <Text style={styles.cardTitle} numberOfLines={1} adjustsFontSizeToFit={true} minimumFontScale={0.7}>Testez vos connaissances</Text>
           <TouchableOpacity 
             style={styles.playButton} 
             onPress={goToChapters}
             activeOpacity={0.7}
           >
-            <Text style={styles.playButtonText}>Commencer</Text>
+            <Text style={styles.playButtonText}>Lancer</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -209,13 +209,13 @@ const styles = StyleSheet.create({
     height: getResponsiveSize(isSmallScreen ? 270 : isLargeScreen ? 370 : 320, false),
   },
   cardTitle: {
-    fontSize: getResponsiveSize(isSmallScreen ? 18 : isLargeScreen ? 24 : 20),
+    fontSize: getResponsiveSize(isSmallScreen ? 17 : isLargeScreen ? 21 : 19),
     fontWeight: 'bold',
     color: '#174C3C',
     textAlign: 'center',
     marginBottom: getResponsiveSize(isSmallScreen ? 15 : isLargeScreen ? 25 : 20, false),
     marginTop: getResponsiveSize(isSmallScreen ? 15 : isLargeScreen ? 25 : 20, false),
-    lineHeight: getResponsiveSize(isSmallScreen ? 22 : isLargeScreen ? 28 : 24, false),
+    lineHeight: getResponsiveSize(isSmallScreen ? 21 : isLargeScreen ? 25 : 23, false),
   },
   playButton: {
     backgroundColor: '#BB9B4E',

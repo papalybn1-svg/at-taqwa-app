@@ -4,6 +4,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import React from "react";
 import AuthorProfileScreen from '../screens/AuthorProfileScreen';
 import BooksScreen from '../screens/BooksScreen';
+import CertificateScreen from '../screens/CertificateScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import HomeScreen from "../screens/HomeScreen";
 import HorairesScreen from '../screens/HorairesScreen';
@@ -91,6 +92,13 @@ function HomeStack() {
         component={AuthorProfileScreen}
         options={{
           gestureEnabled: true, // Permet le swipe pour revenir
+        }}
+      />
+      <Stack.Screen 
+        name="Certificate" 
+        component={CertificateScreen}
+        options={{
+          gestureEnabled: true,
         }}
       />
     </Stack.Navigator>

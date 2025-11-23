@@ -139,15 +139,23 @@ export const updateQuizAnswer = async (
   answer: string,
   isCorrect: boolean
 ): Promise<QuizSession> => {
+  const updatedAnswers = {
+    ...session.answers,
+    [questionId]: {
+      value: answer,
+      correct: isCorrect
+    }
+  };
+  
+  // Calculer le score en temps réel après chaque réponse
+  const correctAnswers = Object.values(updatedAnswers).filter(ans => ans.correct).length;
+  const totalQuestions = session.questionIds.length;
+  const currentScore = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+  
   const updatedSession = {
     ...session,
-    answers: {
-      ...session.answers,
-      [questionId]: {
-        value: answer,
-        correct: isCorrect
-      }
-    }
+    answers: updatedAnswers,
+    score: currentScore // Mettre à jour le score après chaque réponse
   };
   
   await saveQuizSession(updatedSession);
