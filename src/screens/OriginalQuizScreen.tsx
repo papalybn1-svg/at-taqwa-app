@@ -121,7 +121,7 @@ export default function OriginalQuizScreen() {
   const { checkEntitlements } = usePaymentService();
   
   // Entitlements globaux
-  const { entitlements: userEntitlements } = useEntitlements();
+  const { entitlements: userEntitlements, refreshEntitlements } = useEntitlements();
 
   // Charger les scores des quiz
   const loadQuizScores = async () => {
@@ -138,6 +138,11 @@ export default function OriginalQuizScreen() {
   useEffect(() => {
     loadQuizScores();
   }, [user?.uid]);
+
+  // Forcer un refresh des droits à l'ouverture pour harmoniser avec Books/Home
+  useEffect(() => {
+    refreshEntitlements(true).catch(() => {});
+  }, []);
 
   // Reprise automatique d'une session de quiz en cours
   // Utiliser un ref pour éviter que la reprise ne se déclenche plusieurs fois

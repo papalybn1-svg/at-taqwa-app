@@ -72,18 +72,20 @@ export default function QuizChapterSelectScreen() {
   const { checkEntitlements } = usePaymentService();
   
   // Entitlements globaux
-  const { entitlements: userEntitlements } = useEntitlements();
+  const { entitlements: userEntitlements, refreshEntitlements } = useEntitlements();
 
   // Charger les scores des quiz depuis le stockage local
   useEffect(() => {
     loadQuizScores();
   }, [user?.uid]);
 
-  // Recharger les scores quand l'écran redevient actif
+  // Recharger les scores + droits quand l'écran redevient actif
   useFocusEffect(
     useCallback(() => {
       console.log('🔄 QuizChapterSelectScreen: rechargement des scores...');
       loadQuizScores();
+      // Rafraîchir les droits pour éviter un état périmé après paiement
+      refreshEntitlements(true).catch(() => {});
     }, [user?.uid])
   );
 
@@ -238,7 +240,8 @@ export default function QuizChapterSelectScreen() {
   };
 
   // Gérer le clic sur une partie
-  const handlePartPress = (partie: string) => {
+  const handlePartPress = async (partie: string) => {
+    try { await refreshEntitlements(true); } catch {}
     // Vérifier si c'est une partie premium et si l'utilisateur y a accès
     const isPremiumPart = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
     const hasAccessToPart = partie === 'premiere_partie' || 
@@ -265,7 +268,8 @@ export default function QuizChapterSelectScreen() {
   };
 
   // Gérer le clic sur un chapitre
-  const handleChapterPress = (chapter: any) => {
+  const handleChapterPress = async (chapter: any) => {
+    try { await refreshEntitlements(true); } catch {}
     // Vérifier uniquement l'accès premium
     if (!isQuizAccessible(chapter.partieKey)) {
       // Verrouillage par accès payant
