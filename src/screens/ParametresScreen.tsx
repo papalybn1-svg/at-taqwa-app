@@ -4,6 +4,9 @@ import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import React, { useContext, useState } from 'react';
 import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import chaptersData from '../../data/chapitres.json';
+import { getQuizProfile } from '../utils/quizSession';
+import { read as readUserStorage } from '../utils/userStorage';
 import * as Linking from 'expo-linking';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
@@ -22,6 +25,58 @@ export default function ParametresScreen() {
   const [profileModal, setProfileModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
+  // Vérifier l'éligibilité au certificat (tous les quiz avec données complètes)
+  const checkCertificateEligibility = async (): Promise<boolean> => {
+    try {
+      const scores = (await readUserStorage<Record<string, number>>(firebaseUser?.uid, 'quizScores')) || {};
+      const profile = firebaseUser?.uid ? await getQuizProfile(firebaseUser.uid) : null;
+      const bestScores = profile?.bestScores || {};
+      // Lister tous les chapitres qui ont des quiz
+      const allChapters = Object.entries(chaptersData).flatMap(([_, partie]: any) =>
+        partie.chapitres.map((ch: any) => {
+          const numKey = String(parseInt(ch.image, 10));
+          try {
+            const data = require(`../../data/exercices_par_chapitre/chapitre_${numKey}_exercices.json`);
+            const hasQuiz = Array.isArray(data)
+              ? data.length > 0
+              : (data && typeof data === 'object' && 'quiz' in data && Array.isArray((data as any).quiz) && (data as any).quiz.length > 0);
+            return hasQuiz ? numKey : null;
+          } catch {
+            return null;
+          }
+        })
+      ).filter((k: string | null): k is string => !!k);
+      if (allChapters.length === 0) return false;
+      // Exiger 100% sur chaque chapitre disposant d'un quiz
+      for (const key of allChapters) {
+        const score = (scores as any)[key] ?? (bestScores as any)[key];
+        if (score === undefined || score < 100) {
+          return false;
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleOpenCertificate = async () => {
+    const ok = await checkCertificateEligibility();
+    if (!ok) {
+      Alert.alert(
+        'Attestation indisponible',
+        'Pour obtenir votre attestation, complétez d’abord tous les quiz à 100%.\n\nRendez‑vous dans la section Quiz.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Aller au Quiz', onPress: () => require('@react-navigation/native').useNavigation().navigate('Accueil', { screen: 'QuizChapterSelect' }) }
+        ]
+      );
+      return;
+    }
+    // Naviguer vers le CertificateScreen dans le stack Accueil
+    require('@react-navigation/native').useNavigation().navigate('Accueil', { screen: 'Certificate' });
+  };
+
 
 
 
@@ -268,6 +323,11 @@ export default function ParametresScreen() {
         <TouchableOpacity style={styles.row} onPress={() => setProfileModal(true)}>
           <MaterialCommunityIcons name="account-edit" size={22} color={colors.primary} />
           <Text style={styles.rowText}>Modifier le profil</Text>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.row} onPress={handleOpenCertificate}>
+          <MaterialCommunityIcons name="certificate" size={22} color={colors.primary} />
+          <Text style={styles.rowText}>Mon attestation</Text>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
         </TouchableOpacity>
 
