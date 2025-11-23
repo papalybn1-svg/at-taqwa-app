@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { searchCityWithCountry } from './citySearchService';
 
 // Configuration MALIKITE pour le Sénégal
 const MALIKITE_CONFIG = {
@@ -79,7 +80,9 @@ const buildApiUrl = (params: {
     timezone = MALIKITE_CONFIG.timezone
   } = params;
 
-  const baseParams = `method=${method}&school=${school}&latitudeAdjustmentMethod=${MALIKITE_CONFIG.latitudeAdjustmentMethod}&timezonestring=${encodeURIComponent(timezone)}`;
+  // Ajouter timezonestring uniquement si fourni
+  const tzParam = timezone ? `&timezonestring=${encodeURIComponent(timezone)}` : '';
+  const baseParams = `method=${method}&school=${school}&latitudeAdjustmentMethod=${MALIKITE_CONFIG.latitudeAdjustmentMethod}${tzParam}`;
 
   if (city && country) {
     return `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&${baseParams}`;
@@ -135,7 +138,17 @@ export const fetchPrayerTimes = async (cityName?: string, countryName?: string):
   lastUpdate: string;
 }> => {
   const today = getTodayDate();
-  const cacheKey = getCacheKey(today, MALIKITE_CONFIG.timezone, MALIKITE_CONFIG.method, MALIKITE_CONFIG.school, cityName ? `${cityName}_${countryName || 'Senegal'}` : undefined);
+  // Utilitaire pour savoir si on traite le Sénégal (par défaut oui si non spécifié)
+  const isSenegal = (name?: string): boolean => {
+    if (!name) return true;
+    const normalized = name.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+    return normalized.includes('senegal') || normalized === 'sn';
+  };
+  const isSn = isSenegal(countryName);
+  // Clé de cache: garder Africa/Dakar pour SN; 'global' + city/country pour le reste
+  const cacheKey = isSn
+    ? getCacheKey(today, MALIKITE_CONFIG.timezone, MALIKITE_CONFIG.method, MALIKITE_CONFIG.school, cityName ? `${cityName}_${countryName || 'Senegal'}` : undefined)
+    : getCacheKey(today, 'global', MALIKITE_CONFIG.method, MALIKITE_CONFIG.school, cityName ? `${cityName}_${countryName || 'World'}` : undefined);
   
   try {
     // Essayer de récupérer du cache d'abord
@@ -152,34 +165,79 @@ export const fetchPrayerTimes = async (cityName?: string, countryName?: string):
     }
 
     // Si pas de cache, faire l'appel API
-    let url: string;
+    let url: string | undefined;
     let city = cityName || 'Dakar';
     let country = countryName || 'Senegal';
 
-    if (cityName) {
-      url = buildApiUrl({ city, country });
-    } else {
-      // Essayer d'obtenir la localisation GPS
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({});
-          url = buildApiUrl({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude
-          });
-          console.log('📍 Utilisation GPS:', location.coords);
-        } else {
-          url = buildApiUrl({ city, country });
+    if (isSn) {
+      // 🇸🇳 Mode Sénégal — conserver la logique actuelle (timingsByCity, timezone Africa/Dakar)
+      if (cityName) {
+        url = buildApiUrl({ city, country: 'Senegal', method: MALIKITE_CONFIG.method, school: MALIKITE_CONFIG.school, timezone: MALIKITE_CONFIG.timezone });
+      } else {
+        // Essayer d'obtenir la localisation GPS, sinon utiliser Dakar/Senegal
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === 'granted') {
+            const location = await Location.getCurrentPositionAsync({});
+            url = buildApiUrl({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              method: MALIKITE_CONFIG.method,
+              school: MALIKITE_CONFIG.school,
+              timezone: MALIKITE_CONFIG.timezone
+            });
+            console.log('📍 (SN) Utilisation GPS:', location.coords);
+          } else {
+            url = buildApiUrl({ city, country: 'Senegal', method: MALIKITE_CONFIG.method, school: MALIKITE_CONFIG.school, timezone: MALIKITE_CONFIG.timezone });
+          }
+        } catch (error) {
+          console.log('❌ (SN) Erreur GPS, utilisation Dakar par défaut:', error);
+          url = buildApiUrl({ city, country: 'Senegal', method: MALIKITE_CONFIG.method, school: MALIKITE_CONFIG.school, timezone: MALIKITE_CONFIG.timezone });
         }
-      } catch (error) {
-        console.log('❌ Erreur GPS, utilisation Dakar par défaut:', error);
-        url = buildApiUrl({ city, country });
+      }
+      console.log('🌍 Mode Sénégal', { city, country: 'Senegal', url });
+    } else {
+      // 🌍 Mode Monde/Afrique — utiliser lat/lon via Nominatim; ne pas forcer la timezone
+      let built = false;
+      if (cityName) {
+        try {
+          const info = await searchCityWithCountry(city, country);
+          if (info && info.lat != null && info.lon != null) {
+            url = buildApiUrl({
+              latitude: info.lat,
+              longitude: info.lon,
+              method: MALIKITE_CONFIG.method,
+              school: MALIKITE_CONFIG.school,
+              timezone: undefined as any
+            });
+            built = true;
+            console.log('🌍 Mode Monde (lat/lon via Nominatim)', { city: info.name, country: info.country, lat: info.lat, lon: info.lon, url });
+          }
+        } catch (e) {
+          console.log('⚠️ Échec Nominatim, tentative fallback timingsByCity:', e);
+        }
+      }
+      if (!built) {
+        // Dernier recours: tenter timingsByCity avec pays tel quel (peut échouer) sinon Dakar
+        try {
+          url = buildApiUrl({ city, country, method: MALIKITE_CONFIG.method, school: MALIKITE_CONFIG.school, timezone: undefined as any });
+          console.log('🌍 Mode Monde (timingsByCity fallback)', { city, country, url });
+        } catch {
+          // Comme buildApiUrl exige city/country OU lat/lon, on force Dakar en tout dernier recours
+          url = buildApiUrl({ city: 'Dakar', country: 'Senegal', method: MALIKITE_CONFIG.method, school: MALIKITE_CONFIG.school, timezone: MALIKITE_CONFIG.timezone });
+          console.log('🌍 Mode Monde → Fallback Dakar (construction URL)');
+        }
       }
     }
 
+    // Sécurité: si pour une raison quelconque l'URL n'est pas définie, basculer sur Dakar
+    if (!url) {
+      url = buildApiUrl({ city: 'Dakar', country: 'Senegal', method: MALIKITE_CONFIG.method, school: MALIKITE_CONFIG.school, timezone: MALIKITE_CONFIG.timezone });
+      console.log('⚠️ URL non définie, fallback Dakar forcé');
+    }
+
     console.log('🌐 URL appelée:', url);
-    console.log('⏰ TZ utilisé:', MALIKITE_CONFIG.timezone);
+    console.log('⏰ TZ utilisée (SN seulement):', isSn ? MALIKITE_CONFIG.timezone : '(déduite par Aladhan)');
     console.log('📊 Method:', MALIKITE_CONFIG.method, 'School:', MALIKITE_CONFIG.school);
 
     const controller = new AbortController();
@@ -241,7 +299,9 @@ export const fetchPrayerTimes = async (cityName?: string, countryName?: string):
     return {
       timings: fallbackTimings,
       date: { gregorian: { day: new Date().getDate(), month: { fr: 'Janvier' }, year: new Date().getFullYear() } },
-      city: 'Dakar (offline)',
+      city: isSn
+        ? 'Dakar (offline)'
+        : `Dakar (fallback depuis ${cityName || 'N/A'}, ${countryName || 'N/A'})`,
       nextPrayer: getNextPrayer(fallbackTimings),
       lastUpdate: new Date().toISOString()
     };
