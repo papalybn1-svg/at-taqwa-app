@@ -453,32 +453,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     return chapter.image;
   };
 
-  // Fonction pour vérifier si le quiz actuel est débloqué
-  const isCurrentQuizUnlocked = () => {
-    const quizKey = getCurrentChapterQuizKey();
-    if (!quizKey) return false;
-    return isQuizUnlocked(quizKey.toString(), quizScores);
-  };
-
   // Fonction pour gérer le clic sur "Faire le quiz"
   const handleQuizPress = () => {
     const quizKey = getCurrentChapterQuizKey();
     if (!quizKey) return;
-
-    // Vérifier si le quiz est débloqué
-    if (!isQuizUnlocked(quizKey.toString(), quizScores)) {
-      // Calculer le quiz précédent basé sur le numéro global du chapitre
-      const currentChapterNumber = parseInt(quizKey);
-      const previousQuizKey = (currentChapterNumber - 1).toString();
-      const score = quizScores[previousQuizKey];
-      
-      setLockedChapter(chapter);
-      setPreviousScore(score);
-      setShowLockModal(true);
-      return;
-    }
     
-    // Quiz débloqué, naviguer vers le quiz avec la section actuelle pour le retour
+    // Ouvrir directement le quiz sans vérification de déblocage
     navigation.navigate('OriginalQuiz', { 
       exercicesKey: quizKey.toString(), 
       chapterTitle: chapter.title, 
@@ -1007,21 +987,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>1/1</Text>
             </View>
             
-              {isCurrentQuizUnlocked() ? (
-                <TouchableOpacity
-                  onPress={handleQuizPress}
-                  style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  onPress={handleQuizPress}
-                  style={{ backgroundColor: '#CCCCCC', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12, opacity: 0.7 }}
-                >
-                  <Text style={{ color: '#666', fontWeight: 'bold', fontSize: 14 }}>Quiz verrouillé</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                onPress={handleQuizPress}
+                style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
+              </TouchableOpacity>
           </>
         ) : (
           // Navigation normale pour les chapitres multi-pages
@@ -1054,21 +1025,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             </View>
             
             {currentSectionIndex === totalSections - 1 ? (
-                isCurrentQuizUnlocked() ? (
-                  <TouchableOpacity
-                    onPress={handleQuizPress}
-                    style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
-                  >
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    onPress={handleQuizPress}
-                    style={{ backgroundColor: '#CCCCCC', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18, opacity: 0.7 }}
-                  >
-                    <Text style={{ color: '#666', fontWeight: 'bold', fontSize: 16 }}>Quiz verrouillé</Text>
-                  </TouchableOpacity>
-                )
+                <TouchableOpacity
+                  onPress={handleQuizPress}
+                  style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
+                </TouchableOpacity>
             ) : (
               <TouchableOpacity
                 onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
