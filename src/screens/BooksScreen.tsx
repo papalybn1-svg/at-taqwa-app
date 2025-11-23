@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NavigationProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from "react";
 import { Alert, Animated, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -31,6 +31,7 @@ function paginateBlocks(blocks: { type: string; contenu: string }[], maxPages = 
 
 export default function BooksScreen() {
   const navigation = useNavigation<NavigationProp<any>>();
+  const route = useRoute<any>();
   const data = chaptersData as ChaptersData;
   const { user } = useAuth();
   const responsive = useResponsive();
@@ -74,6 +75,14 @@ export default function BooksScreen() {
   React.useEffect(() => {
     loadProgress();
   }, [user?.uid]);
+
+  // Prendre en charge une pré-sélection de partie via navigation (ex: depuis Quiz "Acheter")
+  React.useEffect(() => {
+    const preselected = (route.params as any)?.selectedPart as string | undefined;
+    if (preselected) {
+      setSelectedPart(preselected);
+    }
+  }, [route.params]);
 
   // Recharger la progression quand l'écran redevient actif
   useFocusEffect(

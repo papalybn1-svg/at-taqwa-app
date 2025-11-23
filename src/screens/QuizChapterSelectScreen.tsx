@@ -448,6 +448,26 @@ export default function QuizChapterSelectScreen() {
                             source={imageMap[ch.image] || require('../../assets/1.png')} 
                             style={styles.quizImage} 
                           />
+                          <View
+                            style={[
+                              styles.quizStatusBadge,
+                              isAccessible ? styles.quizStatusUnlocked : styles.quizStatusPremium
+                            ]}
+                          >
+                            <MaterialCommunityIcons
+                              name={isAccessible ? 'check-circle' : 'crown'}
+                              size={12}
+                              color={isAccessible ? '#174C3C' : '#D4AF37'}
+                            />
+                            <Text
+                              style={[
+                                styles.quizStatusText,
+                                isAccessible ? styles.quizStatusTextUnlocked : styles.quizStatusTextPremium
+                              ]}
+                            >
+                              {isAccessible ? 'DÉBLOQUÉ' : 'PREMIUM'}
+                            </Text>
+                          </View>
                           {!isAccessible && (
                             <View style={styles.quizLockOverlay}>
                               <MaterialCommunityIcons name="lock" size={24} color="#BB9B4E" />
@@ -613,10 +633,11 @@ export default function QuizChapterSelectScreen() {
                   style={styles.modalButtonPrimary}
                   onPress={() => {
                     setShowLockModal(false);
-                    navigation.navigate('Books' as never);
+                    const partKey = lockedChapter?.partieKey;
+                    (navigation as any).navigate('Books', partKey ? { selectedPart: partKey } : undefined);
                   }}
                 >
-                  <Text style={styles.modalButtonTextPrimary}>Voir les parties</Text>
+                  <Text style={styles.modalButtonTextPrimary}>Acheter</Text>
                 </TouchableOpacity>
               </View>
           </View>
@@ -1091,6 +1112,36 @@ const styles = StyleSheet.create({
      height: '100%',
      resizeMode: 'cover',
    },
+  quizStatusBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    gap: 6,
+  },
+  quizStatusUnlocked: {
+    borderWidth: 1,
+    borderColor: '#174C3C',
+  },
+  quizStatusPremium: {
+    borderWidth: 1,
+    borderColor: '#D4AF37',
+  },
+  quizStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  quizStatusTextUnlocked: {
+    color: '#174C3C',
+  },
+  quizStatusTextPremium: {
+    color: '#D4AF37',
+  },
    quizLockOverlay: {
      position: 'absolute',
      top: 0,
