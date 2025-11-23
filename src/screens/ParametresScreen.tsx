@@ -31,19 +31,30 @@ export default function ParametresScreen() {
       const scores = (await readUserStorage<Record<string, number>>(firebaseUser?.uid, 'quizScores')) || {};
       const profile = firebaseUser?.uid ? await getQuizProfile(firebaseUser.uid) : null;
       const bestScores = profile?.bestScores || {};
+      // Mapping statique des fichiers d'exercices (évite require dynamique non supporté par Metro)
+      const exercicesFiles: { [key: string]: any[] | { quiz: any[] } } = {
+        '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
+        '2': require('../../data/exercices_par_chapitre/chapitre_2_exercices.json'),
+        '3': require('../../data/exercices_par_chapitre/chapitre_3_exercices.json'),
+        '4': require('../../data/exercices_par_chapitre/chapitre_4_exercices.json'),
+        '5': require('../../data/exercices_par_chapitre/chapitre_5_exercices.json'),
+        '6': require('../../data/exercices_par_chapitre/chapitre_6_exercices.json'),
+        '7': require('../../data/exercices_par_chapitre/chapitre_7_exercices.json'),
+        '8': require('../../data/exercices_par_chapitre/chapitre_8_exercices.json'),
+        '9': require('../../data/exercices_par_chapitre/chapitre_9_execrcices.json'),
+        '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
+        '11': require('../../data/exercices_par_chapitre/chapitre_11_exercices.json'),
+        '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
+      };
       // Lister tous les chapitres qui ont des quiz
       const allChapters = Object.entries(chaptersData).flatMap(([_, partie]: any) =>
         partie.chapitres.map((ch: any) => {
           const numKey = String(parseInt(ch.image, 10));
-          try {
-            const data = require(`../../data/exercices_par_chapitre/chapitre_${numKey}_exercices.json`);
-            const hasQuiz = Array.isArray(data)
-              ? data.length > 0
-              : (data && typeof data === 'object' && 'quiz' in data && Array.isArray((data as any).quiz) && (data as any).quiz.length > 0);
-            return hasQuiz ? numKey : null;
-          } catch {
-            return null;
-          }
+          const data = exercicesFiles[numKey];
+          const hasQuiz = Array.isArray(data)
+            ? data.length > 0
+            : (data && typeof data === 'object' && 'quiz' in data && Array.isArray((data as any).quiz) && (data as any).quiz.length > 0);
+          return hasQuiz ? numKey : null;
         })
       ).filter((k: string | null): k is string => !!k);
       if (allChapters.length === 0) return false;
