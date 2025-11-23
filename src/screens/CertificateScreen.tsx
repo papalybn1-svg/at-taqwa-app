@@ -72,7 +72,7 @@ const CertificateContent = ({
             resizeMode="contain"
           />
         </View>
-        <Text style={[styles.certificateTitle, { fontSize: titleSize, marginBottom: isForCapture ? 8 : 6 }]}>
+        <Text allowFontScaling={false} style={[styles.certificateTitle, { fontSize: titleSize, marginBottom: isForCapture ? 8 : 6 }]}>
           ATTESTATION DE COMPLÉTION
         </Text>
         <View style={[styles.decorativeLine, { width: isForCapture ? 180 : 130, height: isForCapture ? 2.5 : 2 }]} />
@@ -85,31 +85,31 @@ const CertificateContent = ({
           <MaterialCommunityIcons name="trophy" size={trophySize} color={colors.secondary} />
         </View>
         
-        <Text style={[styles.certificateText, { fontSize: textSize, marginBottom: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
+        <Text allowFontScaling={false} style={[styles.certificateText, { fontSize: textSize, marginBottom: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
           Nous certifions que
         </Text>
         
-        <Text style={[styles.userName, { fontSize: userNameSize, marginVertical: isForCapture ? 10 : 8 }]}>
+        <Text allowFontScaling={false} style={[styles.userName, { fontSize: userNameSize, marginVertical: isForCapture ? 10 : 8 }]}>
           {userName}
         </Text>
         
-        <Text style={[styles.certificateText, { fontSize: textSize, marginBottom: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
+        <Text allowFontScaling={false} style={[styles.certificateText, { fontSize: textSize, marginBottom: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
           a complété avec succès tous les exercices du livre
         </Text>
         
-        <Text style={[styles.bookTitle, { fontSize: bookTitleSize, marginVertical: isForCapture ? 8 : 6 }]}>
+        <Text allowFontScaling={false} style={[styles.bookTitle, { fontSize: bookTitleSize, marginVertical: isForCapture ? 8 : 6 }]}>
           "Les réparations de la prière en islam"
         </Text>
         
-        <Text style={[styles.certificateText, { fontSize: textSize, marginBottom: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
+        <Text allowFontScaling={false} style={[styles.certificateText, { fontSize: textSize, marginBottom: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
           avec une moyenne de
         </Text>
         
-        <Text style={[styles.score, { fontSize: scoreSize, marginVertical: isForCapture ? 10 : 8 }]}>
+        <Text allowFontScaling={false} style={[styles.score, { fontSize: scoreSize, marginVertical: isForCapture ? 10 : 8 }]}>
           {averageScore}%
         </Text>
         
-        <Text style={[styles.certificateText, { fontSize: textSize, marginTop: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
+        <Text allowFontScaling={false} style={[styles.certificateText, { fontSize: textSize, marginTop: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
           démontrant une compréhension approfondie des concepts enseignés.
         </Text>
       </View>
@@ -118,12 +118,12 @@ const CertificateContent = ({
       <View style={[styles.certificateFooter, { paddingTop: isForCapture ? 15 : 12, paddingBottom: isForCapture ? 15 : 12 }]}>
         {/* Date et signature en bas */}
         <View style={[styles.footerBottom, { paddingHorizontal: isForCapture ? 20 : 15 }]}>
-          <Text style={[styles.dateValue, { fontSize: dateSize }]}>
+          <Text allowFontScaling={false} style={[styles.dateValue, { fontSize: dateSize }]}>
             {dateStr}
           </Text>
           <View style={styles.signatureContainer}>
-            <Text style={[styles.signatureLabel, { fontSize: dateSize }]}>
-              At-Taqwa
+            <Text allowFontScaling={false} style={[styles.signatureLabel, { fontSize: dateSize }]}>
+              Aly Anta Sow
             </Text>
           </View>
         </View>

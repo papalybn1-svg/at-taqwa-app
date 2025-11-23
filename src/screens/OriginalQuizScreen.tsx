@@ -945,7 +945,7 @@ export default function OriginalQuizScreen() {
                 setLockedQuizInfo({ key: nextQuizKey, score: currentScore });
                 setShowLockModal(true);
               }}>
-                <Text style={styles.restartButtonText}>Quiz suivant (verrouillé)</Text>
+                <Text style={styles.restartButtonText}>Quiz suivant</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
