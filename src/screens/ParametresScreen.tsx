@@ -7,7 +7,8 @@ import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, Vie
 import * as Linking from 'expo-linking';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
-import { auth, db } from './firebaseConfig';
+import { auth, db, storage } from './firebaseConfig';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { AuthContext } from './LoginScreen';
 
 export default function ParametresScreen() {
@@ -32,14 +33,17 @@ export default function ParametresScreen() {
         throw new Error('Utilisateur non connecté');
       }
 
-      console.log('📤 Début traitement image...');
-      console.log('🔗 URI image:', uri);
-      
-      // Pour l'instant, on utilise l'URI local comme URL
-      // En production, cela sera remplacé par Firebase Storage
-      const imageURL = uri;
-      
-      console.log('🔗 URL finale:', imageURL);
+      console.log('📤 Début upload Storage...');
+      // Convertir l'URI locale en blob
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      // Chemin dans Firebase Storage
+      const fileRef = ref(storage, `profiles/${firebaseUser.uid}.jpg`);
+      // Envoyer dans Storage
+      await uploadBytes(fileRef, blob);
+      // Récupérer l'URL de téléchargement
+      const imageURL = await getDownloadURL(fileRef);
+      console.log('🔗 URL Storage:', imageURL);
       
       // Mettre à jour l'état local
       setEditPhoto(imageURL);

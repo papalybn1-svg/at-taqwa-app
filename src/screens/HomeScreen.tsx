@@ -564,18 +564,15 @@ export default function HomeScreen() {
             </Text>
           </View>
           <TouchableOpacity 
-            onPress={handleNotificationPress} 
-            style={styles.notificationButton}
-            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Paramètres' as never)}
+            style={styles.avatarButton}
+            activeOpacity={0.8}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialCommunityIcons name="bell-outline" size={24} color="#174C3C" />
-            {newNotificationsCount > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>
-                  {newNotificationsCount > 99 ? '99+' : newNotificationsCount.toString()}
-                </Text>
-              </View>
+            {user?.photoURL ? (
+              <Image source={{ uri: user.photoURL }} style={styles.avatarSmall} />
+            ) : (
+              <MaterialCommunityIcons name="account-circle" size={28} color="#174C3C" />
             )}
           </TouchableOpacity>
       </View>
@@ -793,6 +790,22 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     fontSize: responsiveStyle.fontSize.base,
     color: colors.gray,
     marginTop: responsiveStyle.spacing.xs,
+  },
+  avatarButton: {
+    padding: 2,
+    borderRadius: 20,
+    backgroundColor: '#FFF',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  avatarSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EEE',
   },
   notificationButton: {
     padding: 8,
