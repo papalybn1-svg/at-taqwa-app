@@ -256,6 +256,43 @@ function PayDunyaDeepLinkHandler() {
               console.error('Erreur verify-email via deep link:', e);
             }
           }
+        } else if (parsed?.scheme === 'https' && parsed?.hostname === 'attaqwa-confidentialite.vercel.app') {
+          // Ouvrir directement depuis le lien HTTPS du domaine (Universal/App Links)
+          const mode = parsed.queryParams?.mode as string | undefined;
+          const oob = parsed.queryParams?.oobCode as string | undefined;
+          if (mode === 'verifyEmail' && oob) {
+            try {
+              console.log('📧 HTTPS link: applyActionCode avec oobCode');
+              await applyActionCode(auth, oob);
+              await auth.currentUser?.reload();
+              if (auth.currentUser?.emailVerified && auth.currentUser) {
+                try {
+                  const ref = doc(db, 'users', auth.currentUser.uid);
+                  const snap = await getDoc(ref);
+                  if (!snap.exists()) {
+                    await setDoc(ref, {
+                      email: auth.currentUser.email,
+                      role: 'user',
+                      emailVerified: true,
+                      createdAt: new Date(),
+                      displayName: auth.currentUser.displayName || '',
+                    });
+                  } else if (!(snap.data() as any)?.emailVerified) {
+                    await setDoc(ref, { ...(snap.data() as any), emailVerified: true });
+                  }
+                  const role = (snap.data() as any)?.role || 'user';
+                  setUser?.({ ...(auth.currentUser as any), role });
+                } catch {
+                  setUser?.({ ...(auth.currentUser as any), role: 'user' });
+                }
+                Alert.alert('E‑mail vérifié', 'Votre adresse e‑mail est confirmée.', [{ text: 'OK' }]);
+              } else {
+                Alert.alert('Vérification en cours', 'Votre email n’est pas encore confirmé. Réessayez dans quelques instants.');
+              }
+            } catch (e) {
+              console.error('Erreur verify-email via HTTPS link:', e);
+            }
+          }
         }
       } catch (error) {
         console.error('❌ Erreur traitement deep link:', error);
@@ -376,7 +413,12 @@ export default function App() {
               }}
             >
               {!user ? (
-                <Stack.Screen name="Login" component={LoginScreen} />
+                // Si pas de user dans useAuth mais session Firebase non vérifiée => afficher VerifyEmail
+                auth.currentUser && auth.currentUser.emailVerified === false ? (
+                  <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+                ) : (
+                  <Stack.Screen name="Login" component={LoginScreen} />
+                )
               ) : !user.emailVerified ? (
                 <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
               ) : user.role === 'admin' ? (

@@ -17,9 +17,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
 
-      "buildNumber": "2.1.2",
+      "buildNumber": "2.1.3",
       
       "icon": "./assets/LOGO_AT_TAQWA.png",
+      "associatedDomains": ["applinks:attaqwa-confidentialite.vercel.app"],
       "infoPlist": {
         "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
@@ -35,6 +36,20 @@
         "foregroundImage": "./assets/logo_fond_transparent.png",
         "backgroundColor": "#2E8B57"
       },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "attaqwa-confidentialite.vercel.app",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "edgeToEdgeEnabled": false,
       "enableHermes": true,
       "softwareKeyboardLayoutMode": "resize",
