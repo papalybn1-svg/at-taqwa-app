@@ -2,11 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Image, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-<<<<<<< HEAD
 import ViewShot, { captureRef } from 'react-native-view-shot';
-=======
-import ViewShot, { captureRef } from 'react-native-view-shot';
->>>>>>> merge/quizzes-bb7c5a3
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
 import { read as readUserStorage } from '../utils/userStorage';
