@@ -1,4 +1,5 @@
 import { NavigationContainer } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Linking from 'expo-linking';
 import { AppState } from 'react-native';
@@ -341,21 +342,43 @@ function PayDunyaDeepLinkHandler() {
 
 export default function App() {
   const [splashStep, setSplashStep] = useState(0);
+  const [introReady, setIntroReady] = useState(false);
   const { user, loading, setUser } = useAuth();
   
+  // Décider si on affiche l'intro (uniquement au tout premier lancement)
   useEffect(() => {
-    // Séquence splash par défaut à chaque ouverture
-    setSplashStep(0);
+    (async () => {
+      try {
+        const seen = await AsyncStorage.getItem('intro:splashSeen');
+        if (seen) {
+          // Déjà vu → passer directement à l'app
+          setSplashStep(2);
+        } else {
+          setSplashStep(0);
+        }
+      } catch {
+        setSplashStep(0);
+      } finally {
+        setIntroReady(true);
+      }
+    })();
   }, []);
 
   useEffect(() => {
     if (splashStep === 0) {
-      const timer = setTimeout(() => setSplashStep(1), 3500);
+      const timer = setTimeout(() => setSplashStep(1), 1200); // durée réduite
       return () => clearTimeout(timer);
     }
     if (splashStep === 1) {
-      const timer = setTimeout(() => setSplashStep(2), 4000);
+      const timer = setTimeout(() => setSplashStep(2), 1200); // durée réduite
       return () => clearTimeout(timer);
+    }
+  }, [splashStep]);
+
+  // Marquer l'intro comme vue dès qu'on entre dans l'app
+  useEffect(() => {
+    if (splashStep === 2) {
+      AsyncStorage.setItem('intro:splashSeen', '1').catch(() => {});
     }
   }, [splashStep]);
 
@@ -368,6 +391,10 @@ export default function App() {
     }
   }, [splashStep]);
 
+  if (!introReady) {
+    // Petit écran vide pour éviter le flash pendant la décision AsyncStorage
+    return <View style={{ flex: 1, backgroundColor: '#F3F5F7' }} />;
+  }
   if (splashStep === 0) {
     console.log('📱 Affichage SplashLogo (step 0)');
     return <SplashLogo />;

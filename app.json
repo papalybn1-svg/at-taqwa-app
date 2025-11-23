@@ -8,11 +8,6 @@
     "icon": "./assets/LOGO_AT_TAQWA.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/LOGO_AT_TAQWA.png",
-      "backgroundColor": "#2E8B57",
-      "resizeMode": "contain"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
