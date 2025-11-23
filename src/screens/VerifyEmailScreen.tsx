@@ -175,7 +175,7 @@ export default function VerifyEmailScreen({ navigation }: any) {
           onPress={handleResendEmail}
           disabled={loading}
         >
-          <MaterialCommunityIcons name="email-send" size={20} color="white" />
+          <MaterialCommunityIcons name="email-outline" size={20} color="white" />
           <Text style={styles.buttonText}>
             {loading ? 'Envoi...' : 'Renvoyer l\'email'}
           </Text>

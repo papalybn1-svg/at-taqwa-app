@@ -584,7 +584,6 @@ export default function HomeScreen() {
           <Image 
             source={require('../../assets/femme-transformer.png')} 
             style={styles.bannerImage}
-            pointerEvents="none"
             defaultSource={require('../../assets/femme-transformer.png')}
           />
       </View>

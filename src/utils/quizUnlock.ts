@@ -56,7 +56,7 @@ export const getQuizUnlockStatus = (
   
   return {
     isUnlocked: false,
-    requiredQuiz,
+    requiredQuiz: requiredQuiz || undefined,
     requiredScore,
     currentScore,
     progress

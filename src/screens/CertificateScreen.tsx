@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Image, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import ViewShot from 'react-native-view-shot';
+import ViewShot, { captureRef } from 'react-native-view-shot';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
 import { read as readUserStorage } from '../utils/userStorage';
@@ -173,7 +173,7 @@ export default function CertificateScreen() {
 
     try {
       // Récupérer tous les scores des quiz
-      const scores = await readUserStorage<Record<string, number>>(user.uid, 'quizScores');
+      const scores = (await readUserStorage<Record<string, number>>(user.uid, 'quizScores')) || {};
       const profile = await getQuizProfile(user.uid);
       const bestScores = profile.bestScores || {};
 
@@ -197,7 +197,9 @@ export default function CertificateScreen() {
       let latestCompletionDate: Date | null = null;
 
       for (const chapterKey of allChapters) {
-        const score = scores[chapterKey] || bestScores[chapterKey];
+        const score =
+          (scores as Record<string, number>)[chapterKey] ??
+          (bestScores as Record<string, number>)[chapterKey];
         if (score === undefined || score < 100) {
           allCompleted = false;
         } else {
@@ -242,11 +244,11 @@ export default function CertificateScreen() {
       // Capturer la vue visible exactement comme elle apparaît
       let uri: string;
       try {
-        uri = await certificateRef.current.capture({
+        uri = await captureRef(certificateRef, {
           format: 'png',
           quality: 1.0,
           result: 'tmpfile',
-        });
+        } as any);
       } catch (captureError) {
         console.error('❌ Erreur lors de la capture:', captureError);
         throw new Error(`Erreur de capture: ${captureError instanceof Error ? captureError.message : 'Erreur inconnue'}`);
