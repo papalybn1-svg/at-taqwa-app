@@ -7,6 +7,7 @@ import React, { useContext, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import chaptersData from '../../data/chapitres.json';
 import { getQuizProfile } from '../utils/quizSession';
 import { read as readUserStorage } from '../utils/userStorage';
@@ -104,13 +105,26 @@ export default function ParametresScreen() {
       }
 
       console.log('📤 Préparation image (mode sans Storage)...');
-      // Assurer un base64 fiable
+      // Assurer un base64 fiable, compressé et redimensionné pour éviter les crashs mémoire
       let b64 = base64Data || null;
-      if (!b64) {
-        b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+      let finalMime = 'image/jpeg';
+      try {
+        const manipulated = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 512, height: 512 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        b64 = manipulated.base64 || b64;
+        finalMime = 'image/jpeg';
+      } catch (manipErr) {
+        console.warn('⚠️ Échec de la manipulation d’image, fallback lecture brute:', manipErr);
+        if (!b64) {
+          b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+          finalMime = mimeType || 'image/jpeg';
+        }
       }
       if (!b64) throw new Error('Conversion base64 échouée');
-      const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${b64}`;
+      const dataUrl = `data:${finalMime};base64,${b64}`;
 
       // Mettre à jour localement et dans le contexte
       setEditPhoto(dataUrl);
