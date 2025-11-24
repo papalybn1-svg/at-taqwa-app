@@ -73,6 +73,8 @@ export default function QuizChapterSelectScreen() {
   
   // Entitlements globaux
   const { entitlements: userEntitlements, refreshEntitlements } = useEntitlements();
+  // Entitlements frais lus côté backend pour éviter tout état périmé
+  const [freshEntitlements, setFreshEntitlements] = useState<{ part2: boolean; part3: boolean } | null>(null);
 
   // Charger les scores des quiz depuis le stockage local
   useEffect(() => {
@@ -85,7 +87,15 @@ export default function QuizChapterSelectScreen() {
       console.log('🔄 QuizChapterSelectScreen: rechargement des scores...');
       loadQuizScores();
       // Rafraîchir les droits pour éviter un état périmé après paiement
-      refreshEntitlements(true).catch(() => {});
+      (async () => {
+        try {
+          await refreshEntitlements(true);
+        } catch {}
+        try {
+          const latest = await checkEntitlements();
+          setFreshEntitlements(latest);
+        } catch {}
+      })();
     }, [user?.uid])
   );
 
@@ -214,10 +224,11 @@ export default function QuizChapterSelectScreen() {
   // Vérifier si un quiz est accessible (uniquement vérification premium)
   const isQuizAccessible = (partieKey?: string) => {
     // Vérifier l'accès à la partie si c'est une partie payante
-    if (partieKey === 'deuxieme_partie' && !userEntitlements.part2) {
+    const source = freshEntitlements ?? userEntitlements;
+    if (partieKey === 'deuxieme_partie' && !source.part2) {
       return false; // Pas d'accès à la partie 2
     }
-    if (partieKey === 'troisieme_partie' && !userEntitlements.part3) {
+    if (partieKey === 'troisieme_partie' && !source.part3) {
       return false; // Pas d'accès à la partie 3
     }
     
@@ -242,11 +253,16 @@ export default function QuizChapterSelectScreen() {
   // Gérer le clic sur une partie
   const handlePartPress = async (partie: string) => {
     try { await refreshEntitlements(true); } catch {}
+    try {
+      const latest = await checkEntitlements();
+      setFreshEntitlements(latest);
+    } catch {}
     // Vérifier si c'est une partie premium et si l'utilisateur y a accès
     const isPremiumPart = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
+    const source = freshEntitlements ?? userEntitlements;
     const hasAccessToPart = partie === 'premiere_partie' || 
-      (partie === 'deuxieme_partie' && userEntitlements.part2) ||
-      (partie === 'troisieme_partie' && userEntitlements.part3);
+      (partie === 'deuxieme_partie' && source.part2) ||
+      (partie === 'troisieme_partie' && source.part3);
     
     if (!hasAccessToPart && isPremiumPart) {
       // Afficher un modal pour encourager l'achat
@@ -270,6 +286,10 @@ export default function QuizChapterSelectScreen() {
   // Gérer le clic sur un chapitre
   const handleChapterPress = async (chapter: any) => {
     try { await refreshEntitlements(true); } catch {}
+    try {
+      const latest = await checkEntitlements();
+      setFreshEntitlements(latest);
+    } catch {}
     // Vérifier uniquement l'accès premium
     if (!isQuizAccessible(chapter.partieKey)) {
       // Verrouillage par accès payant
