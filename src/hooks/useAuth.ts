@@ -1,5 +1,5 @@
 import { User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { auth, db } from '../screens/firebaseConfig';
 import {
@@ -88,35 +88,62 @@ export function useAuth() {
       try {
         if (firebaseUser) {
           setLoading(true);
-          
-          // Vérifier si l'utilisateur existe en base
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          const userData = userDoc.data();
-          
-          // Si l'email n'est pas vérifié, on conserve la session pour permettre la redirection automatique
-          // L'interface se chargera d'afficher l'écran de vérification (App.tsx) au lieu de déconnecter.
-          
-          // Récupérer le rôle depuis Firestore
-          const freshRole = await fetchUserRoleFromFirestore(firebaseUser);
-          const freshUserData = { ...firebaseUser, role: freshRole };
-          console.log('🔥 Rôle Firestore:', freshRole, 'pour', firebaseUser.email, 'UID:', firebaseUser.uid);
+          try {
+            // Recharger pour récupérer emailVerified frais
+            await firebaseUser.reload();
+          } catch {}
+          const refreshedUser = auth.currentUser || firebaseUser;
+          if (!refreshedUser?.emailVerified) {
+            // Email non vérifié → ne pas exposer de user actif
+            if (isMounted) {
+              setUser(null);
+              setLoading(false);
+              if (initializing) setInitializing(false);
+            }
+            return;
+          }
+          // Ici: email vérifié → s'assurer que Firestore reflète l'état
+          try {
+            const userRef = doc(db, 'users', refreshedUser.uid);
+            const snap = await getDoc(userRef);
+            if (!snap.exists()) {
+              await setDoc(userRef, {
+                email: refreshedUser.email,
+                role: 'user',
+                emailVerified: true,
+                createdAt: new Date(),
+                displayName: refreshedUser.displayName || '',
+              });
+            } else if (!(snap.data() as any)?.emailVerified) {
+              await updateDoc(userRef, { emailVerified: true });
+            }
+          } catch (e) {
+            console.log('ℹ️ Sync Firestore users skipped/failed:', e);
+          }
+          // Rôle Firestore
+          const freshRole = await fetchUserRoleFromFirestore(refreshedUser);
+          // Récupérer d'éventuelles méta‑données supplémentaires depuis Firestore (ex: photoURL inline)
+          let photoURLOverride: string | undefined;
+          try {
+            const profileSnap = await getDoc(doc(db, 'users', refreshedUser.uid));
+            photoURLOverride = (profileSnap.data() as any)?.photoURL || undefined;
+          } catch {}
+          const freshUserData = { ...(refreshedUser as any), role: freshRole, photoURL: photoURLOverride || refreshedUser.photoURL };
+          console.log('🔥 Rôle Firestore:', freshRole, 'pour', refreshedUser.email, 'UID:', refreshedUser.uid);
 
           if (isMounted) {
             // Nettoyer les données de l'ancien utilisateur si différent
-            if (user && user.uid !== firebaseUser.uid) {
+            if (user && user.uid !== refreshedUser.uid) {
               console.log('🔄 Changement d\'utilisateur détecté, nettoyage des données...');
               console.log('👤 Ancien utilisateur:', user.email, 'UID:', user.uid);
-              console.log('👤 Nouvel utilisateur:', firebaseUser.email, 'UID:', firebaseUser.uid);
+              console.log('👤 Nouvel utilisateur:', refreshedUser.email, 'UID:', refreshedUser.uid);
               await cleanupUserData(user.uid);
             }
-            
             setUser(freshUserData);
             setLoading(false);
             if (initializing) setInitializing(false);
-            
-            // Sauvegarder pour fallback
             await saveUserDataLocally(freshUserData);
-            console.log('✅ Utilisateur connecté avec persistance:', firebaseUser.email);
+            console.log('✅ Utilisateur connecté (email vérifié):', refreshedUser.email);
           }
         } else {
           // En production, si Firebase dit déconnecté, l'utilisateur est vraiment déconnecté

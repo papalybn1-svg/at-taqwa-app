@@ -122,16 +122,16 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     let cancelled = false;
     const verify = async () => {
       setAccessStatus('pending');
-      const allChapters = getAllChapters();
+    const allChapters = getAllChapters();
       const currentChapter = allChapters.find((ch) => ch.image === chapter?.image);
       if (!currentChapter) {
         if (!cancelled) setAccessStatus('granted');
         return;
       }
-      if (currentChapter.partieKey === 'premiere_partie') {
+    if (currentChapter.partieKey === 'premiere_partie') {
         if (!cancelled) setAccessStatus('granted');
         return;
-      }
+    }
       try { await refreshEntitlements(true); } catch {}
       let latest = entitlements;
       try { latest = await fetchEntitlements(); } catch {}
@@ -446,7 +446,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const handleQuizPress = () => {
     const quizKey = getCurrentChapterQuizKey();
     if (!quizKey) return;
-    
+
     // Ouvrir directement le quiz sans vérification de déblocage
     navigation.navigate('OriginalQuiz', { 
       exercicesKey: quizKey.toString(), 
@@ -981,10 +981,10 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             </View>
             
               <TouchableOpacity
-                onPress={handleQuizPress}
-                style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+              onPress={handleQuizPress}
+              style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
               </TouchableOpacity>
           </>
         ) : (
@@ -1019,10 +1019,10 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
             
             {currentSectionIndex === totalSections - 1 ? (
                 <TouchableOpacity
-                  onPress={handleQuizPress}
-                  style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                onPress={handleQuizPress}
+                style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
                 </TouchableOpacity>
             ) : (
               <TouchableOpacity

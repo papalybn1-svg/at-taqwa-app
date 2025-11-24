@@ -1,17 +1,18 @@
-import { NavigationContainer } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Linking from 'expo-linking';
-import { AppState } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
+import { applyActionCode } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { Alert, Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { EntitlementsProvider, useEntitlements } from './src/contexts/EntitlementsContext';
 import { useAuth } from './src/hooks/useAuth';
 import { usePaymentService } from './src/lib/paymentService';
-import { useEntitlements, EntitlementsProvider } from './src/contexts/EntitlementsContext';
 import AdminTabNavigator from './src/navigation/AdminTabNavigator';
 import TabNavigator from './src/navigation/TabNavigator';
 import ChapterScreen from './src/screens/ChapterScreen';
@@ -19,8 +20,6 @@ import LoginScreen, { AuthContext } from './src/screens/LoginScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import VerifyEmailScreen from './src/screens/VerifyEmailScreen';
 import { auth, db } from './src/screens/firebaseConfig';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { applyActionCode } from 'firebase/auth';
 
 type RootStackParamList = {
   Main: undefined;
@@ -39,6 +38,7 @@ type RootStackParamList = {
 
 const Stack = createStackNavigator<RootStackParamList>();
 const { height } = Dimensions.get('window');
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 function SplashLogo() {
   const [progress, setProgress] = React.useState(0);
@@ -257,6 +257,12 @@ function PayDunyaDeepLinkHandler() {
               console.error('Erreur verify-email via deep link:', e);
             }
           }
+        } else if (parsed?.hostname === 'reset-password') {
+          // Lien custom: attaqwa://reset-password?oobCode=...
+          const oob = parsed.queryParams?.oobCode as string | undefined;
+          if (oob && navigationRef.isReady()) {
+            navigationRef.navigate('ResetPassword', { oobCode: oob });
+          }
         } else if (parsed?.scheme === 'https' && parsed?.hostname === 'attaqwa-confidentialite.vercel.app') {
           // Ouvrir directement depuis le lien HTTPS du domaine (Universal/App Links)
           const mode = parsed.queryParams?.mode as string | undefined;
@@ -293,7 +299,19 @@ function PayDunyaDeepLinkHandler() {
             } catch (e) {
               console.error('Erreur verify-email via HTTPS link:', e);
             }
-          }
+          } else if (mode === 'resetPassword' && oob) {
+            // Rediriger vers l'écran ResetPassword avec le code
+            if (navigationRef.isReady()) {
+              navigationRef.navigate('ResetPassword', { oobCode: oob });
+            } else {
+              // Si la nav n'est pas prête, réessayer légèrement plus tard
+              setTimeout(() => {
+                if (navigationRef.isReady()) {
+                  navigationRef.navigate('ResetPassword', { oobCode: oob });
+                }
+              }, 300);
+            }
+          } 
         }
       } catch (error) {
         console.error('❌ Erreur traitement deep link:', error);
@@ -432,7 +450,7 @@ export default function App() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
             <StatusBar barStyle="dark-content" backgroundColor="#F3F5F7" />
-            <NavigationContainer>
+            <NavigationContainer ref={navigationRef}>
               <Stack.Navigator 
               screenOptions={{ 
                 headerShown: false,

@@ -57,7 +57,13 @@ export default function VerifyEmailScreen({ navigation }: any) {
 
     setLoading(true);
     try {
-      await sendEmailVerification(auth.currentUser);
+      const actionCodeSettings = {
+        url: 'https://attaqwa-confidentialite.vercel.app/index.html',
+        handleCodeInApp: false,
+        iOS: { bundleId: 'com.attaqwa.app' },
+        android: { packageName: 'com.attaqwa.app', installApp: false, minimumVersion: '1' },
+      } as any;
+      await sendEmailVerification(auth.currentUser, actionCodeSettings);
       Alert.alert(
         'Email envoyé !',
         'Un nouvel email de vérification a été envoyé. Vérifiez votre boîte de réception et le dossier spam.',
@@ -82,12 +88,14 @@ export default function VerifyEmailScreen({ navigation }: any) {
       await auth.currentUser.reload();
       const isVerified = !!auth.currentUser.emailVerified;
       if (isVerified) {
-        // Optionnel: synchroniser un champ informatif côté Firestore
+        // Créer/mettre à jour le document Firestore uniquement après vérification réelle
         try {
-          await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-            emailVerified: true
-          });
-        } catch {}
+          const userRef = doc(db, 'users', auth.currentUser.uid);
+          // Tentative d'update; si le doc n'existe pas, l'update échouera et on pourra setDoc côté App (deep link)
+          await updateDoc(userRef, { emailVerified: true });
+        } catch {
+          // Si le doc n'existe pas, on le créera au prochain passage (useAuth/App) pour éviter des erreurs de droits
+        }
       }
       
       Alert.alert(

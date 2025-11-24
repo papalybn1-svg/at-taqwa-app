@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, getDoc, doc } from 'firebase/firestore';
 import React from 'react';
 import {
     Alert,
@@ -23,6 +23,7 @@ import { useEntitlements } from '../contexts/EntitlementsContext';
 import { AuthContext } from './LoginScreen';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
 import { usePaymentService } from '../lib/paymentService';
+import { Image as ExpoImage } from 'expo-image';
 
 // Fonction utilitaire pour obtenir l'image d'un chapitre avec fallback
 const getChapterImage = (imageKey: string) => {
@@ -155,6 +156,7 @@ export default function HomeScreen() {
   
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [newNotificationsCount, setNewNotificationsCount] = React.useState(0);
+  const [avatarUri, setAvatarUri] = React.useState<string | undefined>(undefined);
 
   const [previewModalVisible, setPreviewModalVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter | null>(null);
@@ -198,6 +200,26 @@ export default function HomeScreen() {
 
     testConnection();
   }, []);
+
+  // Charger l'avatar depuis Firestore si absent dans le contexte
+  React.useEffect(() => {
+    const loadAvatar = async () => {
+      try {
+        if (!user?.uid) return;
+        // Préférer la valeur dans le contexte si disponible
+        if (user.photoURL) {
+          setAvatarUri(user.photoURL);
+          return;
+        }
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        const url = (snap.data() as any)?.photoURL as string | undefined;
+        if (url) setAvatarUri(url);
+      } catch {
+        // silencieux
+      }
+    };
+    loadAvatar();
+  }, [user?.uid, user?.photoURL]);
 
   // Données de fallback pour le mode hors ligne
   const fallbackNotifications: Notification[] = [
@@ -569,8 +591,8 @@ export default function HomeScreen() {
             activeOpacity={0.8}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            {user?.photoURL ? (
-              <Image source={{ uri: user.photoURL }} style={styles.avatarSmall} />
+            {avatarUri ? (
+              <ExpoImage source={{ uri: avatarUri }} style={styles.avatarSmall} contentFit="cover" />
             ) : (
               <MaterialCommunityIcons name="account-circle" size={28} color="#174C3C" />
             )}

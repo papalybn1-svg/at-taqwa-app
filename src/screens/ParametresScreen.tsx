@@ -1,9 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import React, { useContext, useState } from 'react';
-import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import * as FileSystem from 'expo-file-system';
 import chaptersData from '../../data/chapitres.json';
 import { getQuizProfile } from '../utils/quizSession';
 import { read as readUserStorage } from '../utils/userStorage';
@@ -11,12 +14,13 @@ import * as Linking from 'expo-linking';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
 import { auth, db, storage } from './firebaseConfig';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, uploadString, getDownloadURL } from 'firebase/storage';
 import { AuthContext } from './LoginScreen';
 
 export default function ParametresScreen() {
   const { user: contextUser, setUser } = useContext(AuthContext);
   const { logout } = useAuth();
+  const navigation = useNavigation<any>();
   
   // Utiliser l'utilisateur Firebase Auth directement
   const firebaseUser = auth.currentUser;
@@ -79,19 +83,19 @@ export default function ParametresScreen() {
         'Pour obtenir votre attestation, complétez d’abord tous les quiz à 100%.\n\nRendez‑vous dans la section Quiz.',
         [
           { text: 'Annuler', style: 'cancel' },
-          { text: 'Aller au Quiz', onPress: () => require('@react-navigation/native').useNavigation().navigate('Accueil', { screen: 'QuizChapterSelect' }) }
+          { text: 'Aller au Quiz', onPress: () => navigation.navigate('Accueil', { screen: 'QuizChapterSelect' }) }
         ]
       );
       return;
     }
     // Naviguer vers le CertificateScreen dans le stack Accueil
-    require('@react-navigation/native').useNavigation().navigate('Accueil', { screen: 'Certificate' });
+    navigation.navigate('Accueil', { screen: 'Certificate' });
   };
 
 
 
 
-  const uploadImage = async (uri: string) => {
+  const uploadImage = async (uri: string, mimeType?: string, base64Data?: string | null) => {
     setLoading(true);
     try {
       // Vérifier que l'utilisateur est connecté
@@ -99,42 +103,32 @@ export default function ParametresScreen() {
         throw new Error('Utilisateur non connecté');
       }
 
-      console.log('📤 Début upload Storage...');
-      // Convertir l'URI locale en blob
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      // Chemin dans Firebase Storage
-      const fileRef = ref(storage, `profiles/${firebaseUser.uid}.jpg`);
-      // Envoyer dans Storage
-      await uploadBytes(fileRef, blob);
-      // Récupérer l'URL de téléchargement
-      const imageURL = await getDownloadURL(fileRef);
-      console.log('🔗 URL Storage:', imageURL);
-      
-      // Mettre à jour l'état local
-      setEditPhoto(imageURL);
-      
-      // Utilisateur Firebase réel - mettre à jour Firebase Auth
-      await updateProfile(firebaseUser, { photoURL: imageURL });
-      
-      // Mettre à jour le contexte aussi
-      if (contextUser) {
-        const updatedContextUser = { ...contextUser, photoURL: imageURL };
-        setUser(updatedContextUser);
+      console.log('📤 Préparation image (mode sans Storage)...');
+      // Assurer un base64 fiable
+      let b64 = base64Data || null;
+      if (!b64) {
+        b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
       }
-      
-      // Mettre à jour Firestore aussi
+      if (!b64) throw new Error('Conversion base64 échouée');
+      const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${b64}`;
+
+      // Mettre à jour localement et dans le contexte
+      setEditPhoto(dataUrl);
+      if (contextUser) setUser({ ...contextUser, photoURL: dataUrl });
+
+      // Stocker dans Firestore uniquement (pas de Storage, pas d’Auth photoURL)
       await updateDoc(doc(db, 'users', firebaseUser.uid), { 
-        photoURL: imageURL,
-        updatedAt: new Date()
+        photoURL: dataUrl,
+        updatedAt: new Date(),
+        _photoStorage: 'inline'
       });
-      console.log('✅ Firebase Auth et Firestore mis à jour');
-      
-      console.log('✅ Profil mis à jour avec succès');
-      Alert.alert('Succès', 'Photo de profil mise à jour avec succès !');
-    } catch (e) {
+      console.log('✅ Photo de profil stockée en Data URL dans Firestore');
+      Alert.alert('Succès', 'Photo de profil mise à jour !');
+    } catch (e: any) {
       console.error('❌ Erreur upload image:', e);
-      let errorMessage = "Impossible de mettre à jour la photo. Veuillez réessayer.";
+      if (e && e.code) console.error('🔎 Code Storage:', e.code);
+      if (e && e.customData) console.error('🔎 Détails Storage:', e.customData);
+      let errorMessage = "Impossible de traiter la photo. Veuillez réessayer.";
       
       if (e instanceof Error) {
         if (e.message.includes('auth/network-request-failed')) {
@@ -145,7 +139,6 @@ export default function ParametresScreen() {
           errorMessage = "Erreur d'authentification. Veuillez vous reconnecter.";
         }
       }
-      
       Alert.alert('Erreur', errorMessage);
     }
     setLoading(false);
@@ -164,10 +157,12 @@ export default function ParametresScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        await uploadImage(result.assets[0].uri);
+        const asset = result.assets[0] as any;
+        await uploadImage(asset.uri, asset.mimeType || 'image/jpeg', asset.base64 || null);
       }
     } catch (error) {
       console.error('Erreur caméra:', error);
@@ -188,12 +183,14 @@ export default function ParametresScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-        quality: 0.8,
-        allowsMultipleSelection: false,
+      quality: 0.8,
+      allowsMultipleSelection: false,
+      base64: true,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-        await uploadImage(result.assets[0].uri);
+        const asset = result.assets[0] as any;
+        await uploadImage(asset.uri, asset.mimeType || 'image/jpeg', asset.base64 || null);
       }
     } catch (error) {
       console.error('Erreur sélection image:', error);
@@ -309,10 +306,10 @@ export default function ParametresScreen() {
       <View style={styles.profileContainer}>
         <TouchableOpacity onPress={() => setProfileModal(true)}>
           {contextUser?.photoURL ? (
-            <Image source={{ uri: contextUser.photoURL }} style={styles.avatar} />
+            <ExpoImage source={{ uri: contextUser.photoURL }} style={styles.avatar} contentFit="cover" />
           ) : (
             <View style={styles.avatarPlaceholder}>
-            <MaterialCommunityIcons name="account-circle" size={80} color={colors.primary} />
+              <MaterialCommunityIcons name="account-circle" size={80} color={colors.primary} />
             </View>
           )}
         </TouchableOpacity>
@@ -403,9 +400,10 @@ export default function ParametresScreen() {
             {/* Aperçu de la photo sélectionnée */}
             {(editPhoto || contextUser?.photoURL) && (
               <View style={styles.imagePreviewContainer}>
-                <Image 
+                <ExpoImage 
                   source={{ uri: editPhoto || contextUser?.photoURL || '' }} 
                   style={styles.imagePreview} 
+                  contentFit="cover"
                 />
                 <Text style={styles.imagePreviewText}>
                   {editPhoto ? 'Nouvelle photo' : 'Photo actuelle'}

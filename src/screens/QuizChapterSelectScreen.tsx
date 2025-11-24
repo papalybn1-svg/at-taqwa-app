@@ -448,26 +448,28 @@ export default function QuizChapterSelectScreen() {
                             source={imageMap[ch.image] || require('../../assets/1.png')} 
                             style={styles.quizImage} 
                           />
-                          <View
-                            style={[
-                              styles.quizStatusBadge,
-                              isAccessible ? styles.quizStatusUnlocked : styles.quizStatusPremium
-                            ]}
-                          >
-                            <MaterialCommunityIcons
-                              name={isAccessible ? 'check-circle' : 'crown'}
-                              size={12}
-                              color={isAccessible ? '#174C3C' : '#D4AF37'}
-                            />
-                            <Text
+                          {!isAccessible && (
+                            <View
                               style={[
-                                styles.quizStatusText,
-                                isAccessible ? styles.quizStatusTextUnlocked : styles.quizStatusTextPremium
+                                styles.quizStatusBadge,
+                                styles.quizStatusPremium
                               ]}
                             >
-                              {isAccessible ? 'DÉBLOQUÉ' : 'PREMIUM'}
-                            </Text>
-                          </View>
+                              <MaterialCommunityIcons
+                                name="crown"
+                                size={12}
+                                color="#D4AF37"
+                              />
+                              <Text
+                                style={[
+                                  styles.quizStatusText,
+                                  styles.quizStatusTextPremium
+                                ]}
+                              >
+                                PREMIUM
+                              </Text>
+                            </View>
+                          )}
                           {!isAccessible && (
                             <View style={styles.quizLockOverlay}>
                               <MaterialCommunityIcons name="lock" size={24} color="#BB9B4E" />

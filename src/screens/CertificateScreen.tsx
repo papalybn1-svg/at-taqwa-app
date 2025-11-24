@@ -3,11 +3,11 @@ import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Image, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
+import chaptersData from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
-import { read as readUserStorage } from '../utils/userStorage';
 import { getQuizProfile } from '../utils/quizSession';
-import chaptersData from '../../data/chapitres.json';
+import { read as readUserStorage } from '../utils/userStorage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 

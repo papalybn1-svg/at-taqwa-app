@@ -57,6 +57,12 @@ export default function LoginScreen({ navigation }: any) {
     setToast({ visible: true, message, type });
   };
 
+  const isValidEmailFormat = (value: string) => {
+    // Simple validation suffisante pour éviter les valeurs manifestement invalides
+    const re = /^\S+@\S+\.\S+$/;
+    return re.test(value);
+  };
+
   const evaluatePassword = (pwd: string) => {
     const hasMinLen = pwd.length >= 8;
     const hasUpper = /[A-Z]/.test(pwd);
@@ -116,25 +122,45 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   const handleAuth = async () => {
+    const trimmedEmail = (email || '').trim();
+    const safePassword = typeof password === 'string' ? password : '';
+
+    // Garde-fous : éviter tout appel Firebase avec valeurs undefined/vides
+    if (!trimmedEmail || !safePassword) {
+      setErrorMessage('Veuillez saisir un email et un mot de passe.');
+      return;
+    }
+    if (!isValidEmailFormat(trimmedEmail)) {
+      setErrorMessage('Adresse email invalide.');
+      return;
+    }
+
     setLoading(true);
     try {
       if (screen === 'register') {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCred.user, { displayName: `${prenom} ${nom}` });
+        if (!isPasswordValid) {
+          setErrorMessage('Le mot de passe est trop faible.');
+          setLoading(false);
+          return;
+        }
+        const userCred = await createUserWithEmailAndPassword(auth, trimmedEmail, safePassword);
+        try {
+          await updateProfile(userCred.user, { displayName: `${prenom} ${nom}`.trim() });
+        } catch (e) {
+          console.log('⚠️ Échec updateProfile (non bloquant):', e);
+        }
         
-        // Envoyer l'email de vérification
-        await sendEmailVerification(userCred.user);
+        // Envoyer l'email de vérification (avec URL d'action du site pour Universal Links)
+        const actionCodeSettings = {
+          url: 'https://attaqwa-confidentialite.vercel.app/index.html',
+          handleCodeInApp: false,
+          iOS: { bundleId: 'com.attaqwa.app' },
+          android: { packageName: 'com.attaqwa.app', installApp: false, minimumVersion: '1' },
+        } as any;
+        await sendEmailVerification(userCred.user, actionCodeSettings);
         console.log('📧 Email de vérification envoyé à:', userCred.user.email);
-        
-        // Créer le document utilisateur avec le rôle par défaut
-        // emailVerified sera mis à jour après vérification
-        await setDoc(doc(db, 'users', userCred.user.uid), {
-          email: userCred.user.email,
-          role: 'user',
-          emailVerified: false,
-          createdAt: new Date(),
-          displayName: `${prenom} ${nom}`,
-        });
+        // IMPORTANT: Ne PAS créer ici le document Firestore users
+        // On attend la vérification réelle côté Firebase avant de persister en base
 
         // Sauvegarder les données utilisateur localement pour Expo Go
         try {
@@ -149,50 +175,34 @@ export default function LoginScreen({ navigation }: any) {
           console.error('❌ Erreur sauvegarde locale:', error);
         }
 
-        showToast('Inscription réussie ! Vérifiez votre email pour activer votre compte.', 'success');
+        showToast('Email de vérification envoyé. Consultez votre boîte de réception.', 'success');
         console.log('✅ Inscription réussie pour:', userCred.user.email);
-        
-        // Afficher une alerte explicative
-        Alert.alert(
-          'Inscription réussie !',
-          'Un email de vérification a été envoyé à votre adresse. Veuillez vérifier votre boîte de réception et cliquer sur le lien pour activer votre compte.',
-          [
-            { 
-              text: 'Vérifier mon email', 
-              onPress: () => {
-                // Rediriger vers l'écran de vérification email (sans déconnecter)
-                navigation.navigate('VerifyEmail' as never);
-              }
-            }
-          ]
-        );
+        // Ne pas afficher d'alerte bloquante ici: laisser le deep link et App.tsx gérer la suite
       } else {
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
-        
-        // Vérifier si l'email est vérifié (seulement pour les nouveaux utilisateurs)
-        const userDocRef = doc(db, 'users', userCred.user.uid);
-        let userDoc = await getDoc(userDocRef);
-        let userData = userDoc.data();
-        
-        if (!userCred.user.emailVerified && !userData) {
-          showToast('Veuillez vérifier votre email. Nous vous redirigeons…', 'success');
+        const userCred = await signInWithEmailAndPassword(auth, trimmedEmail, safePassword);
+        // Recharger l'état Firebase pour obtenir emailVerified à jour
+        await userCred.user.reload();
+        const currentUser = auth.currentUser;
+        if (!currentUser?.emailVerified) {
+          showToast('Veuillez vérifier votre email avant de vous connecter.', 'error');
           setLoading(false);
           navigation.navigate('VerifyEmail' as never);
           return;
         }
-
-        if (!userData) {
-          // Si le document n'existe pas, on le crée automatiquement
+        // Ici emailVerified === true → s'assurer que le doc Firestore existe
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        let userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
           await setDoc(userDocRef, {
-            email: userCred.user.email,
+            email: currentUser.email,
             role: 'user',
-            emailVerified: userCred.user.emailVerified,
+            emailVerified: true,
             createdAt: new Date(),
-            displayName: userCred.user.displayName || '',
+            displayName: currentUser.displayName || '',
           });
           userDoc = await getDoc(userDocRef);
-          userData = userDoc.data();
         }
+        const userData = userDoc.data();
 
         // Vérifier si c'est un nouvel utilisateur
         const isNewUser = userCred.user.metadata.creationTime === userCred.user.metadata.lastSignInTime;
