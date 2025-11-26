@@ -34,6 +34,10 @@ export default function BooksScreen() {
   const route = useRoute<any>();
   const data = chaptersData as ChaptersData;
   const { user } = useAuth();
+  // Garde simple: éviter d'utiliser les entitlements avant que l'utilisateur ne soit chargé
+  if (!user) {
+    return null;
+  }
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
   const styles = createStyles(responsive, responsiveStyle);

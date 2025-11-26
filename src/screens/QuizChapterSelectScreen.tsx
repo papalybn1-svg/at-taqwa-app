@@ -61,6 +61,10 @@ export default function QuizChapterSelectScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
+  // Garde: ne pas utiliser entitlements avant user
+  if (!user) {
+    return null;
+  }
   const [quizScores, setQuizScores] = useState<{ [key: string]: number }>({});
   const [quizBestScores, setQuizBestScores] = useState<{ [key: string]: number }>({});
   const [quizPartialScores, setQuizPartialScores] = useState<{ [key: string]: number }>({});
@@ -1163,7 +1167,7 @@ const styles = StyleSheet.create({
   },
   quizStatusTextPremium: {
     color: '#D4AF37',
-  },
+   },
    quizLockOverlay: {
      position: 'absolute',
      top: 0,

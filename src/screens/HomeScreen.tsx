@@ -338,25 +338,25 @@ export default function HomeScreen() {
         ? latest.part2
         : latest.part3;
     if (isPremium && !hasAccess) {
-      const partieNumero = selectedChapter.partie === 'deuxieme_partie' ? '2' : '3';
-      Alert.alert(
-        'Contenu Premium',
-        `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { 
-            text: 'Voir les parties', 
-            onPress: () => {
-              closePreviewModal();
-              navigation.navigate('Books' as never);
+        const partieNumero = selectedChapter.partie === 'deuxieme_partie' ? '2' : '3';
+        Alert.alert(
+          'Contenu Premium',
+          `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
+          [
+            { text: 'Annuler', style: 'cancel' },
+            { 
+              text: 'Voir les parties', 
+              onPress: () => {
+                closePreviewModal();
+                navigation.navigate('Books' as never);
+              }
             }
-          }
-        ]
-      );
-      return;
-    }
-    closePreviewModal();
-    navigation.navigate('Chapter', { chapter: selectedChapter });
+          ]
+        );
+        return;
+      }
+      closePreviewModal();
+      navigation.navigate('Chapter', { chapter: selectedChapter });
   };
 
   const loadNotifications = React.useCallback(async () => {
@@ -709,7 +709,7 @@ export default function HomeScreen() {
                             <Text style={[styles.premiumText, unlocked ? { color: '#fff' } : {}]}>
                               {unlocked ? 'DÉBLOQUÉ' : 'PREMIUM'}
                             </Text>
-                          </View>
+                        </View>
                         );
                       })()}
                     </View>

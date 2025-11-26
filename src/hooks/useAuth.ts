@@ -3,9 +3,9 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { auth, db } from '../screens/firebaseConfig';
 import {
-    clearAuthPersistence,
-    getUserDataWithPersistence,
-    saveUserDataWithPersistence
+  clearAuthPersistence,
+  getUserDataWithPersistence,
+  saveUserDataWithPersistence
 } from '../utils/authPersistence';
 import { cleanupUserQuizSessions } from '../utils/quizSession';
 import { removeAllWithPrefix, remove as removeUserStorage } from '../utils/userStorage';
@@ -66,16 +66,14 @@ export function useAuth() {
     // Laisser Firebase Auth gérer la persistance automatiquement
     console.log('🚀 Initialisation Firebase Auth avec persistance...');
 
-    // Timeout de sécurité pour forcer la fin du chargement après 15 secondes
+    // Timeout de sécurité: termine le "loading" si Firebase tarde, sans forcer user=null
     const timeoutId = setTimeout(() => {
       console.log('⏰ Timeout de sécurité - Forcer la fin du chargement');
       if (isMounted) {
         setLoading(false);
         setInitializing(false);
-        // Si aucun utilisateur n'est chargé après 15s, on force null pour aller à LoginScreen
-        setUser(null);
       }
-    }, 15000);
+    }, 8000);
 
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       console.log('🔄 Auth state changed:', firebaseUser ? 'User connected' : 'User disconnected');
@@ -89,8 +87,10 @@ export function useAuth() {
         if (firebaseUser) {
           setLoading(true);
           try {
-            // Recharger pour récupérer emailVerified frais
-            await firebaseUser.reload();
+            // Recharger depuis le réseau uniquement si l'email n'est pas encore vérifié
+            if (!firebaseUser.emailVerified) {
+              await firebaseUser.reload();
+            }
           } catch {}
           const refreshedUser = auth.currentUser || firebaseUser;
           if (!refreshedUser?.emailVerified) {

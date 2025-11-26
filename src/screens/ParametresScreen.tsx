@@ -1,10 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { sendPasswordResetEmail, updateProfile, deleteUser } from 'firebase/auth';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import React, { useContext, useState } from 'react';
-import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -17,6 +17,8 @@ import colors from '../theme/colors';
 import { auth, db, storage } from './firebaseConfig';
 import { ref, uploadBytes, uploadString, getDownloadURL } from 'firebase/storage';
 import { AuthContext } from './LoginScreen';
+import { LinearGradient } from 'expo-linear-gradient';
+// (Préférences étendues retirées à la demande)
 
 export default function ParametresScreen() {
   const { user: contextUser, setUser } = useContext(AuthContext);
@@ -30,6 +32,7 @@ export default function ParametresScreen() {
   const [profileModal, setProfileModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
+  // (États retirés: darkMode, langue, textScale, notifCount)
   // Vérifier l'éligibilité au certificat (tous les quiz avec données complètes)
   const checkCertificateEligibility = async (): Promise<boolean> => {
     try {
@@ -125,7 +128,7 @@ export default function ParametresScreen() {
       }
       if (!b64) throw new Error('Conversion base64 échouée');
       const dataUrl = `data:${finalMime};base64,${b64}`;
-
+      
       // Mettre à jour localement et dans le contexte
       setEditPhoto(dataUrl);
       if (contextUser) setUser({ ...contextUser, photoURL: dataUrl });
@@ -197,8 +200,8 @@ export default function ParametresScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
-      allowsMultipleSelection: false,
+        quality: 0.8,
+        allowsMultipleSelection: false,
       base64: true,
     });
 
@@ -310,69 +313,169 @@ export default function ParametresScreen() {
     );
   };
 
+  const handleDeleteAccount = async () => {
+    const current = auth.currentUser;
+    if (!current) {
+      Alert.alert('Erreur', 'Aucun utilisateur connecté.');
+      return;
+    }
+    Alert.alert(
+      'Supprimer mon compte',
+      "Cette action est définitive et supprimera vos données de profil (y compris l'avatar) et votre accès à l’application. Voulez‑vous continuer ?",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const uid = current.uid;
+              // Supprimer les données de profil principales
+              try {
+                await deleteDoc(doc(db, 'users', uid));
+              } catch (e) {
+                // ignorer si déjà supprimé / permissions limitées
+              }
+              // Supprimer le compte Auth (peut exiger une reconnexion récente)
+              try {
+                await deleteUser(current);
+              } catch (e: any) {
+                if (e?.code === 'auth/requires-recent-login') {
+                  Alert.alert(
+                    'Reconnexion requise',
+                    'Pour confirmer la suppression, veuillez vous reconnecter puis réessayer.',
+                    [{ text: 'OK' }]
+                  );
+                  await logout();
+                  return;
+                }
+                throw e;
+              }
+              Alert.alert('Compte supprimé', 'Votre compte a été définitivement supprimé.');
+              await logout();
+            } catch (err) {
+              Alert.alert('Erreur', "La suppression du compte a échoué. Veuillez réessayer plus tard.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Paramètres</Text>
-        <Text style={styles.headerSubtitle}>Gérez votre profil et vos préférences</Text>
-      </View>
-
-      <View style={styles.profileContainer}>
-        <TouchableOpacity onPress={() => setProfileModal(true)}>
-          {contextUser?.photoURL ? (
-            <ExpoImage source={{ uri: contextUser.photoURL }} style={styles.avatar} contentFit="cover" />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <MaterialCommunityIcons name="account-circle" size={80} color={colors.primary} />
-            </View>
-          )}
-        </TouchableOpacity>
-        <Text style={styles.profileName}>{contextUser?.displayName || 'Utilisateur'}</Text>
-        <Text style={styles.profileEmail}>{contextUser?.email}</Text>
-        <View style={styles.userBadge}>
-          <MaterialCommunityIcons 
-            name={contextUser?.role === 'admin' ? 'shield-account' : 'account'} 
-            size={16} 
-            color={contextUser?.role === 'admin' ? '#d4af37' : colors.primary} 
-          />
-          <Text style={[styles.userRole, { color: contextUser?.role === 'admin' ? '#d4af37' : colors.primary }]}>
-            {contextUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
-          </Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Paramètres</Text>
+          <Text style={styles.headerSubtitle}>Gérez votre compte et vos préférences</Text>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.row} onPress={() => setProfileModal(true)}>
-          <MaterialCommunityIcons name="account-edit" size={22} color={colors.primary} />
-          <Text style={styles.rowText}>Modifier le profil</Text>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.row} onPress={handleOpenCertificate}>
-          <MaterialCommunityIcons name="certificate" size={22} color={colors.primary} />
-          <Text style={styles.rowText}>Mon attestation</Text>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
-        </TouchableOpacity>
+        {/* Carte profil */}
+        <LinearGradient colors={['#174C3C', '#19514A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCard}>
+          <View style={styles.profileTopRow}>
+            <TouchableOpacity onPress={() => setProfileModal(true)} activeOpacity={0.9}>
+              {contextUser?.photoURL ? (
+                <ExpoImage source={{ uri: contextUser.photoURL }} style={styles.avatarXL} contentFit="cover" />
+              ) : (
+                <View style={styles.avatarXLPlaceholder}>
+                  <MaterialCommunityIcons name="account-circle" size={72} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={styles.profileTextCol}>
+              <Text style={styles.profileNameXL}>{contextUser?.displayName || 'Utilisateur'}</Text>
+              <Text style={styles.profileEmailXL}>{contextUser?.email}</Text>
+              <View style={styles.userBadgeXL}>
+                <MaterialCommunityIcons
+                  name={contextUser?.role === 'admin' ? 'shield-account' : 'account'}
+                  size={16}
+                  color="#FFD666"
+                />
+                <Text style={styles.userRoleXL}>
+                  {contextUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.profileQuickRow}>
+            <TouchableOpacity style={styles.quickAction} onPress={() => setProfileModal(true)}>
+              <MaterialCommunityIcons name="account-edit" size={18} color="#174C3C" />
+              <Text style={styles.quickActionText}>Modifier</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickAction} onPress={handleOpenCertificate}>
+              <MaterialCommunityIcons name="certificate" size={18} color="#174C3C" />
+              <Text style={styles.quickActionText}>Attestation</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
 
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => Linking.openURL('https://attaqwa-confidentialite.vercel.app/contact.html')}
-        >
-          <MaterialCommunityIcons name="lifebuoy" size={22} color={colors.primary} />
-          <Text style={styles.rowText}>Assistance / Contact</Text>
-          <MaterialCommunityIcons name="open-in-new" size={20} color={colors.placeholder} />
-        </TouchableOpacity>
+        {/* Section: Mon compte */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Mon compte</Text>
+          <TouchableOpacity style={styles.listItem} onPress={() => setProfileModal(true)}>
+            <View style={styles.listLeft}>
+              <MaterialCommunityIcons name="account-edit" size={20} color={colors.primary} />
+              <Text style={styles.listText}>Modifier le profil</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.listItem} onPress={handleOpenCertificate}>
+            <View style={styles.listLeft}>
+              <MaterialCommunityIcons name="certificate" size={20} color={colors.primary} />
+              <Text style={styles.listText}>Mon attestation</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity style={styles.row} onPress={handleSendResetEmail} disabled={sendingReset}>
-          <MaterialCommunityIcons name="email-lock" size={22} color={colors.primary} />
-          <Text style={styles.rowText}>Recevoir un email de réinitialisation</Text>
-          <MaterialCommunityIcons name="send" size={20} color={sendingReset ? '#ccc' : colors.placeholder} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.row, styles.logoutRow]} onPress={handleLogout}>
-          <MaterialCommunityIcons name="logout" size={22} color="#f44336" />
-          <Text style={[styles.rowText, { color: '#f44336' }]}>Déconnexion</Text>
-          <MaterialCommunityIcons name="chevron-right" size={20} color="#f44336" />
-        </TouchableOpacity>
-      </View>
+        {/* (Section Application et Prière & rappels retirées) */}
+
+        {/* Section: Sécurité */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Sécurité</Text>
+          <TouchableOpacity style={styles.listItem} onPress={handleSendResetEmail} disabled={sendingReset}>
+            <View style={styles.listLeft}>
+              <MaterialCommunityIcons name="email-lock" size={20} color={colors.primary} />
+              <Text style={styles.listText}>Recevoir un email de réinitialisation</Text>
+            </View>
+            <MaterialCommunityIcons name="send" size={18} color={sendingReset ? '#ccc' : colors.placeholder} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Section: Aide */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Aide</Text>
+          <TouchableOpacity
+            style={styles.listItem}
+            onPress={() => Linking.openURL('https://attaqwa-confidentialite.vercel.app/contact.html')}
+          >
+            <View style={styles.listLeft}>
+              <MaterialCommunityIcons name="lifebuoy" size={20} color={colors.primary} />
+              <Text style={styles.listText}>Assistance / Contact</Text>
+            </View>
+            <MaterialCommunityIcons name="open-in-new" size={18} color={colors.placeholder} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Danger zone */}
+        <View style={[styles.sectionCard, styles.dangerCard]}>
+          <Text style={[styles.sectionTitle, { color: '#B00020' }]}>Danger</Text>
+          <TouchableOpacity style={styles.listItem} onPress={handleDeleteAccount}>
+            <View style={styles.listLeft}>
+              <MaterialCommunityIcons name="account-remove" size={20} color="#B00020" />
+              <Text style={[styles.listText, { color: '#B00020' }]}>Supprimer mon compte</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#B00020" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.listItem} onPress={handleLogout}>
+            <View style={styles.listLeft}>
+              <MaterialCommunityIcons name="logout" size={20} color="#B00020" />
+              <Text style={[styles.listText, { color: '#B00020' }]}>Déconnexion</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#B00020" />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
       {/* Modal modification profil */}
       <Modal visible={profileModal} transparent animationType="fade" onRequestClose={() => setProfileModal(false)}>
@@ -448,6 +551,8 @@ export default function ParametresScreen() {
         </View>
       </Modal>
 
+      {/* (Modal Taille du texte retiré) */}
+
 
 
 
@@ -456,21 +561,56 @@ export default function ParametresScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', backgroundColor: '#F3F5F7', paddingTop: 40 },
-  header: { alignItems: 'center', marginBottom: 30 },
+  container: { flex: 1, backgroundColor: '#F3F5F7' },
+  scrollContent: { paddingTop: 28, paddingBottom: 24 },
+  header: { alignItems: 'center', marginBottom: 16 },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#174C3C', marginBottom: 8 },
-  headerSubtitle: { fontSize: 16, color: '#174C3C', textAlign: 'center' },
-  profileContainer: { alignItems: 'center', marginBottom: 30 },
-  avatar: { width: 80, height: 80, borderRadius: 40, marginBottom: 10, backgroundColor: '#E7C97B' },
-  avatarPlaceholder: { width: 80, height: 80, borderRadius: 40, marginBottom: 10, backgroundColor: '#E7C97B', justifyContent: 'center', alignItems: 'center' },
-  profileName: { fontSize: 20, fontWeight: 'bold', color: '#174C3C', marginBottom: 2 },
-  profileEmail: { fontSize: 16, color: '#174C3C', marginBottom: 2 },
-  userBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  userRole: { fontSize: 16, color: '#174C3C', marginLeft: 8 },
-  section: { width: '90%', backgroundColor: '#fff', borderRadius: 18, padding: 18, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#eee', justifyContent: 'space-between' },
-  rowText: { fontSize: 16, color: '#174C3C', marginLeft: 14, fontWeight: 'bold', flex: 1 },
-  logoutRow: { borderBottomWidth: 0 },
+  headerSubtitle: { fontSize: 14, color: '#58736B', textAlign: 'center' },
+
+  profileCard: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 14,
+  },
+  profileTopRow: { flexDirection: 'row', alignItems: 'center' },
+  avatarXL: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#ffffff33' },
+  avatarXLPlaceholder: {
+    width: 72, height: 72, borderRadius: 36, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center'
+  },
+  profileTextCol: { marginLeft: 12, flex: 1 },
+  profileNameXL: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  profileEmailXL: { color: '#E6F1EE', fontSize: 13, marginTop: 2 },
+  userBadgeXL: { flexDirection: 'row', alignItems: 'center', marginTop: 8, backgroundColor: '#ffffff22', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  userRoleXL: { color: '#FFD666', fontSize: 12, fontWeight: '700', marginLeft: 6 },
+  profileQuickRow: { flexDirection: 'row', marginTop: 14 },
+  quickAction: { backgroundColor: '#FFF', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginRight: 10, flexDirection: 'row', alignItems: 'center' },
+  quickActionText: { marginLeft: 8, color: '#174C3C', fontWeight: '700', fontSize: 12 },
+
+  sectionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    paddingVertical: 6,
+    marginHorizontal: 16,
+    marginTop: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  dangerCard: {
+    backgroundColor: '#FFF6F6',
+    borderWidth: 1,
+    borderColor: '#F7DADA',
+  },
+  sectionTitle: { fontSize: 13, fontWeight: '700', color: '#58736B', paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4, textTransform: 'uppercase', letterSpacing: 0.6 },
+  listItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#F1F1F1' },
+  listLeft: { flexDirection: 'row', alignItems: 'center' },
+  listText: { fontSize: 15, color: '#174C3C', marginLeft: 12, fontWeight: '700' },
+  listSubText: { fontSize: 12, color: '#58736B', marginLeft: 12, marginTop: 2 },
+  trailingValue: { fontSize: 13, color: '#58736B', marginRight: 6, fontWeight: '600' },
+
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.18)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { backgroundColor: colors.white, borderRadius: 20, padding: 24, width: 320, maxHeight: '80%', elevation: 8, shadowColor: colors.black, shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.primary, marginBottom: 20, textAlign: 'center' },
@@ -481,6 +621,8 @@ const styles = StyleSheet.create({
   saveButton: { backgroundColor: colors.secondary },
   modalButtonText: { fontWeight: 'bold', fontSize: 13 },
   modalSubtitle: { color: colors.primary, textAlign: 'center', marginBottom: 20, fontSize: 16, lineHeight: 22 },
+  choiceButton: { backgroundColor: colors.background, paddingVertical: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  choiceText: { color: colors.primary, fontWeight: '700' },
 
   imagePreviewContainer: { alignItems: 'center', marginTop: 16, marginBottom: 12 },
   imagePreview: { width: 100, height: 100, borderRadius: 50, marginBottom: 8, backgroundColor: colors.secondary },

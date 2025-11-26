@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { sendEmailVerification } from 'firebase/auth';
+import { sendEmailVerification, signOut } from 'firebase/auth';
 import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -108,7 +108,7 @@ export default function VerifyEmailScreen({ navigation }: any) {
             text: isVerified ? 'Continuer' : 'Réessayer', 
             onPress: () => {
               if (isVerified) {
-                navigation.navigate('Main' as never);
+              navigation.navigate('Main' as never);
               }
             }
           }
@@ -147,14 +147,28 @@ export default function VerifyEmailScreen({ navigation }: any) {
       Alert.alert(
         'Compte supprimé',
         'Votre compte non vérifié a été supprimé. Vous pouvez recommencer l’inscription.',
-        [{ text: 'OK', onPress: () => {} }]
+        [{ text: 'OK', onPress: async () => {
+          try { await signOut(auth); } catch {}
+          try { navigation.navigate('Login'); } catch {}
+        }}]
       );
     } catch (e: any) {
-      Alert.alert(
-        'Suppression impossible',
-        'Nous n’avons pas pu supprimer le compte. Essayez de vous reconnecter puis de relancer la suppression.',
-        [{ text: 'OK' }]
-      );
+      if (e?.code === 'auth/requires-recent-login') {
+        Alert.alert(
+          'Reconnexion requise',
+          'Pour supprimer ce compte, veuillez vous reconnecter puis réessayer.',
+          [{ text: 'OK', onPress: async () => {
+            try { await signOut(auth); } catch {}
+            try { navigation.navigate('Login'); } catch {}
+          }}]
+        );
+      } else {
+        Alert.alert(
+          'Suppression impossible',
+          'Nous n’avons pas pu supprimer le compte. Essayez de vous reconnecter puis de relancer la suppression.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 

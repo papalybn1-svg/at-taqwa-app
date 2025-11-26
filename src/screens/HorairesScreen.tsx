@@ -3,9 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
-import {
-    initializePrayerNotifications
-} from '../services/prayerNotificationsService';
+import { initializePrayerNotifications, cancelAllPrayerNotifications } from '../services/prayerNotificationsService';
 import {
     fetchPrayerTimes,
     formatPrayerTime,
@@ -147,6 +145,7 @@ export default function HorairesScreen() {
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const [offlineMode, setOfflineMode] = useState(false);
   const [nextPrayerInfo, setNextPrayerInfo] = useState<any>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   // Ajout navigation pour bouton retour
   const navigation = require('@react-navigation/native').useNavigation();
@@ -210,8 +209,7 @@ export default function HorairesScreen() {
           setHijri(getHijriDate());
         }
         
-        // Initialiser les notifications une seule fois
-        await initializePrayerNotifications(result.timings);
+        // Ne pas programmer de notifications automatiquement; l’utilisateur activera via le switch
         
       } catch (error) {
         if (!isMounted) return;
@@ -295,8 +293,7 @@ export default function HorairesScreen() {
         setHijri(`${hijri.day} ${hijri.month.fr || hijri.month.en} ${hijri.year}`);
       }
       
-      // Initialiser les notifications pour la nouvelle ville
-      await initializePrayerNotifications(result.timings);
+      // Ne pas programmer automatiquement lors du changement de ville
       
       setModalVisible(false);
       setCityInput('');
@@ -354,7 +351,33 @@ export default function HorairesScreen() {
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Heures de prière</Text>
-            <View style={styles.placeholder} />
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  if (!notificationsEnabled) {
+                    if (prayerTimes) {
+                      await initializePrayerNotifications(prayerTimes, 15);
+                      setNotificationsEnabled(true);
+                    } else {
+                      Alert.alert('Horaires indisponibles', 'Les horaires ne sont pas encore chargés.');
+                    }
+                  } else {
+                    await cancelAllPrayerNotifications();
+                    setNotificationsEnabled(false);
+                  }
+                } catch (e) {
+                  console.error('Notif toggle error:', e);
+                  Alert.alert('Erreur', 'Impossible de mettre à jour les notifications.');
+                }
+              }}
+              style={styles.backButton}
+            >
+              <MaterialCommunityIcons
+                name={notificationsEnabled ? 'bell-ring' : 'bell-outline'}
+                size={24}
+                color={notificationsEnabled ? colors.primary : colors.text}
+              />
+            </TouchableOpacity>
           </View>
 
           {/* Image d'en-tête */}
@@ -388,6 +411,8 @@ export default function HorairesScreen() {
               <MaterialCommunityIcons name="chevron-right" size={isTablet ? 18 : (isSmallScreen ? 12 : 14)} color={colors.primary} />
             </TouchableOpacity>
           </View>
+
+          {/* (Notifications compactes via cloche dans l’en-tête) */}
 
           {/* Indicateur mode hors ligne */}
           {offlineMode && (

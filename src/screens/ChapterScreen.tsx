@@ -110,6 +110,10 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const { user } = useAuth();
   const { entitlements, refreshEntitlements } = useEntitlements();
   const { checkEntitlements: fetchEntitlements } = usePaymentService();
+  // Garde: attendre l'utilisateur avant toute logique premium
+  if (!user) {
+    return null;
+  }
   const [textSize, setTextSize] = useState(16);
   const screenWidth = Dimensions.get('window').width;
   const scrollViewRef = useRef<ScrollView>(null);

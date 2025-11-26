@@ -12,15 +12,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
 
-      "buildNumber": "2.1.10",
+      "buildNumber": "2.2.0",
       
       "icon": "./assets/LOGO_AT_TAQWA.png",
       "associatedDomains": ["applinks:attaqwa-confidentialite.vercel.app"],
       "infoPlist": {
         "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
-        "NSCameraUsageDescription": "Cette application nécessite l'accès à la caméra pour certaines fonctionnalités.",
-        "NSPhotoLibraryUsageDescription": "Cette application nécessite l'accès à la galerie pour certaines fonctionnalités.",
+        "NSCameraUsageDescription": "At‑Taqwa utilise l’appareil photo uniquement pour vous permettre de prendre une photo de profil. Exemple : prendre votre portrait pour l’afficher dans Paramètres et sur l’écran d’accueil.",
+        "NSPhotoLibraryUsageDescription": "At‑Taqwa accède à votre photothèque uniquement pour que vous puissiez choisir une photo de profil. Exemple : sélectionner une image existante à afficher comme avatar dans Paramètres et sur l’écran d’accueil.",
+        "NSPhotoLibraryAddUsageDescription": "At‑Taqwa peut enregistrer l’image de profil compressée dans votre photothèque si vous le demandez.",
         "NSLocationWhenInUseUsageDescription": "Cette application nécessite l'accès à votre localisation pour calculer les heures de prière précises selon votre position géographique.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Cette application nécessite l'accès à votre localisation pour calculer les heures de prière et vous envoyer des notifications de rappel.",
         "ITSAppUsesNonExemptEncryption": false
@@ -61,7 +62,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-notifications"
     ],
     "scheme": "attaqwa",
     "extra": {

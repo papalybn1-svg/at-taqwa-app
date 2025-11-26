@@ -11,6 +11,7 @@ import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { EntitlementsProvider, useEntitlements } from './src/contexts/EntitlementsContext';
+import RootErrorBoundary from './src/components/RootErrorBoundary';
 import { useAuth } from './src/hooks/useAuth';
 import { usePaymentService } from './src/lib/paymentService';
 import AdminTabNavigator from './src/navigation/AdminTabNavigator';
@@ -358,7 +359,7 @@ function PayDunyaDeepLinkHandler() {
   return null;
 }
 
-export default function App() {
+function RootNavigator() {
   const [splashStep, setSplashStep] = useState(0);
   const [introReady, setIntroReady] = useState(false);
   const { user, loading, setUser } = useAuth();
@@ -444,21 +445,15 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-    <AuthContext.Provider value={{ user, setUser }}>
-      <EntitlementsProvider>
-        <PayDunyaDeepLinkHandler />
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
-            <StatusBar barStyle="dark-content" backgroundColor="#F3F5F7" />
-            <NavigationContainer ref={navigationRef}>
-              <Stack.Navigator 
-              screenOptions={{ 
-                headerShown: false,
-                  cardStyle: { backgroundColor: '#F3F5F7' }
-              }}
+      <PayDunyaDeepLinkHandler />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
+          <StatusBar barStyle="dark-content" backgroundColor="#F3F5F7" />
+          <NavigationContainer ref={navigationRef}>
+            <Stack.Navigator 
+              screenOptions={{ headerShown: false, cardStyle: { backgroundColor: '#F3F5F7' } }}
             >
               {!user ? (
-                // Si pas de user dans useAuth mais session Firebase non vérifiée => afficher VerifyEmail
                 auth.currentUser && auth.currentUser.emailVerified === false ? (
                   <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
                 ) : (
@@ -474,12 +469,23 @@ export default function App() {
               <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
               <Stack.Screen name="Chapter" component={ChapterScreen} options={{ gestureEnabled: false }} />
             </Stack.Navigator>
-            </NavigationContainer>
-          </SafeAreaView>
-        </GestureHandlerRootView>
-      </EntitlementsProvider>
-    </AuthContext.Provider>
+          </NavigationContainer>
+        </SafeAreaView>
+      </GestureHandlerRootView>
     </SafeAreaProvider>
+  );
+}
+
+export default function App() {
+  const { user, setUser } = useAuth();
+  return (
+    <RootErrorBoundary>
+      <AuthContext.Provider value={{ user, setUser }}>
+        <EntitlementsProvider>
+          <RootNavigator />
+        </EntitlementsProvider>
+      </AuthContext.Provider>
+    </RootErrorBoundary>
   );
 }
 
