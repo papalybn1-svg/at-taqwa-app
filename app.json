@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-      "buildNumber": "2.2.3",
+      "buildNumber": "2.2.5",
       "icon": "./assets/LOGO_AT_TAQWA.png",
       "associatedDomains": [
         "applinks:attaqwa-confidentialite.vercel.app"
