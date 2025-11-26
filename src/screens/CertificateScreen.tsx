@@ -60,7 +60,7 @@ const CertificateContent = ({
         />
       </View>
 
-      {/* Bordure décorative en haut */}
+      {/* Bordure décorative en haut (derrière le contenu) */}
       <View style={[styles.decorativeBorderTop, { height: isForCapture ? 4 : 3 }]} />
 
       {/* En-tête avec logo et titre */}
@@ -115,7 +115,7 @@ const CertificateContent = ({
       </View>
 
       {/* Footer avec date et signature */}
-      <View style={[styles.certificateFooter, { paddingTop: isForCapture ? 15 : 12, paddingBottom: isForCapture ? 15 : 12 }]}>
+      <View style={[styles.certificateFooter, { paddingTop: isForCapture ? 18 : 14, paddingBottom: isForCapture ? 20 : 18 }]}>
         {/* Date et signature en bas */}
         <View style={[styles.footerBottom, { paddingHorizontal: isForCapture ? 20 : 15 }]}>
           <Text allowFontScaling={false} style={[styles.dateValue, { fontSize: dateSize }]}>
@@ -509,9 +509,9 @@ const styles = StyleSheet.create({
   certificateContainer: {
     width: '100%',
     aspectRatio: 0.707, // Ratio A4 portrait (210/297)
-    maxWidth: screenWidth - 40,
+    maxWidth: screenWidth - 24,
     backgroundColor: '#FAF8F5', // Fond ivoire/beige clair pour un aspect authentique
-    padding: 30,
+    padding: 34,
     justifyContent: 'space-between',
     borderRadius: 20,
     shadowColor: colors.shadow,
@@ -547,8 +547,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: colors.secondary,
-    opacity: 0.3,
-    zIndex: 1,
+    opacity: 0.22,
+    zIndex: 0,
   },
   decorativeBorderBottom: {
     position: 'absolute',
@@ -556,8 +556,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: colors.secondary,
-    opacity: 0.3,
-    zIndex: 1,
+    opacity: 0.22,
+    zIndex: 0,
   },
   certificateHeader: {
     alignItems: 'center',
@@ -594,6 +594,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     zIndex: 1,
+    paddingBottom: 8,
   },
   certificateText: {
     fontSize: 16,
