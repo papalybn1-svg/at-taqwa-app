@@ -1,23 +1,22 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker';
-import { sendPasswordResetEmail, updateProfile, deleteUser } from 'firebase/auth';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import React, { useContext, useState } from 'react';
-import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
 import * as FileSystem from 'expo-file-system';
+import { Image as ExpoImage } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
-import chaptersData from '../../data/chapitres.json';
-import { getQuizProfile } from '../utils/quizSession';
-import { read as readUserStorage } from '../utils/userStorage';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
+import { deleteUser, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
+import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import React, { useContext, useState } from 'react';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import chaptersData from '../../data/chapitres.json';
 import { useAuth } from '../hooks/useAuth';
 import colors from '../theme/colors';
-import { auth, db, storage } from './firebaseConfig';
-import { ref, uploadBytes, uploadString, getDownloadURL } from 'firebase/storage';
+import { getQuizProfile } from '../utils/quizSession';
+import { read as readUserStorage } from '../utils/userStorage';
+import { auth, db } from './firebaseConfig';
 import { AuthContext } from './LoginScreen';
-import { LinearGradient } from 'expo-linear-gradient';
 // (Préférences étendues retirées à la demande)
 
 export default function ParametresScreen() {
@@ -122,7 +121,7 @@ export default function ParametresScreen() {
       } catch (manipErr) {
         console.warn('⚠️ Échec de la manipulation d’image, fallback lecture brute:', manipErr);
         if (!b64) {
-          b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+          b64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
           finalMime = mimeType || 'image/jpeg';
         }
       }
@@ -365,37 +364,34 @@ export default function ParametresScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Paramètres</Text>
-          <Text style={styles.headerSubtitle}>Gérez votre compte et vos préférences</Text>
-        </View>
+        {/* En-tête retiré à la demande */}
 
         {/* Carte profil */}
         <LinearGradient colors={['#174C3C', '#19514A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCard}>
           <View style={styles.profileTopRow}>
             <TouchableOpacity onPress={() => setProfileModal(true)} activeOpacity={0.9}>
-              {contextUser?.photoURL ? (
+          {contextUser?.photoURL ? (
                 <ExpoImage source={{ uri: contextUser.photoURL }} style={styles.avatarXL} contentFit="cover" />
-              ) : (
+          ) : (
                 <View style={styles.avatarXLPlaceholder}>
                   <MaterialCommunityIcons name="account-circle" size={72} color="#fff" />
-                </View>
-              )}
-            </TouchableOpacity>
+            </View>
+          )}
+        </TouchableOpacity>
             <View style={styles.profileTextCol}>
               <Text style={styles.profileNameXL}>{contextUser?.displayName || 'Utilisateur'}</Text>
               <Text style={styles.profileEmailXL}>{contextUser?.email}</Text>
               <View style={styles.userBadgeXL}>
-                <MaterialCommunityIcons
-                  name={contextUser?.role === 'admin' ? 'shield-account' : 'account'}
-                  size={16}
+          <MaterialCommunityIcons 
+            name={contextUser?.role === 'admin' ? 'shield-account' : 'account'} 
+            size={16} 
                   color="#FFD666"
-                />
+          />
                 <Text style={styles.userRoleXL}>
-                  {contextUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
-                </Text>
-              </View>
-            </View>
+            {contextUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+          </Text>
+        </View>
+      </View>
           </View>
           <View style={styles.profileQuickRow}>
             <TouchableOpacity style={styles.quickAction} onPress={() => setProfileModal(true)}>
@@ -424,8 +420,8 @@ export default function ParametresScreen() {
               <MaterialCommunityIcons name="certificate" size={20} color={colors.primary} />
               <Text style={styles.listText}>Mon attestation</Text>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
-          </TouchableOpacity>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
+        </TouchableOpacity>
         </View>
 
         {/* (Section Application et Prière & rappels retirées) */}
@@ -439,7 +435,7 @@ export default function ParametresScreen() {
               <Text style={styles.listText}>Recevoir un email de réinitialisation</Text>
             </View>
             <MaterialCommunityIcons name="send" size={18} color={sendingReset ? '#ccc' : colors.placeholder} />
-          </TouchableOpacity>
+        </TouchableOpacity>
         </View>
 
         {/* Section: Aide */}
@@ -454,8 +450,8 @@ export default function ParametresScreen() {
               <Text style={styles.listText}>Assistance / Contact</Text>
             </View>
             <MaterialCommunityIcons name="open-in-new" size={18} color={colors.placeholder} />
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
+      </View>
 
         {/* Danger zone */}
         <View style={[styles.sectionCard, styles.dangerCard]}>
@@ -568,10 +564,12 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 14, color: '#58736B', textAlign: 'center' },
 
   profileCard: {
-    marginHorizontal: 16,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 14,
+    marginHorizontal: 0,
+    borderRadius: 0,
+    padding: 20,
+    marginBottom: 16,
+    alignSelf: 'stretch',
+    width: '100%',
   },
   profileTopRow: { flexDirection: 'row', alignItems: 'center' },
   avatarXL: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#ffffff33' },

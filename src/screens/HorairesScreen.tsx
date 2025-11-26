@@ -667,6 +667,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E8F5E8',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: responsive.maxContentWidth,
   },
   backButton: { 
     width: 44,
@@ -693,6 +696,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden', 
     position: 'relative',
     backgroundColor: colors.primary,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: responsive.maxContentWidth,
   },
   headerImage: { 
     width: '100%', 
@@ -714,6 +720,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 2,
     zIndex: 2,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: responsive.maxContentWidth,
   },
   dateIconContainer: {
     width: isTablet ? 32 : 28,
@@ -761,6 +770,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 1,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: responsive.maxContentWidth,
   },
   cityInfo: {
     flexDirection: 'row',
@@ -821,6 +833,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: responsive.maxContentWidth,
   },
   prayerListContent: {
     flex: 1,

@@ -9,6 +9,9 @@ export interface ResponsiveDimensions {
   isSmallScreen: boolean;
   scale: number;
   fontScale: number;
+  maxContentWidth: number;
+  horizontalPadding: number;
+  gridColumns: number;
 }
 
 export const useResponsive = (): ResponsiveDimensions => {
@@ -37,6 +40,11 @@ export const useResponsive = (): ResponsiveDimensions => {
   // Calcul du fontScale pour la lisibilité
   const fontScale = isLandscape ? Math.min(scale * 0.9, 1.2) : scale;
 
+  // Contraintes tablette (iPad / Android)
+  const maxContentWidth = isTablet ? (isLandscape ? Math.min(1024, width - 80) : Math.min(820, width - 48)) : width;
+  const horizontalPadding = isTablet ? (isLandscape ? 28 : 20) : 16;
+  const gridColumns = isTablet ? (isLandscape ? 4 : 3) : 2;
+
   return {
     width,
     height,
@@ -44,7 +52,10 @@ export const useResponsive = (): ResponsiveDimensions => {
     isTablet,
     isSmallScreen,
     scale,
-    fontScale
+    fontScale,
+    maxContentWidth,
+    horizontalPadding,
+    gridColumns
   };
 };
 
