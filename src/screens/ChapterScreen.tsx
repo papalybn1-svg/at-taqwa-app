@@ -1,9 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Stockage local scoping par utilisateur
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import colors from '../theme/colors';
 import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { useAuthContext } from '../contexts/AuthContext';
@@ -109,6 +111,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const { user } = useAuthContext();
   const { entitlements, refreshEntitlements } = useEntitlements();
   const { checkEntitlements: fetchEntitlements } = usePaymentService();
+  const insets = useSafeAreaInsets();
   const { chapter } = route.params;
   
   // Tous les useState
@@ -478,6 +481,38 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     loadQuizScores();
   }, [user?.uid, loadQuizScores]);
 
+  // Masquer la TabBar quand on entre dans ChapterScreen et la réafficher quand on quitte
+  useLayoutEffect(() => {
+    const parent = navigation.getParent();
+    if (parent) {
+      // Masquer la TabBar
+      parent.setOptions({
+        tabBarStyle: { display: 'none' }
+      });
+    }
+
+    return () => {
+      // Réafficher la TabBar quand on quitte
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: {
+            backgroundColor: colors.white,
+            height: 80,
+            paddingBottom: 20,
+            paddingTop: 12,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            shadowColor: '#000',
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            elevation: 12,
+            borderTopWidth: 0,
+          }
+        });
+      }
+    };
+  }, [navigation]);
+
   // Gestionnaire pour le bouton retour Android
   useEffect(() => {
     const onBackPress = () => {
@@ -772,7 +807,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
-        <View style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
+        <View style={{ flex: 1, backgroundColor: '#F4F7F6', paddingTop: insets.top }}>
       {/* Header avec image et titre */}
       <View style={{ position: 'relative', overflow: 'visible' }}>
         <Image
@@ -954,7 +989,17 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       </View>
 
       {/* Navigation bas */}
-      <View style={{ flexDirection: 'column', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee', position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+      <View style={{ 
+        flexDirection: 'column', 
+        backgroundColor: '#fff', 
+        borderTopWidth: 1, 
+        borderTopColor: '#eee', 
+        position: 'absolute', 
+        bottom: insets.bottom, 
+        left: 0, 
+        right: 0,
+        paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 8) : 0,
+      }}>
         {/* Bouton Favoris */}
         <TouchableOpacity
           onPress={toggleFavorite}

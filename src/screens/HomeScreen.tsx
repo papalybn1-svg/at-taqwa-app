@@ -15,6 +15,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
@@ -130,7 +131,8 @@ export default function HomeScreen() {
   const { checkEntitlements: fetchEntitlements } = usePaymentService();
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
-  const styles = createStyles(responsive, responsiveStyle);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(responsive, responsiveStyle, insets);
   const [freshEntitlements, setFreshEntitlements] = React.useState<{ part2: boolean; part3: boolean } | null>(null);
   
   const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; onPress: () => void }) => (
@@ -580,7 +582,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top }}>
       <View style={styles.header}>
           <View>
             <Text style={styles.bismillah}>بسم الله الرحمن الرحيم</Text>
@@ -791,7 +793,7 @@ export default function HomeScreen() {
   );
 }
 
-const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any, insets: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F4F7F6' },
   container: { flex: 1 },
   header: {
@@ -799,9 +801,9 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: responsive.horizontalPadding,
-    paddingTop: 20,
+    paddingTop: 10,
     paddingBottom: 10,
-    marginTop: 15,
+    marginTop: 10,
     marginBottom: 20,
     alignSelf: 'center',
     width: '100%',

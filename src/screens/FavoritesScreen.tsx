@@ -3,6 +3,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { Animated, Dimensions, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import { useAuthContext } from '../contexts/AuthContext';
 import colors from '../theme/colors';
@@ -13,6 +14,7 @@ const { width: screenWidth } = Dimensions.get('window');
 export default function FavoritesScreen() {
   const navigation = useNavigation();
   const { user } = useAuthContext();
+  const insets = useSafeAreaInsets();
   const [favorites, setFavorites] = React.useState<{ id: string; title: string; desc: string; author?: string; image?: string; partie?: string; chapterData?: any }[]>([]); 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);

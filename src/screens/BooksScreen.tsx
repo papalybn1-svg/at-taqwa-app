@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from "react";
 import { Alert, Animated, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
@@ -38,6 +39,7 @@ export default function BooksScreen() {
   // TOUS les hooks doivent être appelés AVANT tout return conditionnel
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
+  const insets = useSafeAreaInsets();
   const styles = createStyles(responsive, responsiveStyle);
   const [progress, setProgress] = React.useState<{[key:string]:number}>({});
   const [drawerVisible, setDrawerVisible] = React.useState(false);
@@ -358,7 +360,7 @@ export default function BooksScreen() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F8FAF9' }}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, paddingTop: insets.top }}>
           {/* Header simple avec boutons */}
           <View style={styles.simpleHeader}>
             <TouchableOpacity 

@@ -2,6 +2,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import React from "react";
+import { Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AuthorProfileScreen from '../screens/AuthorProfileScreen';
 import BooksScreen from '../screens/BooksScreen';
 import CertificateScreen from '../screens/CertificateScreen';
@@ -114,6 +116,13 @@ function HomeStack() {
 }
 
 export default function TabNavigator() {
+  const insets = useSafeAreaInsets();
+  
+  // Calculer le paddingBottom en tenant compte de la barre de navigation système Android
+  const bottomPadding = Platform.OS === 'android' 
+    ? Math.max(insets.bottom, 20) // Au moins 20px, ou plus si la barre système est présente
+    : 20;
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -122,8 +131,8 @@ export default function TabNavigator() {
         tabBarInactiveTintColor: "#9CA3AF",
         tabBarStyle: { 
           backgroundColor: colors.white,
-          height: 80,
-          paddingBottom: 20,
+          height: 80 + (Platform.OS === 'android' ? insets.bottom : 0),
+          paddingBottom: bottomPadding,
           paddingTop: 12,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,

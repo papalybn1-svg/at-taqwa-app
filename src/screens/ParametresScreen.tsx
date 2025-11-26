@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -8,8 +8,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { deleteUser, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import chaptersData from '../../data/chapitres.json';
 import { useAuthContext } from '../contexts/AuthContext';
 import colors from '../theme/colors';
@@ -21,6 +22,7 @@ import { auth, db } from './firebaseConfig';
 export default function ParametresScreen() {
   const { user: contextUser, setUser, logout } = useAuthContext();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   
   // Utiliser l'utilisateur Firebase Auth directement
   const firebaseUser = auth.currentUser;
@@ -29,6 +31,7 @@ export default function ParametresScreen() {
   const [profileModal, setProfileModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
+  const [isCertificateEligible, setIsCertificateEligible] = useState(false);
   // (États retirés: darkMode, langue, textScale, notifCount)
   // Vérifier l'éligibilité au certificat (tous les quiz avec données complètes)
   const checkCertificateEligibility = async (): Promise<boolean> => {
@@ -76,12 +79,35 @@ export default function ParametresScreen() {
     }
   };
 
+  // Vérifier l'éligibilité au chargement et quand l'écran devient actif
+  useEffect(() => {
+    const checkEligibility = async () => {
+      if (firebaseUser?.uid) {
+        const eligible = await checkCertificateEligibility();
+        setIsCertificateEligible(eligible);
+      }
+    };
+    checkEligibility();
+  }, [firebaseUser?.uid]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const checkEligibility = async () => {
+        if (firebaseUser?.uid) {
+          const eligible = await checkCertificateEligibility();
+          setIsCertificateEligible(eligible);
+        }
+      };
+      checkEligibility();
+    }, [firebaseUser?.uid])
+  );
+
   const handleOpenCertificate = async () => {
     const ok = await checkCertificateEligibility();
     if (!ok) {
       Alert.alert(
         'Attestation indisponible',
-        'Pour obtenir votre attestation, complétez d’abord tous les quiz à 100%.\n\nRendez‑vous dans la section Quiz.',
+        'Pour obtenir votre attestation, completez d\'abord tous les quiz a 100%.\n\nRendez-vous dans la section Quiz.',
         [
           { text: 'Annuler', style: 'cancel' },
           { text: 'Aller au Quiz', onPress: () => navigation.navigate('Accueil', { screen: 'QuizChapterSelect' }) }
@@ -391,7 +417,7 @@ export default function ParametresScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* En-tête retiré à la demande */}
 
@@ -446,8 +472,22 @@ export default function ParametresScreen() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.listItem} onPress={handleOpenCertificate}>
             <View style={styles.listLeft}>
-              <MaterialCommunityIcons name="certificate" size={20} color={colors.primary} />
-              <Text style={styles.listText}>Mon attestation</Text>
+              <View style={{ position: 'relative' }}>
+                <MaterialCommunityIcons name="certificate" size={20} color={isCertificateEligible ? "#D4AF37" : colors.primary} />
+                {isCertificateEligible && (
+                  <View style={styles.certificateBadge}>
+                    <MaterialCommunityIcons name="check-circle" size={14} color="#fff" />
+                  </View>
+                )}
+              </View>
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={[styles.listText, isCertificateEligible && { color: "#D4AF37", fontWeight: 'bold' }]}>
+                  Mon attestation
+                </Text>
+                {isCertificateEligible && (
+                  <Text style={styles.certificateAvailableText}>✅ Disponible !</Text>
+                )}
+              </View>
             </View>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
         </TouchableOpacity>
@@ -637,6 +677,25 @@ const styles = StyleSheet.create({
   listText: { fontSize: 15, color: '#174C3C', marginLeft: 12, fontWeight: '700' },
   listSubText: { fontSize: 12, color: '#58736B', marginLeft: 12, marginTop: 2 },
   trailingValue: { fontSize: 13, color: '#58736B', marginRight: 6, fontWeight: '600' },
+  certificateBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#4CAF50',
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  certificateAvailableText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
+    marginTop: 2,
+  },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.18)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { backgroundColor: colors.white, borderRadius: 20, padding: 24, width: 320, maxHeight: '80%', elevation: 8, shadowColor: colors.black, shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },

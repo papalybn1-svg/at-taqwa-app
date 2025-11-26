@@ -552,8 +552,73 @@ export default function OriginalQuizScreen() {
         // Calculer le pourcentage de score
         const finalScorePercentage = Math.round((score / quizData.length) * 100);
         
-        // Sauvegarder le score localement (meilleur score uniquement)
-        saveQuizScore(exercicesKey, finalScorePercentage);
+        // Sauvegarder le score localement (meilleur score uniquement) - fonction async appelée sans await
+        saveQuizScore(exercicesKey, finalScorePercentage).then(() => {
+          // Vérifier si tous les quiz sont maintenant complétés à 100% pour l'attestation
+          if (finalScorePercentage === 100 && user?.uid) {
+            (async () => {
+              try {
+                const { getQuizProfile } = await import('../utils/quizSession');
+                const scores = (await readUserStorage<Record<string, number>>(user.uid, 'quizScores')) || {};
+                const profile = await getQuizProfile(user.uid);
+                const bestScores = profile.bestScores || {};
+                
+                // Vérifier tous les chapitres avec quiz
+                const exercicesFiles: { [key: string]: any[] | { quiz: any[] } } = {
+                  '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
+                  '2': require('../../data/exercices_par_chapitre/chapitre_2_exercices.json'),
+                  '3': require('../../data/exercices_par_chapitre/chapitre_3_exercices.json'),
+                  '4': require('../../data/exercices_par_chapitre/chapitre_4_exercices.json'),
+                  '5': require('../../data/exercices_par_chapitre/chapitre_5_exercices.json'),
+                  '6': require('../../data/exercices_par_chapitre/chapitre_6_exercices.json'),
+                  '7': require('../../data/exercices_par_chapitre/chapitre_7_exercices.json'),
+                  '8': require('../../data/exercices_par_chapitre/chapitre_8_exercices.json'),
+                  '9': require('../../data/exercices_par_chapitre/chapitre_9_execrcices.json'),
+                  '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
+                  '11': require('../../data/exercices_par_chapitre/chapitre_11_exercices.json'),
+                  '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
+                };
+                
+                const allChapters = Object.keys(exercicesFiles).filter(key => {
+                  const data = exercicesFiles[key];
+                  return Array.isArray(data) && data.length > 0 || 
+                         (data && typeof data === 'object' && 'quiz' in data && Array.isArray((data as any).quiz) && (data as any).quiz.length > 0);
+                });
+                
+                let allCompleted = true;
+                for (const key of allChapters) {
+                  const chapterScore = scores[key] ?? bestScores[key];
+                  if (chapterScore === undefined || chapterScore < 100) {
+                    allCompleted = false;
+                    break;
+                  }
+                }
+                
+                if (allCompleted) {
+                  // Afficher une alerte de félicitations après un court délai
+                  setTimeout(() => {
+                    Alert.alert(
+                      '🎉 Félicitations !',
+                      'Vous avez complété tous les quiz à 100% !\n\nVotre attestation est maintenant disponible dans les Paramètres.',
+                      [
+                        { text: 'OK', style: 'default' },
+                        { 
+                          text: 'Voir mon attestation', 
+                          style: 'default',
+                          onPress: () => {
+                            navigation.navigate('Accueil' as never, { screen: 'Certificate' } as never);
+                          }
+                        }
+                      ]
+                    );
+                  }, 1000);
+                }
+              } catch (error) {
+                console.error('❌ Erreur vérification attestation:', error);
+              }
+            })();
+          }
+        });
         
         // Logger le résultat sur Firebase
         logQuizResult(score);
@@ -564,23 +629,30 @@ export default function OriginalQuizScreen() {
 
   // Fonction pour sauvegarder le score localement
   const saveQuizScore = async (chapterKey: string, scorePercentage: number) => {
+    if (!user?.uid) return;
+    
     try {
       console.log(`💾 Sauvegarde du score pour chapitre ${chapterKey}: ${scorePercentage}%`);
       
       // Limiter le score à 100% maximum
       const limitedScorePercentage = Math.min(scorePercentage, 100);
       
-      // Sauvegarder le score
-      const scores = (await readUserStorage<Record<string, number>>(user?.uid, 'quizScores')) || {};
+      // Sauvegarder le score dans quizScores
+      const scores = (await readUserStorage<Record<string, number>>(user.uid, 'quizScores')) || {};
       if (!scores[chapterKey] || limitedScorePercentage > scores[chapterKey]) {
         scores[chapterKey] = limitedScorePercentage;
-        await writeUserStorage(user?.uid, 'quizScores', scores);
-        console.log(`✅ Score sauvegardé pour le chapitre ${chapterKey}: ${limitedScorePercentage}%`);
+        await writeUserStorage(user.uid, 'quizScores', scores);
+        console.log(`✅ Score sauvegardé dans quizScores pour le chapitre ${chapterKey}: ${limitedScorePercentage}%`);
       }
+      
+      // IMPORTANT: Mettre à jour le profil de quiz (bestScores) pour l'attestation
+      const { updateQuizProfile } = await import('../utils/quizSession');
+      await updateQuizProfile(user.uid, chapterKey, limitedScorePercentage);
+      console.log(`✅ Profil de quiz mis à jour (bestScores) pour le chapitre ${chapterKey}: ${limitedScorePercentage}%`);
       
       // Nettoyer complètement la session terminée
       const sessionKey = `quizSession:${chapterKey}`;
-      await removeUserStorage(user?.uid, sessionKey);
+      await removeUserStorage(user.uid, sessionKey);
       console.log(`🗑️ Session supprimée: ${sessionKey}`);
       
       // Mettre à jour l'index des sessions

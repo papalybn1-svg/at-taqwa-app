@@ -1,6 +1,7 @@
 import React from 'react';
 import * as Linking from 'expo-linking';
 import { Alert, AppState } from 'react-native';
+import { NavigationContainerRef, CommonActions } from '@react-navigation/native';
 import { applyActionCode } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { EntitlementsContext } from '../../contexts/EntitlementsContext';
@@ -8,11 +9,17 @@ import { usePaymentService } from '../../lib/paymentService';
 import { AuthContext } from '../../contexts/AuthContext';
 import { auth, db } from '../../screens/firebaseConfig';
 
-const PayDunyaDeepLinkHandler: React.FC = () => {
+interface PayDunyaDeepLinkHandlerProps {
+  navigationRef: React.RefObject<NavigationContainerRef<any>>;
+}
+
+const PayDunyaDeepLinkHandler: React.FC<PayDunyaDeepLinkHandlerProps> = ({ navigationRef }) => {
   const { checkEntitlements } = usePaymentService();
   const entitlementsContext = React.useContext(EntitlementsContext);
   const refreshEntitlements = entitlementsContext?.refreshEntitlements;
   const { setUser } = React.useContext(AuthContext);
+  const pendingResetPasswordUrl = React.useRef<string | null>(null);
+  const navigationReady = React.useRef(false);
 
   const refreshRef = React.useRef(refreshEntitlements);
   const checkRef = React.useRef(checkEntitlements);
@@ -58,7 +65,38 @@ const PayDunyaDeepLinkHandler: React.FC = () => {
         } else if (parsed?.scheme === 'https' && parsed?.hostname === 'attaqwa-confidentialite.vercel.app') {
           const mode = parsed.queryParams?.mode as string | undefined;
           const oob = parsed.queryParams?.oobCode as string | undefined;
-          if (mode === 'verifyEmail' && oob) {
+          
+          if (mode === 'resetPassword' && oob) {
+            // Rediriger vers l'écran de réinitialisation de mot de passe
+            console.log('🔐 Deep link réinitialisation mot de passe détecté, oobCode:', oob);
+            
+            // Fonction pour naviguer vers ResetPassword
+            const navigateToResetPassword = () => {
+              if (!navigationRef.current) {
+                // Navigation pas encore prête, stocker l'URL et réessayer plus tard
+                pendingResetPasswordUrl.current = url;
+                console.log('⏳ NavigationContainer pas encore prêt, attente...');
+                return;
+              }
+              
+              try {
+                navigationRef.current.dispatch(
+                  CommonActions.navigate({
+                    name: 'ResetPassword',
+                    params: { oobCode: oob },
+                  })
+                );
+                pendingResetPasswordUrl.current = null;
+                console.log('✅ Navigation vers ResetPassword réussie');
+              } catch (error) {
+                console.error('❌ Erreur navigation ResetPassword:', error);
+                // Stocker pour réessayer plus tard
+                pendingResetPasswordUrl.current = url;
+              }
+            };
+            
+            navigateToResetPassword();
+          } else if (mode === 'verifyEmail' && oob) {
             try {
               await applyActionCode(auth, oob);
               await auth.currentUser?.reload();
@@ -89,7 +127,53 @@ const PayDunyaDeepLinkHandler: React.FC = () => {
     };
 
     const sub = Linking.addEventListener('url', e => handleDeepLink(e.url));
-    Linking.getInitialURL().then(url => { if (url) handleDeepLink(url); });
+    
+    // Gérer l'URL initiale avec un délai pour laisser la navigation se préparer
+    Linking.getInitialURL().then(url => { 
+      if (url) {
+        console.log('🔗 URL initiale détectée:', url);
+        // Attendre que la navigation soit prête avant de traiter le deep link
+        const tryHandleUrl = (attempt = 0) => {
+          if (navigationRef.current) {
+            navigationReady.current = true;
+            handleDeepLink(url);
+          } else if (attempt < 10) {
+            // Réessayer jusqu'à 10 fois (5 secondes max)
+            setTimeout(() => tryHandleUrl(attempt + 1), 500);
+          } else {
+            // Si après 5 secondes la navigation n'est pas prête, stocker l'URL
+            console.warn('⚠️ NavigationContainer toujours pas prêt après 5 secondes');
+            pendingResetPasswordUrl.current = url;
+          }
+        };
+        tryHandleUrl();
+      }
+    });
+    
+    // Vérifier périodiquement s'il y a une URL en attente de navigation
+    const checkPendingUrl = setInterval(() => {
+      if (pendingResetPasswordUrl.current && navigationRef.current) {
+        const url = pendingResetPasswordUrl.current;
+        const parsed = Linking.parse(url);
+        const mode = parsed.queryParams?.mode as string | undefined;
+        const oob = parsed.queryParams?.oobCode as string | undefined;
+        
+        if (mode === 'resetPassword' && oob) {
+          console.log('✅ NavigationContainer prêt, traitement de l\'URL en attente');
+          try {
+            navigationRef.current.dispatch(
+              CommonActions.navigate({
+                name: 'ResetPassword',
+                params: { oobCode: oob },
+              })
+            );
+            pendingResetPasswordUrl.current = null;
+          } catch (error) {
+            console.error('❌ Erreur navigation URL en attente:', error);
+          }
+        }
+      }
+    }, 500);
 
     const appStateSub = AppState.addEventListener('change', async state => {
       if (state === 'active') {
@@ -111,6 +195,7 @@ const PayDunyaDeepLinkHandler: React.FC = () => {
     return () => {
       sub.remove();
       appStateSub.remove();
+      clearInterval(checkPendingUrl);
     };
   }, []);
 

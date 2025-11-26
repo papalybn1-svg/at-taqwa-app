@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Image, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import chaptersData from '../../data/chapitres.json';
@@ -164,6 +164,16 @@ export default function CertificateScreen() {
   useEffect(() => {
     checkEligibility();
   }, [user?.uid]);
+
+  // Recharger l'éligibilité quand l'écran devient actif (après avoir complété un quiz)
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.uid) {
+        console.log('🔄 CertificateScreen: rechargement de l\'éligibilité...');
+        checkEligibility();
+      }
+    }, [user?.uid])
+  );
 
   const checkEligibility = async () => {
     if (!user?.uid) {

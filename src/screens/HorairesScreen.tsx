@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import { initializePrayerNotifications, cancelAllPrayerNotifications } from '../services/prayerNotificationsService';
 import {
@@ -128,6 +129,7 @@ const WORLD_COUNTRIES = [
 export default function HorairesScreen() {
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [prayerTimes, setPrayerTimes] = useState<Record<string, string> | null>(null);
   const [date, setDate] = useState('');
@@ -344,7 +346,7 @@ export default function HorairesScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <GestureDetector gesture={swipeGesture}>
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
           {/* Header moderne cohérent avec les autres pages */}
           <View style={[styles.header, { maxWidth: responsive.maxContentWidth }]}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -664,6 +666,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
+    paddingTop: 10,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E8F5E8',

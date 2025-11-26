@@ -3,6 +3,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, BackHandler, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import { useAuthContext } from '../contexts/AuthContext';
@@ -61,6 +62,7 @@ export default function QuizChapterSelectScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuthContext();
+  const insets = useSafeAreaInsets();
   
   // TOUS les hooks doivent être appelés AVANT tout return conditionnel
   const [quizScores, setQuizScores] = useState<{ [key: string]: number }>({});
@@ -415,7 +417,7 @@ export default function QuizChapterSelectScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
           {/* Header avec bouton retour */}
           <View style={styles.header}>
             <TouchableOpacity 

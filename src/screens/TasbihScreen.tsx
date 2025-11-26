@@ -5,6 +5,7 @@ import { Audio } from 'expo-av';
 import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Dimensions, Image, Keyboard, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Vibration, View } from "react-native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthContext } from '../contexts/AuthContext';
 import colors from "../theme/colors";
 import { read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
@@ -25,6 +26,7 @@ type ActiveZikr = Zikr & { count: number };
 
 export default function TasbihScreen() {
   const { user } = useAuthContext();
+  const insets = useSafeAreaInsets();
   const [systemZikrs, setSystemZikrs] = useState<Zikr[]>([]);
   const [customZikrs, setCustomZikrs] = useState<Zikr[]>([]);
   const [zikrProgress, setZikrProgress] = useState<{ [key: string]: number }>({});
@@ -319,7 +321,7 @@ export default function TasbihScreen() {
   }
 
   return (
-    <View style={styles.safeArea}>
+    <View style={[styles.safeArea, { paddingTop: insets.top }]}>
       {/* Header moderne cohérent */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>

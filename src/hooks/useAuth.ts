@@ -66,14 +66,23 @@ export function useAuth() {
     // Laisser Firebase Auth gérer la persistance automatiquement
     console.log('🚀 Initialisation Firebase Auth avec persistance...');
 
+    // Vérification immédiate de l'utilisateur actuel (pour accélérer le chargement)
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      console.log('✅ Utilisateur déjà connecté détecté:', currentUser.email);
+      // Ne pas mettre à jour l'état ici, laisser onAuthStateChanged le faire
+      // mais cela accélère la détection
+    }
+
     // Timeout de sécurité: termine le "loading" si Firebase tarde, sans forcer user=null
+    // Réduit à 3 secondes car Firebase Auth persistence devrait être instantané
     const timeoutId = setTimeout(() => {
       console.log('⏰ Timeout de sécurité - Forcer la fin du chargement');
       if (isMounted) {
         setLoading(false);
         setInitializing(false);
       }
-    }, 8000);
+    }, 3000);
 
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       console.log('🔄 Auth state changed:', firebaseUser ? 'User connected' : 'User disconnected');
