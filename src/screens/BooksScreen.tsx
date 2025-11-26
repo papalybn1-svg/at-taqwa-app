@@ -9,7 +9,7 @@ import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-g
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
 import { useEntitlements } from '../contexts/EntitlementsContext';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import { usePaymentService } from '../lib/paymentService';
 import colors from '../theme/colors';
 import { Chapter, ChaptersData } from '../types/chapters';
@@ -33,11 +33,9 @@ export default function BooksScreen() {
   const navigation = useNavigation<NavigationProp<any>>();
   const route = useRoute<any>();
   const data = chaptersData as ChaptersData;
-  const { user } = useAuth();
-  // Garde simple: éviter d'utiliser les entitlements avant que l'utilisateur ne soit chargé
-  if (!user) {
-    return null;
-  }
+  const { user } = useAuthContext();
+  
+  // TOUS les hooks doivent être appelés AVANT tout return conditionnel
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
   const styles = createStyles(responsive, responsiveStyle);
@@ -54,12 +52,17 @@ export default function BooksScreen() {
   // Entitlements globaux
   const { entitlements: userEntitlements, refreshEntitlements } = useEntitlements();
   const [freshEntitlements, setFreshEntitlements] = React.useState<{ part2: boolean; part3: boolean } | null>(null);
-
-
-  // Charger la progression utilisateur
-  const loadProgress = async () => {
+  
+  // Paywall état/UI (doit être avant le return null)
+  const [paywallOpen, setPaywallOpen] = React.useState<{ open: boolean; partKey?: string }>(
+    { open: false, partKey: undefined }
+  );
+  
+  // Charger la progression utilisateur (doit être défini avant les useEffect qui l'utilisent)
+  const loadProgress = React.useCallback(async () => {
+    if (!user?.uid) return;
     try {
-      const saved = await readUserStorage<ChapterState>(user?.uid, 'chapterProgress');
+      const saved = await readUserStorage<ChapterState>(user.uid, 'chapterProgress');
       if (saved) {
         // Convertir en map pour l'affichage (clé -> percent)
         const display: {[key:string]:number} = {};
@@ -73,12 +76,12 @@ export default function BooksScreen() {
     } catch (error) {
       console.error('Erreur lors du chargement de la progression:', error);
     }
-  };
+  }, [user?.uid]);
 
   // Charger la progression au montage et quand l'utilisateur change
   React.useEffect(() => {
     loadProgress();
-  }, [user?.uid]);
+  }, [loadProgress]);
 
   // Prendre en charge une pré-sélection de partie via navigation (ex: depuis Quiz "Acheter")
   React.useEffect(() => {
@@ -93,18 +96,29 @@ export default function BooksScreen() {
     React.useCallback(() => {
       loadProgress();
       // Rafraîchir les droits à chaque retour (respecte le cooldown côté contexte)
-      refreshEntitlements(true).catch(()=>{});
-      // Lire un snapshot frais côté backend pour l'affichage des badges
+      // Ne pas forcer pour éviter les boucles infinies
+      refreshEntitlements(false).catch(()=>{});
+      // Lire un snapshot frais côté backend pour l'affichage des badges (avec gestion d'erreur)
       (async () => {
         try {
           const latest = await fetchEntitlements();
           setFreshEntitlements(latest);
-        } catch {
+        } catch (error: any) {
+          // Ne pas logger en boucle si erreur réseau
+          if (!error?.message?.includes('Network request failed') && !error?.message?.includes('Failed to fetch')) {
+            console.error('Erreur fetchEntitlements:', error);
+          }
           // garder l'état actuel en cas d'erreur réseau
         }
       })();
-    }, [user?.uid])
+    }, [loadProgress]) // Retirer refreshEntitlements et fetchEntitlements des dépendances pour éviter les boucles
   );
+
+  // Garde simple: éviter d'utiliser les entitlements avant que l'utilisateur ne soit chargé
+  // MAINTENANT après tous les hooks
+  if (!user) {
+    return null;
+  }
 
   // Sauvegarder la progression
   const saveProgress = async (newProgress: {[key:string]:number}) => {
@@ -133,42 +147,54 @@ export default function BooksScreen() {
   };
 
   const handleChapterPress = async (chapter: Chapter) => {
-    // Trouver partie et index du chapitre
-    let partieKey: string | null = null;
-    let chapitreIndex = 0;
-    Object.keys(data).forEach((pk) => {
-      if (partieKey) return;
-      const idx = (data as any)[pk].chapitres.findIndex((ch: any) => ch.title === (chapter as any).title && ch.image === (chapter as any).image);
-      if (idx >= 0) { partieKey = pk; chapitreIndex = idx; }
-    });
-    
-    // Vérifier si la partie nécessite un paiement (Partie 2 et 3 seulement)
-    if (partieKey === 'deuxieme_partie' || partieKey === 'troisieme_partie') {
-      // Forcer une vérification immédiate des droits et lire un snapshot frais
-      try { await refreshEntitlements(true); } catch {}
-      let fresh = userEntitlements;
-      try { fresh = await fetchEntitlements(); } catch {}
-      const hasAccess = partieKey === 'deuxieme_partie' ? fresh.part2 : fresh.part3;
-      if (!hasAccess) {
-        showPaywallModal(partieKey);
-        return;
+    console.log('📖 handleChapterPress appelé pour:', chapter.title);
+    try {
+      // Trouver partie et index du chapitre
+      let partieKey: string | null = null;
+      let chapitreIndex = 0;
+      Object.keys(data).forEach((pk) => {
+        if (partieKey) return;
+        const idx = (data as any)[pk].chapitres.findIndex((ch: any) => ch.title === (chapter as any).title && ch.image === (chapter as any).image);
+        if (idx >= 0) { partieKey = pk; chapitreIndex = idx; }
+      });
+      
+      console.log('🔍 Partie trouvée:', partieKey, 'Index:', chapitreIndex);
+      
+      // Vérifier si la partie nécessite un paiement (Partie 2 et 3 seulement)
+      if (partieKey === 'deuxieme_partie' || partieKey === 'troisieme_partie') {
+        console.log('🔐 Vérification accès premium pour:', partieKey);
+        // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
+        const source = freshEntitlements ?? userEntitlements;
+        const hasAccess = partieKey === 'deuxieme_partie' ? source.part2 : source.part3;
+        console.log('🔑 Accès:', hasAccess, 'Entitlements:', source);
+        if (!hasAccess) {
+          console.log('🔒 Accès refusé, affichage paywall');
+          showPaywallModal(partieKey);
+          return;
+        }
       }
+      
+      let initialSection = 0;
+      if (partieKey && user?.uid) {
+        const progressKey = `chapter${partieKey}_${chapitreIndex + 1}`;
+        try {
+          const saved = await readUserStorage<ChapterState>(user.uid, 'chapterProgress');
+          const last = saved && saved[progressKey]?.lastSection;
+          if (typeof last === 'number') initialSection = last;
+        } catch (e) {
+          console.warn('Erreur lecture progression:', e);
+        }
+      }
+      
+      console.log('✅ Navigation vers Chapter avec section:', initialSection);
+      (navigation as any).navigate('Chapter', { chapter, initialSection });
+    } catch (error) {
+      console.error('❌ Erreur dans handleChapterPress:', error);
+      Alert.alert('Erreur', 'Impossible d\'ouvrir le chapitre. Veuillez réessayer.');
     }
-    
-    let initialSection = 0;
-    if (partieKey) {
-      const progressKey = `chapter${partieKey}_${chapitreIndex + 1}`;
-      const saved = await readUserStorage<ChapterState>(user?.uid, 'chapterProgress');
-      const last = saved && saved[progressKey]?.lastSection;
-      if (typeof last === 'number') initialSection = last;
-    }
-    (navigation as any).navigate('Chapter', { chapter, initialSection });
   };
 
-  // Paywall état/UI
-  const [paywallOpen, setPaywallOpen] = React.useState<{ open: boolean; partKey?: string }>(
-    { open: false, partKey: undefined }
-  );
+  // Fonctions pour le paywall (déclarées après le return null car ce ne sont pas des hooks)
   const showPaywallModal = (partieKey: string) => setPaywallOpen({ open: true, partKey: partieKey });
   const closePaywall = () => setPaywallOpen({ open: false, partKey: undefined });
 
@@ -208,10 +234,12 @@ export default function BooksScreen() {
             const res = await checkPaymentStatus(token);
             const s = (res.status || '').toString().toUpperCase();
             if (s === 'COMPLETED') {
-              // Actualise les entitlements immédiatement
-              try { await refreshEntitlements(true); } catch {}
+              console.log('✅ Paiement complété, actualisation des entitlements...');
+              // FORCER le refresh après un paiement complété pour débloquer immédiatement
+              // Le cooldown de 2s pour force=true empêche les boucles tout en permettant la mise à jour
+              try { await refreshEntitlements(true); } catch (e) { console.warn('Erreur refreshEntitlements:', e); }
               // Forcer rechargement soft: on rappelle refreshEntitlements via Navigation event
-              // ou simplement re-monter l’écran:
+              // ou simplement re-monter l'écran:
               setTimeout(()=> {
                 // Best effort: on redessine la page, EntitlementsProvider rechargera selon cooldown
                 setSelectedPart(null);
@@ -227,11 +255,13 @@ export default function BooksScreen() {
             } else {
               Alert.alert('Traitement en cours', 'Le paiement est en cours de confirmation. Réessayez dans quelques instants.');
             }
-          } catch (e) {
+          } catch (e: any) {
+            // Ne pas logger en boucle si erreur réseau
+            if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+              console.warn('Polling status erreur:', e);
+            }
             if (attempts < maxAttempts) {
               setTimeout(pollOnce, baseDelayMs);
-            } else {
-              console.warn('Polling status erreur:', e);
             }
           }
         };
@@ -261,20 +291,40 @@ export default function BooksScreen() {
   };
 
   const handlePartCardPress = async (partie: string) => {
-    const isPremium = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
-    if (!isPremium) {
-      handlePartPress(partie);
-      return;
-    }
-    // Rafraîchir et relire les droits pour éviter toute latence d'état
-    try { await refreshEntitlements(true); } catch {}
-    let fresh = userEntitlements;
-    try { fresh = await fetchEntitlements(); } catch {}
-    const isUnlocked = (partie === 'deuxieme_partie' && fresh.part2) || (partie === 'troisieme_partie' && fresh.part3);
-    if (isUnlocked) {
-      handlePartPress(partie);
-    } else {
-      showPaywallModal(partie);
+    console.log('🔵 handlePartCardPress appelé pour:', partie);
+    try {
+      const isPremium = partie === 'deuxieme_partie' || partie === 'troisieme_partie';
+      if (!isPremium) {
+        console.log('✅ Partie gratuite, ouverture directe');
+        handlePartPress(partie);
+        return;
+      }
+      // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
+      console.log('🔄 Vérification des droits premium...');
+      // Ne pas forcer pour éviter les boucles infinies
+      try { await refreshEntitlements(false); } catch (e) { 
+        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+          console.error('Erreur refreshEntitlements:', e);
+        }
+      }
+      let fresh = userEntitlements;
+      try { fresh = await fetchEntitlements(); } catch (e) { 
+        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+          console.error('Erreur fetchEntitlements:', e);
+        }
+      }
+      const isUnlocked = (partie === 'deuxieme_partie' && fresh.part2) || (partie === 'troisieme_partie' && fresh.part3);
+      console.log('🔐 Accès premium:', { partie, isUnlocked, fresh });
+      if (isUnlocked) {
+        console.log('✅ Accès débloqué, ouverture de la partie');
+        handlePartPress(partie);
+      } else {
+        console.log('🔒 Accès verrouillé, affichage du paywall');
+        showPaywallModal(partie);
+      }
+    } catch (error) {
+      console.error('❌ Erreur dans handlePartCardPress:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue. Veuillez réessayer.');
     }
   };
 
@@ -436,8 +486,12 @@ export default function BooksScreen() {
                       {/* Carte de partie */}
                       <TouchableOpacity 
                         style={[styles.partCard, isPremium && styles.premiumCard]}
-                        onPress={() => { handlePartCardPress(partie); }}
+                        onPress={() => {
+                          console.log('👆 Clic sur la carte partie:', partie);
+                          handlePartCardPress(partie);
+                        }}
                         activeOpacity={0.95}
+                        disabled={false}
                       >
                         <View style={styles.partCardContent}>
                           <View style={styles.partCardHeader}>

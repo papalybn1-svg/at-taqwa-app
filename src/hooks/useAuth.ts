@@ -94,9 +94,14 @@ export function useAuth() {
           } catch {}
           const refreshedUser = auth.currentUser || firebaseUser;
           if (!refreshedUser?.emailVerified) {
-            // Email non vérifié → ne pas exposer de user actif
+            // Email non vérifié → exposer l'utilisateur avec emailVerified: false pour permettre la redirection vers VerifyEmail
+            const freshUserData: AuthUser = {
+              ...refreshedUser,
+              emailVerified: false,
+              role: 'user', // Rôle par défaut
+            } as AuthUser;
             if (isMounted) {
-              setUser(null);
+              setUser(freshUserData);
               setLoading(false);
               if (initializing) setInitializing(false);
             }
@@ -176,6 +181,73 @@ export function useAuth() {
       unsubscribe();
     };
   }, [initializing]);
+
+  // Polling pour détecter quand l'email devient vérifié (si l'utilisateur est connecté mais non vérifié)
+  useEffect(() => {
+    if (!user || user.emailVerified) return; // Pas besoin de polling si déjà vérifié ou pas d'utilisateur
+    
+    let isMounted = true;
+    let timer: any;
+    
+    const checkEmailVerification = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser || !isMounted) return;
+        
+        await currentUser.reload();
+        if (currentUser.emailVerified && isMounted) {
+          // L'email est maintenant vérifié → déclencher onAuthStateChanged en forçant un re-render
+          // On peut aussi mettre à jour directement l'utilisateur
+          const freshRole = await fetchUserRoleFromFirestore(currentUser);
+          try {
+            const userRef = doc(db, 'users', currentUser.uid);
+            const snap = await getDoc(userRef);
+            if (!snap.exists()) {
+              await setDoc(userRef, {
+                email: currentUser.email,
+                role: 'user',
+                emailVerified: true,
+                createdAt: new Date(),
+                displayName: currentUser.displayName || '',
+              });
+            } else if (!(snap.data() as any)?.emailVerified) {
+              await updateDoc(userRef, { emailVerified: true });
+            }
+          } catch (e) {
+            console.log('ℹ️ Sync Firestore users skipped/failed:', e);
+          }
+          
+          const freshUserData: AuthUser = {
+            ...(currentUser as any),
+            role: freshRole,
+            emailVerified: true,
+          };
+          
+          if (isMounted) {
+            setUser(freshUserData);
+            await saveUserDataLocally(freshUserData);
+            console.log('✅ Email vérifié détecté via polling');
+          }
+          return; // Arrêter le polling
+        }
+      } catch (error) {
+        console.error('❌ Erreur polling vérification email:', error);
+      }
+      
+      // Continuer le polling si toujours non vérifié
+      if (isMounted) {
+        timer = setTimeout(checkEmailVerification, 3000);
+      }
+    };
+    
+    // Démarrer le polling après 1 seconde
+    timer = setTimeout(checkEmailVerification, 1000);
+    
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [user?.uid, user?.emailVerified]);
 
   const isAdmin = () => user?.role === 'admin';
 

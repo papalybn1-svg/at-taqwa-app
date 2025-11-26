@@ -8,20 +8,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { deleteUser, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import chaptersData from '../../data/chapitres.json';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import colors from '../theme/colors';
-import { getQuizProfile } from '../utils/quizSession';
-import { read as readUserStorage } from '../utils/userStorage';
+import { cleanupUserQuizSessions, getQuizProfile } from '../utils/quizSession';
+import { removeAllWithPrefix, remove as removeUserStorage } from '../utils/userStorage';
 import { auth, db } from './firebaseConfig';
-import { AuthContext } from './LoginScreen';
 // (Préférences étendues retirées à la demande)
 
 export default function ParametresScreen() {
-  const { user: contextUser, setUser } = useContext(AuthContext);
-  const { logout } = useAuth();
+  const { user: contextUser, setUser, logout } = useAuthContext();
   const navigation = useNavigation<any>();
   
   // Utiliser l'utilisateur Firebase Auth directement
@@ -329,15 +327,39 @@ export default function ParametresScreen() {
           onPress: async () => {
             try {
               const uid = current.uid;
-              // Supprimer les données de profil principales
+              
+              // 1. Nettoyer toutes les données utilisateur locales (AsyncStorage)
+              try {
+                console.log('🧹 Nettoyage des données locales pour l\'utilisateur:', uid);
+                await Promise.all([
+                  removeUserStorage(uid, 'chapterProgress'),
+                  removeUserStorage(uid, 'favorites'),
+                  removeUserStorage(uid, 'quizScores'),
+                  removeUserStorage(uid, 'zikrProgress'),
+                  removeUserStorage(uid, 'entitlements'),
+                  removeUserStorage(uid, 'payment_token'),
+                ]);
+                await removeAllWithPrefix(uid, 'quizSession:');
+                await cleanupUserQuizSessions(uid);
+                console.log('✅ Données locales nettoyées');
+              } catch (cleanupError) {
+                console.error('⚠️ Erreur lors du nettoyage des données locales (non-bloquant):', cleanupError);
+                // Continuer même si le nettoyage échoue
+              }
+              
+              // 2. Supprimer les données de profil Firestore
               try {
                 await deleteDoc(doc(db, 'users', uid));
+                console.log('✅ Document Firestore supprimé');
               } catch (e) {
                 // ignorer si déjà supprimé / permissions limitées
+                console.log('ℹ️ Document Firestore déjà supprimé ou inexistant');
               }
-              // Supprimer le compte Auth (peut exiger une reconnexion récente)
+              
+              // 3. Supprimer le compte Auth (peut exiger une reconnexion récente)
               try {
                 await deleteUser(current);
+                console.log('✅ Compte Firebase Auth supprimé');
               } catch (e: any) {
                 if (e?.code === 'auth/requires-recent-login') {
                   Alert.alert(
@@ -350,10 +372,17 @@ export default function ParametresScreen() {
                 }
                 throw e;
               }
+              
+              // 4. Mettre à jour le contexte et déconnecter
+              setUser(null);
               Alert.alert('Compte supprimé', 'Votre compte a été définitivement supprimé.');
               await logout();
-            } catch (err) {
-              Alert.alert('Erreur', "La suppression du compte a échoué. Veuillez réessayer plus tard.");
+            } catch (err: any) {
+              console.error('❌ Erreur lors de la suppression du compte:', err);
+              Alert.alert(
+                'Erreur',
+                err?.message || "La suppression du compte a échoué. Veuillez réessayer plus tard."
+              );
             }
           }
         }

@@ -3,19 +3,24 @@ import * as Linking from 'expo-linking';
 import { Alert, AppState } from 'react-native';
 import { applyActionCode } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useEntitlements } from '../../contexts/EntitlementsContext';
+import { EntitlementsContext } from '../../contexts/EntitlementsContext';
 import { usePaymentService } from '../../lib/paymentService';
 import { AuthContext } from '../../contexts/AuthContext';
 import { auth, db } from '../../screens/firebaseConfig';
 
 const PayDunyaDeepLinkHandler: React.FC = () => {
   const { checkEntitlements } = usePaymentService();
-  const { refreshEntitlements } = useEntitlements();
+  const entitlementsContext = React.useContext(EntitlementsContext);
+  const refreshEntitlements = entitlementsContext?.refreshEntitlements;
   const { setUser } = React.useContext(AuthContext);
 
   const refreshRef = React.useRef(refreshEntitlements);
   const checkRef = React.useRef(checkEntitlements);
-  React.useEffect(() => { refreshRef.current = refreshEntitlements; }, [refreshEntitlements]);
+  React.useEffect(() => { 
+    if (refreshEntitlements) {
+      refreshRef.current = refreshEntitlements;
+    }
+  }, [refreshEntitlements]);
   React.useEffect(() => { checkRef.current = checkEntitlements; }, [checkEntitlements]);
 
   React.useEffect(() => {
@@ -26,16 +31,20 @@ const PayDunyaDeepLinkHandler: React.FC = () => {
           switch (parsed.path) {
             case 'success': {
               try {
+                // Attendre un peu pour que le backend traite le paiement
                 await new Promise(r => setTimeout(r, 2000));
-                await refreshRef.current();
+                // FORCER le refresh après un paiement réussi pour débloquer immédiatement
+                if (refreshRef.current) {
+                  await refreshRef.current(true); // force=true pour bypasser le cooldown
+                }
                 const entitlements = await checkRef.current();
                 if (entitlements.part2 || entitlements.part3) {
                   Alert.alert('Paiement réussi !', 'Votre paiement a été confirmé. Accès débloqué.', [{ text: 'OK' }]);
                 } else {
-                  Alert.alert('Paiement en cours', 'L’accès sera débloqué dans quelques instants.', [{ text: 'OK' }]);
+                  Alert.alert('Paiement en cours', 'L\'accès sera débloqué dans quelques instants.', [{ text: 'OK' }]);
                 }
               } catch {
-                Alert.alert('Paiement en cours', 'L’accès sera débloqué dans quelques instants.', [{ text: 'OK' }]);
+                Alert.alert('Paiement en cours', 'L\'accès sera débloqué dans quelques instants.', [{ text: 'OK' }]);
               }
               break;
             }
@@ -43,7 +52,7 @@ const PayDunyaDeepLinkHandler: React.FC = () => {
               Alert.alert('Paiement annulé', 'Vous pouvez réessayer à tout moment.', [{ text: 'OK' }]);
               break;
             case 'failed':
-              Alert.alert('Paiement échoué', 'Le paiement n’a pas pu être traité.', [{ text: 'OK' }]);
+              Alert.alert('Paiement échoué', 'Le paiement n\'a pas pu être traité.', [{ text: 'OK' }]);
               break;
           }
         } else if (parsed?.scheme === 'https' && parsed?.hostname === 'attaqwa-confidentialite.vercel.app') {

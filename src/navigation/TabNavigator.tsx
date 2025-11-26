@@ -5,6 +5,7 @@ import React from "react";
 import AuthorProfileScreen from '../screens/AuthorProfileScreen';
 import BooksScreen from '../screens/BooksScreen';
 import CertificateScreen from '../screens/CertificateScreen';
+import ChapterScreen from '../screens/ChapterScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import HomeScreen from "../screens/HomeScreen";
 import HorairesScreen from '../screens/HorairesScreen';
@@ -78,6 +79,13 @@ function HomeStack() {
         component={BooksScreen}
         options={{
           gestureEnabled: false,
+        }}
+      />
+      <Stack.Screen 
+        name="Chapter" 
+        component={ChapterScreen}
+        options={{
+          gestureEnabled: true, // Permet le swipe pour revenir
         }}
       />
       <Stack.Screen 

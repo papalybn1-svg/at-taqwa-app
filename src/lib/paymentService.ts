@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+import { ENV } from '../config/environment';
 import { auth } from '../screens/firebaseConfig';
 import { write as writeUserStorage } from '../utils/userStorage';
 
@@ -72,9 +74,8 @@ export class PaymentService {
     try {
       // Force refresh uniquement si explicitement demandé
       const token = await user.getIdToken(force);
-      console.log('🔑 Token Firebase obtenu (complet):', token);
-      console.log('👤 User UID:', user.uid);
-      console.log('📧 User email:', user.email);
+      // Ne logger le token que si nécessaire (désactivé pour éviter le spam)
+      // console.log('🔑 Token Firebase obtenu');
       return token;
     } catch (error) {
       console.error('❌ Erreur génération token Firebase:', error);
@@ -103,13 +104,19 @@ export class PaymentService {
         const grantedIds = resources.filter(r => r.granted).map(r => r.id);
         await writeUserStorage(uid, 'entitlements', grantedIds);
       } catch (e) {
-        console.warn('⚠️ Impossible d’écrire entitlements en local:', e);
+        console.warn('⚠️ Impossible d\'écrire entitlements en local:', e);
       }
       
       console.log('🎯 Entitlements calculés:', { part2, part3 });
       return { part2, part3 };
-    } catch (error) {
-      console.error('Erreur vérification entitlements:', error);
+    } catch (error: any) {
+      // Ne pas logger en boucle si c'est une erreur réseau
+      if (error?.message?.includes('Network request failed') || error?.message?.includes('Failed to fetch')) {
+        console.warn('⚠️ Erreur réseau lors de la vérification des entitlements (backend inaccessible)');
+      } else {
+        console.error('❌ Erreur vérification entitlements:', error);
+      }
+      // Retourner les valeurs par défaut sans relancer d'appels
       return { part2: false, part3: false };
     }
   }
@@ -167,10 +174,11 @@ export class PaymentService {
         `/api/paydunya/status?token=${encodeURIComponent(token)}`
       );
       // Si confirmé, synchroniser les entitlements
+      // Note: Cette fonction est appelée depuis le polling dans BooksScreen
+      // Le refresh des entitlements est géré là-bas avec force=true
       const status = (data.status || '').toString().toUpperCase();
-      if (status === 'COMPLETED') {
-        try { await this.checkEntitlements(); } catch {}
-      }
+      // Ne pas appeler checkEntitlements ici pour éviter les appels en double
+      // Le refresh sera fait dans BooksScreen après détection du COMPLETED
       return { status: data.status };
     } catch (error) {
       console.error('Erreur vérification statut paiement:', error);
@@ -192,20 +200,31 @@ export class PaymentService {
   }
 }
 
-import { ENV } from '../config/environment';
+// Instance singleton du service de paiement pour éviter les re-créations
+let paymentServiceInstance: PaymentService | null = null;
+
+function getPaymentService(): PaymentService {
+  if (!paymentServiceInstance) {
+    paymentServiceInstance = new PaymentService({
+      backendUrl: ENV.BACKEND_URL
+    });
+  }
+  return paymentServiceInstance;
+}
 
 /**
  * Hook React pour utiliser le service de paiement
+ * Utilise une instance singleton pour éviter les re-créations infinies
  */
 export function usePaymentService() {
-  const paymentService = new PaymentService({
-    backendUrl: ENV.BACKEND_URL
-  });
-
-  return {
-    checkEntitlements: () => paymentService.checkEntitlements(),
-    createPayment: (planId: 'BOOK_PART_2' | 'BOOK_PART_3') => paymentService.createPayment(planId),
-    checkPaymentStatus: (token: string) => paymentService.checkPaymentStatus(token),
-    openPayDunyaCheckout: (checkoutUrl: string) => paymentService.openPayDunyaCheckout(checkoutUrl)
-  };
-} 
+  // Utiliser useMemo pour garantir que les fonctions retournées sont stables
+  return useMemo(() => {
+    const service = getPaymentService();
+    return {
+      checkEntitlements: () => service.checkEntitlements(),
+      createPayment: (planId: 'BOOK_PART_2' | 'BOOK_PART_3') => service.createPayment(planId),
+      checkPaymentStatus: (token: string) => service.checkPaymentStatus(token),
+      openPayDunyaCheckout: (checkoutUrl: string) => service.openPayDunyaCheckout(checkoutUrl)
+    };
+  }, []); // Dépendances vides = stable pour toujours
+}

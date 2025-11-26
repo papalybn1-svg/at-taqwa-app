@@ -5,7 +5,7 @@ import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, View } from '
 import { BarChart, LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
-import { AuthContext } from './LoginScreen';
+import { AuthContext } from '../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 

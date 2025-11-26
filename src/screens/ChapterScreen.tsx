@@ -1,17 +1,16 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Stockage local scoping par utilisateur
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import { useEntitlements } from '../contexts/EntitlementsContext';
+import { usePaymentService } from '../lib/paymentService';
 import { ChaptersData } from '../types/chapters';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
-import { isQuizUnlocked } from '../utils/quizUnlock';
-import { usePaymentService } from '../lib/paymentService';
 
 const chaptersData = chaptersDataRaw as ChaptersData;
 
@@ -106,23 +105,152 @@ function getChaptersInPartie(partieKey: string) {
 }
 
 const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) => {
-  // TOUS LES HOOKS EN PREMIER
-  const { user } = useAuth();
+  // TOUS LES HOOKS EN PREMIER (avant tout return conditionnel)
+  const { user } = useAuthContext();
   const { entitlements, refreshEntitlements } = useEntitlements();
   const { checkEntitlements: fetchEntitlements } = usePaymentService();
-  // Garde: attendre l'utilisateur avant toute logique premium
-  if (!user) {
-    return null;
-  }
-  const [textSize, setTextSize] = useState(16);
-  const screenWidth = Dimensions.get('window').width;
-  const scrollViewRef = useRef<ScrollView>(null);
   const { chapter } = route.params;
+  
+  // Tous les useState
+  const [textSize, setTextSize] = useState(16);
   const [chapterContent, setChapterContent] = useState<any>(null);
   const [accessStatus, setAccessStatus] = useState<'pending'|'granted'|'denied'>('pending');
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // 0 = première section
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [scrollProgress, setScrollProgress] = useState(0); // Ajout pour la progression verticale
+  const [isScrollable, setIsScrollable] = useState(false); // Pour savoir si la page est scrollable
   
+  // États pour la gestion des quiz
+  const [quizScores, setQuizScores] = useState<Record<string, number>>({});
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [lockedChapter, setLockedChapter] = useState<any>(null);
+  const [previousScore, setPreviousScore] = useState<number | undefined>(undefined);
+  
+  // Tous les useRef
+  const screenWidth = Dimensions.get('window').width;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  
+  // Fonctions utilisées dans les useEffect - doivent être définies AVANT les useEffect
+  const initializeChapterProgress = useCallback(async () => {
+    if (!user?.uid || !chapter) return;
+    try {
+      const saved = (await readUserStorage<ChapterState>(user.uid, 'chapterProgress')) || {};
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+      if (!currentChapterData) return;
+      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+      if (!saved[progressKey]) {
+        const updated: ChapterState = {
+          ...saved,
+          [progressKey]: {
+            percent: 0,
+            lastSection: 0,
+            updatedAt: Date.now(),
+          },
+        };
+        await writeUserStorage(user.uid, 'chapterProgress', updated);
+      }
+    } catch (error) {
+      console.error('Erreur initialisation progression:', error);
+    }
+  }, [user?.uid, chapter]);
+  
+  const loadFavorites = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const storedFavorites = await readUserStorage<any[]>(user.uid, 'favorites');
+      if (storedFavorites) setFavorites(storedFavorites);
+    } catch (error) {
+      console.error('Erreur lors du chargement des favoris:', error);
+    }
+  }, [user?.uid]);
+  
+  const updateChapterProgress = useCallback(async () => {
+    if (!user?.uid || !chapter || !chapterContent) return;
+    try {
+      // Charger la progression existante (scopée utilisateur)
+      const saved = (await readUserStorage<ChapterState>(user.uid, 'chapterProgress')) || {};
+      
+      // Trouver l'index du chapitre dans sa partie
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+      
+      if (!currentChapterData) return;
+      
+      // Calculer la progression basée sur la section actuelle
+      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      const totalSections = sections.length;
+      const currentProgress = Math.round(((currentSectionIndex + 1) / totalSections) * 100);
+      
+      // Créer la clé de progression
+      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+      
+      const previous = saved[progressKey]?.percent ?? 0;
+      const updated: ChapterState = {
+        ...saved,
+        [progressKey]: {
+          percent: currentProgress > previous ? currentProgress : previous,
+          lastSection: currentSectionIndex,
+          updatedAt: Date.now(),
+        },
+      };
+      await writeUserStorage(user.uid, 'chapterProgress', updated);
+      console.log(`Progression mise à jour: ${progressKey} = ${updated[progressKey].percent}% (section ${currentSectionIndex})`);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la progression:', error);
+    }
+  }, [user?.uid, chapter, chapterContent, currentSectionIndex]);
+  
+  const markChapterAsComplete = useCallback(async () => {
+    if (!user?.uid || !chapter || !chapterContent) return;
+    try {
+      // Charger la progression existante
+      const saved = (await readUserStorage<ChapterState>(user.uid, 'chapterProgress')) || {};
+      
+      // Trouver l'index du chapitre dans sa partie
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+      
+      if (!currentChapterData) return;
+      
+      // Créer la clé de progression
+      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+      
+      // Marquer comme 100% lu et dernière section
+      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      const updated: ChapterState = {
+        ...saved,
+        [progressKey]: {
+          percent: 100,
+          lastSection: Math.max(0, sections.length - 1),
+          updatedAt: Date.now(),
+        },
+      };
+      await writeUserStorage(user.uid, 'chapterProgress', updated);
+      console.log(`Chapitre marqué comme complètement lu: ${progressKey}`);
+    } catch (error) {
+      console.error('Erreur lors du marquage du chapitre comme lu:', error);
+    }
+  }, [user?.uid, chapter, chapterContent]);
+  
+  const loadQuizScores = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const scores = await readUserStorage<Record<string, number>>(user.uid, 'quizScores');
+      if (scores) {
+        setQuizScores(scores);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des scores de quiz:', error);
+    }
+  }, [user?.uid]);
+  
+  // Tous les useEffect doivent être avant le return null
   // Vérifier l'accès de façon fiable (refresh + relecture serveur) avant d'afficher quoi que ce soit
   useEffect(() => {
+    if (!user || !chapter) return;
     let cancelled = false;
     const verify = async () => {
       setAccessStatus('pending');
@@ -135,8 +263,9 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     if (currentChapter.partieKey === 'premiere_partie') {
         if (!cancelled) setAccessStatus('granted');
         return;
-    }
-      try { await refreshEntitlements(true); } catch {}
+      }
+      // Ne pas forcer pour éviter les boucles infinies
+      try { await refreshEntitlements(false); } catch {}
       let latest = entitlements;
       try { latest = await fetchEntitlements(); } catch {}
       const allowed = currentChapter.partieKey === 'deuxieme_partie'
@@ -148,22 +277,11 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     };
     verify();
     return () => { cancelled = true; };
-  }, [chapter?.image, user?.uid]);
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // 0 = première section
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [favorites, setFavorites] = useState<any[]>([]);
-  const [scrollProgress, setScrollProgress] = useState(0); // Ajout pour la progression verticale
-  const [isScrollable, setIsScrollable] = useState(false); // Pour savoir si la page est scrollable
-  
-  // États pour la gestion des quiz
-  const [quizScores, setQuizScores] = useState<Record<string, number>>({});
-  const [showLockModal, setShowLockModal] = useState(false);
-  const [lockedChapter, setLockedChapter] = useState<any>(null);
-  const [previousScore, setPreviousScore] = useState<number | undefined>(undefined);
+  }, [chapter?.image, user?.uid, entitlements, refreshEntitlements, fetchEntitlements]);
 
   // useEffect pour charger le contenu du chapitre
   useEffect(() => {
+    if (!user || !chapter) return;
     if (chapter && chapter.image && chapterFiles[chapter.image]) {
       const content = chapterFiles[chapter.image];
       setChapterContent(content);
@@ -188,23 +306,26 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       };
       loadInitialSection();
     }
-  }, [chapter, route.params.initialSection, user?.uid]);
+  }, [chapter, route.params.initialSection, user?.uid, initializeChapterProgress]);
 
   // useEffect pour charger les favoris
   useEffect(() => {
+    if (!user) return;
     loadFavorites();
-  }, []);
+  }, [user?.uid, loadFavorites]);
 
   // useEffect pour vérifier si cette page/section est en favoris
   useEffect(() => {
+    if (!user || !chapter) return;
     if (chapter && favorites.length >= 0) {
       const pageId = `${chapter.image}_${chapter.title}_section_${currentSectionIndex}`;
       setIsFavorite(favorites.some(fav => fav.id === pageId));
     }
-  }, [chapter, favorites, currentSectionIndex]);
+  }, [chapter, favorites, currentSectionIndex, user]);
 
   // useEffect pour l'animation de fondu
   useEffect(() => {
+    if (!user) return;
     fadeAnim.setValue(0);
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -212,21 +333,26 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       useNativeDriver: true,
     }).start();
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-  }, [currentSectionIndex]);
+  }, [currentSectionIndex, user]);
 
   // useEffect pour mettre à jour la progression
   useEffect(() => {
-    if (chapter && chapterContent) {
-      updateChapterProgress();
-      
-      // Marquer comme complètement lu si on est à la dernière section
-      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-      const totalSections = sections.length;
-      if (currentSectionIndex === totalSections - 1) {
-        markChapterAsComplete();
-      }
+    if (!user || !chapter || !chapterContent) return;
+    updateChapterProgress();
+    
+    // Marquer comme complètement lu si on est à la dernière section
+    const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+    const totalSections = sections.length;
+    if (currentSectionIndex === totalSections - 1) {
+      markChapterAsComplete();
     }
-  }, [currentSectionIndex, chapter, chapterContent]);
+  }, [currentSectionIndex, chapter, chapterContent, user, updateChapterProgress, markChapterAsComplete]);
+  
+  // Garde: attendre l'utilisateur avant toute logique premium
+  // MAINTENANT après tous les hooks
+  if (!user) {
+    return null;
+  }
 
   // Tailles de texte disponibles
   const textSizes = [16, 19, 22];
@@ -235,15 +361,6 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   };
 
   // Fonctions de gestion des favoris
-  const loadFavorites = async () => {
-    try {
-      const storedFavorites = await readUserStorage<any[]>(user?.uid, 'favorites');
-      if (storedFavorites) setFavorites(storedFavorites);
-    } catch (error) {
-      console.error('Erreur lors du chargement des favoris:', error);
-    }
-  };
-
   const saveFavorites = async (newFavorites: any[]) => {
     try {
       console.log('Sauvegarde des favoris:', newFavorites);
@@ -300,77 +417,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     setIsFavorite(!isFavorite);
   };
 
-  // Fonction pour mettre à jour la progression du chapitre
-  const updateChapterProgress = async () => {
-    if (!chapter || !chapterContent) return;
-    
-    try {
-      // Charger la progression existante (scopée utilisateur)
-      const saved = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
-      
-      // Trouver l'index du chapitre dans sa partie
-      const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
-      
-      if (!currentChapterData) return;
-      
-      // Calculer la progression basée sur la section actuelle
-      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-      const totalSections = sections.length;
-      const currentProgress = Math.round(((currentSectionIndex + 1) / totalSections) * 100);
-      
-      // Créer la clé de progression
-      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
-      
-      const previous = saved[progressKey]?.percent ?? 0;
-      const updated: ChapterState = {
-        ...saved,
-        [progressKey]: {
-          percent: currentProgress > previous ? currentProgress : previous,
-          lastSection: currentSectionIndex,
-          updatedAt: Date.now(),
-        },
-      };
-      await writeUserStorage(user?.uid, 'chapterProgress', updated);
-      console.log(`Progression mise à jour: ${progressKey} = ${updated[progressKey].percent}% (section ${currentSectionIndex})`);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de la progression:', error);
-    }
-  };
-
-  // Fonction pour marquer un chapitre comme complètement lu
-  const markChapterAsComplete = async () => {
-    if (!chapter) return;
-    
-    try {
-      // Charger la progression existante
-      const saved = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
-      
-      // Trouver l'index du chapitre dans sa partie
-      const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
-      
-      if (!currentChapterData) return;
-      
-      // Créer la clé de progression
-      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
-      
-      // Marquer comme 100% lu et dernière section
-      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-      const updated: ChapterState = {
-        ...saved,
-        [progressKey]: {
-          percent: 100,
-          lastSection: Math.max(0, sections.length - 1),
-          updatedAt: Date.now(),
-        },
-      };
-      await writeUserStorage(user?.uid, 'chapterProgress', updated);
-      console.log(`Chapitre marqué comme complètement lu: ${progressKey}`);
-    } catch (error) {
-      console.error('Erreur lors du marquage du chapitre comme lu:', error);
-    }
-  };
+  // updateChapterProgress et markChapterAsComplete sont déjà définis en useCallback ci-dessus
 
   // Fonction pour gérer le retour vers la page des chapitres de cette partie
   const handleBackPress = () => {
@@ -395,47 +442,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     }
   };
 
-  const initializeChapterProgress = async () => {
-    if (!chapter) return;
-    
-    try {
-      // Charger la progression existante
-      const saved = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
-      
-      // Trouver l'index du chapitre dans sa partie
-      const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
-      
-      if (!currentChapterData) return;
-      
-      // Créer la clé de progression
-      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
-      
-      // Initialiser si pas encore de progression
-      if (!saved[progressKey]) {
-        const updated: ChapterState = {
-          ...saved,
-          [progressKey]: { percent: 0, lastSection: 0, updatedAt: Date.now() },
-        };
-        await writeUserStorage(user?.uid, 'chapterProgress', updated);
-        console.log(`Progression initialisée: ${progressKey} = 0%`);
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'initialisation de la progression:', error);
-    }
-  };
-
-  // Fonction pour charger les scores des quiz
-  const loadQuizScores = async () => {
-    try {
-      const scores = await readUserStorage<Record<string, number>>(user?.uid, 'quizScores');
-      if (scores) {
-        setQuizScores(scores);
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement des scores de quiz:', error);
-    }
-  };
+  // initializeChapterProgress est déjà défini en useCallback ci-dessus
+  // Code orphelin supprimé
 
   // Fonction pour obtenir la clé du quiz du chapitre actuel
   const getCurrentChapterQuizKey = () => {
@@ -466,8 +474,9 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
 
   // useEffect pour charger les scores des quiz
   useEffect(() => {
+    if (!user) return;
     loadQuizScores();
-  }, [user?.uid]);
+  }, [user?.uid, loadQuizScores]);
 
   // Gestionnaire pour le bouton retour Android
   useEffect(() => {

@@ -14,7 +14,7 @@ import { usePaymentService } from '../lib/paymentService';
 import { useEntitlements } from '../contexts/EntitlementsContext';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import { db } from './firebaseConfig';
-import { AuthContext } from './LoginScreen';
+import { useAuthContext } from '../contexts/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -71,8 +71,8 @@ function generateOptionsForQuiz(questions: {question: string, reponse?: string, 
 
 export default function OriginalQuizScreen() {
   const route = useRoute();
-  const { user } = useContext(AuthContext);
   const navigation = useNavigation();
+  const { user } = useAuthContext();
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
   const styles = createStyles(responsive, responsiveStyle);
@@ -141,8 +141,9 @@ export default function OriginalQuizScreen() {
 
   // Forcer un refresh des droits à l'ouverture pour harmoniser avec Books/Home
   useEffect(() => {
-    refreshEntitlements(true).catch(() => {});
-  }, []);
+    // Ne pas forcer pour éviter les boucles infinies
+    refreshEntitlements(false).catch(() => {});
+  }, []); // Pas de dépendances pour éviter les re-exécutions
 
   // Reprise automatique d'une session de quiz en cours
   // Utiliser un ref pour éviter que la reprise ne se déclenche plusieurs fois

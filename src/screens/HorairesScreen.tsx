@@ -346,7 +346,7 @@ export default function HorairesScreen() {
       <GestureDetector gesture={swipeGesture}>
         <View style={styles.container}>
           {/* Header moderne cohérent avec les autres pages */}
-          <View style={styles.header}>
+          <View style={[styles.header, { maxWidth: responsive.maxContentWidth }]}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
             </TouchableOpacity>
@@ -381,7 +381,7 @@ export default function HorairesScreen() {
           </View>
 
           {/* Image d'en-tête */}
-          <View style={styles.headerContainer}>
+          <View style={[styles.headerContainer, { maxWidth: responsive.maxContentWidth }]}>
             <Image
               source={require('../../assets/heurepriere.jpg')}
               style={styles.headerImage}
@@ -390,7 +390,7 @@ export default function HorairesScreen() {
           </View>
 
           {/* Carte dorée avec date */}
-          <View style={styles.dateCard}>
+          <View style={[styles.dateCard, { maxWidth: responsive.maxContentWidth }]}>
             <View style={styles.dateIconContainer}>
               <MaterialCommunityIcons name="calendar" size={24} color="#2C3E50" />
             </View>
@@ -401,7 +401,7 @@ export default function HorairesScreen() {
           </View>
 
           {/* Section ville */}
-          <View style={styles.citySection}>
+          <View style={[styles.citySection, { maxWidth: responsive.maxContentWidth }]}>
             <View style={styles.cityInfo}>
               <MaterialCommunityIcons name="map-marker" size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} color={colors.primary} />
               <Text style={styles.cityText}>{city || 'Dakar'}</Text>
@@ -423,7 +423,7 @@ export default function HorairesScreen() {
           )}
 
           {/* Liste des prières */}
-          <View style={styles.prayerListContainer}>
+          <View style={[styles.prayerListContainer, { maxWidth: responsive.maxContentWidth }]}>
             <ScrollView 
               style={styles.prayerListContent}
               showsVerticalScrollIndicator={false}
@@ -669,7 +669,6 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E8F5E8',
     alignSelf: 'center',
     width: '100%',
-    maxWidth: responsive.maxContentWidth,
   },
   backButton: { 
     width: 44,
@@ -698,7 +697,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignSelf: 'center',
     width: '100%',
-    maxWidth: responsive.maxContentWidth,
   },
   headerImage: { 
     width: '100%', 
@@ -722,7 +720,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
     alignSelf: 'center',
     width: '100%',
-    maxWidth: responsive.maxContentWidth,
   },
   dateIconContainer: {
     width: isTablet ? 32 : 28,
@@ -772,7 +769,6 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
     alignSelf: 'center',
     width: '100%',
-    maxWidth: responsive.maxContentWidth,
   },
   cityInfo: {
     flexDirection: 'row',
@@ -835,7 +831,6 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     alignSelf: 'center',
     width: '100%',
-    maxWidth: responsive.maxContentWidth,
   },
   prayerListContent: {
     flex: 1,

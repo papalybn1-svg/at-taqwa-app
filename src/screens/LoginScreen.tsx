@@ -2,12 +2,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Image as RNImage, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AuthUser } from '../hooks/useAuth';
 import { auth } from './firebaseConfig';
 
-import { AuthContext } from '../contexts/AuthContext';
+import { useAuthContext } from '../contexts/AuthContext';
 
 // Ajouter un composant Toast moderne
 function Toast({ visible, message, type, onHide }: { visible: boolean, message: string, type: 'success' | 'error', onHide: () => void }) {
@@ -44,7 +44,7 @@ export default function LoginScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const { user, setUser } = useContext(AuthContext);
+  const { user, setUser } = useAuthContext();
   const [toast, setToast] = useState<{ visible: boolean, message: string, type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
   const [passwordStrength, setPasswordStrength] = useState<{ score: number; percent: number; label: 'Faible' | 'Moyen' | 'Fort' | 'Très fort' } | null>(null);
   const [isPasswordValid, setIsPasswordValid] = useState(false);
@@ -153,8 +153,23 @@ export default function LoginScreen({ navigation }: any) {
           iOS: { bundleId: 'com.attaqwa.app' },
           android: { packageName: 'com.attaqwa.app', installApp: false, minimumVersion: '1' },
         } as any;
-        await sendEmailVerification(userCred.user, actionCodeSettings);
-        console.log('📧 Email de vérification envoyé à:', userCred.user.email);
+        
+        try {
+          await sendEmailVerification(userCred.user, actionCodeSettings);
+          console.log('📧 Email de vérification envoyé à:', userCred.user.email);
+          showToast('Email de vérification envoyé. Consultez votre boîte de réception et le dossier spam.', 'success');
+        } catch (emailError: any) {
+          console.error('❌ Erreur envoi email de vérification:', emailError);
+          let errorMsg = 'L\'email de vérification n\'a pas pu être envoyé.';
+          if (emailError.code === 'auth/too-many-requests') {
+            errorMsg = 'Trop de tentatives d\'envoi d\'email. Veuillez attendre quelques minutes avant de réessayer. Vous pouvez quand même vérifier votre email si vous en avez déjà reçu un.';
+          } else if (emailError.code === 'auth/network-request-failed') {
+            errorMsg = 'Erreur de connexion. Vérifiez votre connexion internet et réessayez.';
+          }
+          showToast(errorMsg, 'error');
+          // Continuer quand même : l'utilisateur peut utiliser "Renvoyer l'email" plus tard
+        }
+        
         // IMPORTANT: Ne PAS créer ici le document Firestore users
         // On attend la vérification réelle côté Firebase avant de persister en base
 
@@ -171,9 +186,9 @@ export default function LoginScreen({ navigation }: any) {
           console.error('❌ Erreur sauvegarde locale:', error);
         }
 
-        showToast('Email de vérification envoyé. Consultez votre boîte de réception.', 'success');
         console.log('✅ Inscription réussie pour:', userCred.user.email);
-        // Ne pas afficher d'alerte bloquante ici: laisser le deep link et App.tsx gérer la suite
+        // Ne pas naviguer manuellement : App.tsx gérera automatiquement la redirection vers VerifyEmail
+        // car useAuth détectera l'utilisateur avec emailVerified: false
       } else {
         const userCred = await signInWithEmailAndPassword(auth, trimmedEmail, safePassword);
         // Recharger l'état Firebase pour obtenir emailVerified à jour

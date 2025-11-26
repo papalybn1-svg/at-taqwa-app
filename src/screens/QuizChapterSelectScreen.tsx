@@ -1,11 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, BackHandler, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import colors from '../theme/colors';
 import { migrateUnscopedKeyToUser, read as readUserStorage } from '../utils/userStorage';
 import { isQuizUnlocked } from '../utils/quizUnlock';
@@ -60,11 +60,9 @@ function SplashFamille() {
 export default function QuizChapterSelectScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { user } = useAuth();
-  // Garde: ne pas utiliser entitlements avant user
-  if (!user) {
-    return null;
-  }
+  const { user } = useAuthContext();
+  
+  // TOUS les hooks doivent être appelés AVANT tout return conditionnel
   const [quizScores, setQuizScores] = useState<{ [key: string]: number }>({});
   const [quizBestScores, setQuizBestScores] = useState<{ [key: string]: number }>({});
   const [quizPartialScores, setQuizPartialScores] = useState<{ [key: string]: number }>({});
@@ -79,31 +77,9 @@ export default function QuizChapterSelectScreen() {
   const { entitlements: userEntitlements, refreshEntitlements } = useEntitlements();
   // Entitlements frais lus côté backend pour éviter tout état périmé
   const [freshEntitlements, setFreshEntitlements] = useState<{ part2: boolean; part3: boolean } | null>(null);
-
-  // Charger les scores des quiz depuis le stockage local
-  useEffect(() => {
-    loadQuizScores();
-  }, [user?.uid]);
-
-  // Recharger les scores + droits quand l'écran redevient actif
-  useFocusEffect(
-    useCallback(() => {
-      console.log('🔄 QuizChapterSelectScreen: rechargement des scores...');
-      loadQuizScores();
-      // Rafraîchir les droits pour éviter un état périmé après paiement
-      (async () => {
-        try {
-          await refreshEntitlements(true);
-        } catch {}
-        try {
-          const latest = await checkEntitlements();
-          setFreshEntitlements(latest);
-        } catch {}
-      })();
-    }, [user?.uid])
-  );
-
-  const loadQuizScores = async () => {
+  
+  // loadQuizScores doit être un useCallback pour être utilisé dans les hooks
+  const loadQuizScores = useCallback(async () => {
     try {
       console.log('📥 Chargement des scores de quiz...');
       await migrateUnscopedKeyToUser(user?.uid, 'quizScores');
@@ -222,8 +198,100 @@ export default function QuizChapterSelectScreen() {
     } catch (error) {
       console.error('Erreur lors du chargement des scores:', error);
     }
-  };
+  }, [user?.uid]);
+  
+  // TOUS les useEffect et useFocusEffect doivent être AVANT le return null
+  // Charger les scores des quiz depuis le stockage local
+  useEffect(() => {
+    if (!user) return;
+    loadQuizScores();
+  }, [user?.uid, loadQuizScores]);
 
+  // Recharger les scores + droits quand l'écran redevient actif
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      console.log('🔄 QuizChapterSelectScreen: rechargement des scores...');
+      loadQuizScores();
+      // Rafraîchir les droits pour éviter un état périmé après paiement
+      // Ne pas forcer pour éviter les boucles infinies
+      (async () => {
+        try {
+          await refreshEntitlements(false);
+        } catch {}
+        try {
+          const latest = await checkEntitlements();
+          setFreshEntitlements(latest);
+        } catch {}
+      })();
+    }, [user?.uid, refreshEntitlements, checkEntitlements, loadQuizScores])
+  );
+
+  // Gestion du bouton retour Android pour aller à l'accueil
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      const onBackPress = () => {
+        if (selectedPart) {
+          setSelectedPart(null);
+          return true;
+        }
+        navigation.navigate('HomeMain' as never);
+        return true;
+      };
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [navigation, selectedPart, user])
+  );
+
+  // Intercepter le retour (swipe ou bouton) pour forcer l'accueil
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (e.data.action.type === 'GO_BACK' || e.data.action.type === 'POP') {
+        e.preventDefault();
+        if (selectedPart) {
+          setSelectedPart(null);
+        } else {
+        navigation.navigate('HomeMain' as never);
+        }
+      }
+    });
+    return unsubscribe;
+  }, [navigation, selectedPart, user]);
+  
+  // Génère la liste plate de tous les chapitres avec association fiable (doit être un useMemo avant return null)
+  const allChapters = useMemo(() => {
+    return Object.entries(chaptersData).flatMap(([partieKey, partie], partieIndex) =>
+      partie.chapitres.map((ch, chapitreIndex) => {
+        // On tente d'associer le chapitre à son fichier d'exercices par numéro
+        const num = ch.image;
+        const numKey = String(parseInt(num, 10)); // '01' -> '1', '10' -> '10'
+        const exercices = exercicesFiles[numKey];
+        // Gérer les deux formats : tableau direct ou objet avec propriété quiz
+        const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
+                       (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
+                        Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
+        if (hasQuiz) {
+          return {
+            ...ch,
+            id: `${partieIndex}-${chapitreIndex}`,
+            partie: partie.titre,
+            partieKey: partieKey,
+            image: ch.image || '',
+            exercicesKey: numKey,
+          };
+        }
+        return null;
+      })
+    ).filter((chapter): chapter is { id: string; partie: string; partieKey: string; exercicesKey: string; image: string; title: string; desc: string; author: string } => !!chapter);
+  }, []);
+  
+  // Garde: ne pas utiliser entitlements avant user
+  // MAINTENANT après tous les hooks
+  if (!user) {
+    return null;
+  }
 
   // Vérifier si un quiz est accessible (uniquement vérification premium)
   const isQuizAccessible = (partieKey?: string) => {
@@ -256,7 +324,8 @@ export default function QuizChapterSelectScreen() {
 
   // Gérer le clic sur une partie
   const handlePartPress = async (partie: string) => {
-    try { await refreshEntitlements(true); } catch {}
+    // Ne pas forcer pour éviter les boucles infinies
+    try { await refreshEntitlements(false); } catch {}
     try {
       const latest = await checkEntitlements();
       setFreshEntitlements(latest);
@@ -289,7 +358,8 @@ export default function QuizChapterSelectScreen() {
 
   // Gérer le clic sur un chapitre
   const handleChapterPress = async (chapter: any) => {
-    try { await refreshEntitlements(true); } catch {}
+    // Ne pas forcer pour éviter les boucles infinies
+    try { await refreshEntitlements(false); } catch {}
     try {
       const latest = await checkEntitlements();
       setFreshEntitlements(latest);
@@ -328,36 +398,6 @@ export default function QuizChapterSelectScreen() {
     }
   };
 
-  // Génère la liste plate de tous les chapitres avec association fiable
-  // Vérification des exercices ajoutés (chapitres 4, 8, 11)
-  console.log("🔍 Test chapitre 4:", exercicesFiles["4"] ? "✅ Trouvé" : "❌ Manquant");
-  console.log("🔍 Test chapitre 8:", exercicesFiles["8"] ? "✅ Trouvé" : "❌ Manquant");
-  console.log("🔍 Test chapitre 11:", exercicesFiles["11"] ? "✅ Trouvé" : "❌ Manquant");
-  
-  const allChapters = Object.entries(chaptersData).flatMap(([partieKey, partie], partieIndex) =>
-    partie.chapitres.map((ch, chapitreIndex) => {
-      // On tente d'associer le chapitre à son fichier d'exercices par numéro
-      const num = ch.image;
-      const numKey = String(parseInt(num, 10)); // '01' -> '1', '10' -> '10'
-      const exercices = exercicesFiles[numKey];
-      // Gérer les deux formats : tableau direct ou objet avec propriété quiz
-      const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
-                     (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
-                      Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
-      if (hasQuiz) {
-        return {
-          ...ch,
-          id: `${partieIndex}-${chapitreIndex}`,
-          partie: partie.titre,
-          partieKey: partieKey,
-          image: ch.image || '',
-          exercicesKey: numKey,
-        };
-      }
-      return null;
-    })
-  ).filter((chapter): chapter is { id: string; partie: string; partieKey: string; exercicesKey: string; image: string; title: string; desc: string; author: string } => !!chapter);
-  
   // Logs détaillés par partie
   console.log("📋 Chapitres détectés avec quiz:", allChapters.map(ch => `${ch.exercicesKey} (${ch.partieKey})`));
   console.log("📊 Répartition par partie:");
@@ -371,36 +411,6 @@ export default function QuizChapterSelectScreen() {
     return allChapters.filter(ch => ch.partieKey === partieKey);
   };
 
-  // Gestion du bouton retour Android pour aller à l'accueil
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        if (selectedPart) {
-          setSelectedPart(null);
-          return true;
-        }
-        navigation.navigate('HomeMain' as never);
-        return true;
-      };
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-      return () => subscription.remove();
-    }, [navigation, selectedPart])
-  );
-
-  // Intercepter le retour (swipe ou bouton) pour forcer l'accueil
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (e.data.action.type === 'GO_BACK' || e.data.action.type === 'POP') {
-        e.preventDefault();
-        if (selectedPart) {
-          setSelectedPart(null);
-        } else {
-        navigation.navigate('HomeMain' as never);
-        }
-      }
-    });
-    return unsubscribe;
-  }, [navigation, selectedPart]);
 
   return (
     <GestureHandlerRootView style={styles.container}>

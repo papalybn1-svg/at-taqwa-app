@@ -5,7 +5,7 @@ import { Audio } from 'expo-av';
 import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Dimensions, Image, Keyboard, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Vibration, View } from "react-native";
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import colors from "../theme/colors";
 import { read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
@@ -24,7 +24,7 @@ export type Zikr = {
 type ActiveZikr = Zikr & { count: number };
 
 export default function TasbihScreen() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [systemZikrs, setSystemZikrs] = useState<Zikr[]>([]);
   const [customZikrs, setCustomZikrs] = useState<Zikr[]>([]);
   const [zikrProgress, setZikrProgress] = useState<{ [key: string]: number }>({});

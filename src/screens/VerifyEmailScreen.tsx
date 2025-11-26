@@ -1,29 +1,38 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { sendEmailVerification, signOut } from 'firebase/auth';
-import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { applyActionCode, sendEmailVerification, signOut } from 'firebase/auth';
+import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { auth, db } from './firebaseConfig';
+import { AuthContext } from '../contexts/AuthContext';
 
 export default function VerifyEmailScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState(auth.currentUser?.email || '');
   const [confirmEnabled, setConfirmEnabled] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const [verificationLink, setVerificationLink] = useState('');
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const { setUser } = React.useContext(AuthContext);
   
-  // Auto-polling: recharger l'état emailVerified toutes les 3s pour rediriger automatiquement
+  // Auto-polling: recharger l'état emailVerified toutes les 3s
+  // useAuth détectera le changement et App.tsx redirigera automatiquement vers MainTabs
   React.useEffect(() => {
     let mounted = true;
     let timer: any;
     const tick = async () => {
       try {
-        await auth.currentUser?.reload();
-        if (mounted && auth.currentUser?.emailVerified) {
-          navigation.navigate('Main' as never);
-          return;
+        if (auth.currentUser) {
+          await auth.currentUser.reload();
+          // Le changement de emailVerified déclenchera onAuthStateChanged dans useAuth
+          // qui mettra à jour l'utilisateur, et App.tsx redirigera automatiquement
         }
+      } catch (error) {
+        console.error('Erreur polling vérification:', error);
       } finally {
-        timer = setTimeout(tick, 3000);
+        if (mounted) {
+          timer = setTimeout(tick, 3000);
+        }
       }
     };
     tick();
@@ -66,12 +75,26 @@ export default function VerifyEmailScreen({ navigation }: any) {
       await sendEmailVerification(auth.currentUser, actionCodeSettings);
       Alert.alert(
         'Email envoyé !',
-        'Un nouvel email de vérification a été envoyé. Vérifiez votre boîte de réception et le dossier spam.',
+        'Un nouvel email de vérification a été envoyé. Vérifiez votre boîte de réception et le dossier spam.\n\nSi vous ne recevez pas l\'email, attendez quelques minutes avant de réessayer.',
         [{ text: 'OK' }]
       );
     } catch (error: any) {
       console.error('Erreur envoi email:', error);
-      Alert.alert('Erreur', 'Impossible d\'envoyer l\'email de vérification. Veuillez réessayer.');
+      let errorMsg = 'Impossible d\'envoyer l\'email de vérification.';
+      let errorTitle = 'Erreur';
+      
+      if (error.code === 'auth/too-many-requests') {
+        errorTitle = 'Trop de tentatives';
+        errorMsg = 'Vous avez fait trop de tentatives d\'envoi d\'email. Firebase limite l\'envoi pour éviter le spam.\n\nVeuillez attendre 5 à 10 minutes avant de réessayer.\n\nEn attendant, vérifiez votre boîte de réception et le dossier spam - vous avez peut-être déjà reçu un email de vérification.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorTitle = 'Erreur de connexion';
+        errorMsg = 'Impossible d\'envoyer l\'email à cause d\'un problème de connexion. Vérifiez votre connexion internet et réessayez.';
+      } else if (error.code === 'auth/user-not-found') {
+        errorTitle = 'Utilisateur introuvable';
+        errorMsg = 'L\'utilisateur n\'existe plus. Veuillez vous réinscrire.';
+      }
+      
+      Alert.alert(errorTitle, errorMsg, [{ text: 'OK' }]);
     } finally {
       setLoading(false);
     }
@@ -107,8 +130,11 @@ export default function VerifyEmailScreen({ navigation }: any) {
           { 
             text: isVerified ? 'Continuer' : 'Réessayer', 
             onPress: () => {
-              if (isVerified) {
-              navigation.navigate('Main' as never);
+              if (isVerified && auth.currentUser) {
+                // Mettre à jour l'utilisateur pour déclencher la redirection automatique
+                const role = (auth.currentUser as any).role || 'user';
+                setUser?.({ ...(auth.currentUser as any), role, emailVerified: true });
+                // App.tsx redirigera automatiquement vers MainTabs
               }
             }
           }
@@ -124,11 +150,83 @@ export default function VerifyEmailScreen({ navigation }: any) {
           { 
             text: 'Continuer quand même', 
             onPress: () => {
-              navigation.navigate('Main' as never);
+              if (auth.currentUser) {
+                const role = (auth.currentUser as any).role || 'user';
+                setUser?.({ ...(auth.currentUser as any), role, emailVerified: true });
+                // App.tsx redirigera automatiquement vers MainTabs
+              }
             }
           }
         ]
       );
+    }
+  };
+
+  const handleVerifyLinkManually = async () => {
+    if (!verificationLink.trim()) {
+      Alert.alert('Lien requis', 'Veuillez coller le lien de vérification reçu par email.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Extraire le oobCode du lien
+      let oobCode: string | null = null;
+      
+      // Format 1: https://attaqwa-confidentialite.vercel.app/?mode=verifyEmail&oobCode=...
+      const urlMatch = verificationLink.match(/[?&]oobCode=([^&]+)/);
+      if (urlMatch) {
+        oobCode = decodeURIComponent(urlMatch[1]);
+      } else {
+        // Format 2: juste le code (si l'utilisateur copie seulement le code)
+        oobCode = verificationLink.trim();
+      }
+
+      if (!oobCode) {
+        Alert.alert('Lien invalide', 'Le lien de vérification semble invalide. Assurez-vous d\'avoir copié le lien complet depuis l\'email.');
+        return;
+      }
+
+      // Appliquer le code de vérification
+      await applyActionCode(auth, oobCode);
+      await auth.currentUser?.reload();
+      
+      if (auth.currentUser?.emailVerified && auth.currentUser) {
+        // Créer/mettre à jour le document Firestore
+        const ref = doc(db, 'users', auth.currentUser.uid);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          await setDoc(ref, {
+            email: auth.currentUser.email,
+            role: 'user',
+            emailVerified: true,
+            createdAt: new Date(),
+            displayName: auth.currentUser.displayName || '',
+          });
+        } else {
+          await updateDoc(ref, { emailVerified: true });
+        }
+        const role = (snap.data() as any)?.role || 'user';
+        // Mettre à jour l'utilisateur avec emailVerified: true pour déclencher la redirection automatique dans App.tsx
+        setUser?.({ ...(auth.currentUser as any), role, emailVerified: true });
+        
+        // Ne pas naviguer manuellement : App.tsx détectera emailVerified: true et redirigera automatiquement
+        setVerificationLink('');
+        setShowLinkInput(false);
+      } else {
+        Alert.alert('Erreur', 'La vérification n\'a pas pu être confirmée. Vérifiez que le lien est correct et non expiré.');
+      }
+    } catch (error: any) {
+      console.error('Erreur vérification manuelle:', error);
+      let errorMsg = 'Impossible de vérifier le lien.';
+      if (error.code === 'auth/invalid-action-code') {
+        errorMsg = 'Le lien de vérification est invalide ou a expiré. Demandez un nouvel email.';
+      } else if (error.code === 'auth/expired-action-code') {
+        errorMsg = 'Le lien de vérification a expiré. Cliquez sur "Renvoyer l\'email" pour en recevoir un nouveau.';
+      }
+      Alert.alert('Erreur de vérification', errorMsg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -137,39 +235,82 @@ export default function VerifyEmailScreen({ navigation }: any) {
       Alert.alert('Erreur', 'Aucun utilisateur connecté');
       return;
     }
-    try {
-      // Supprimer éventuel doc Firestore
-      try {
-        await deleteDoc(doc(db, 'users', auth.currentUser.uid));
-      } catch {}
-      // Supprimer le compte Firebase (nécessite une session récente: OK juste après inscription)
-      await auth.currentUser.delete();
-      Alert.alert(
-        'Compte supprimé',
-        'Votre compte non vérifié a été supprimé. Vous pouvez recommencer l’inscription.',
-        [{ text: 'OK', onPress: async () => {
-          try { await signOut(auth); } catch {}
-          try { navigation.navigate('Login'); } catch {}
-        }}]
-      );
-    } catch (e: any) {
-      if (e?.code === 'auth/requires-recent-login') {
-        Alert.alert(
-          'Reconnexion requise',
-          'Pour supprimer ce compte, veuillez vous reconnecter puis réessayer.',
-          [{ text: 'OK', onPress: async () => {
-            try { await signOut(auth); } catch {}
-            try { navigation.navigate('Login'); } catch {}
-          }}]
-        );
-      } else {
-        Alert.alert(
-          'Suppression impossible',
-          'Nous n’avons pas pu supprimer le compte. Essayez de vous reconnecter puis de relancer la suppression.',
-          [{ text: 'OK' }]
-        );
-      }
-    }
+
+    // Confirmation avant suppression
+    Alert.alert(
+      'Supprimer mon compte',
+      'Voulez-vous vraiment supprimer votre compte non vérifié ? Cette action est irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const uid = auth.currentUser?.uid;
+              
+              // Supprimer éventuel doc Firestore
+              if (uid) {
+                try {
+                  await deleteDoc(doc(db, 'users', uid));
+                  console.log('✅ Document Firestore supprimé');
+                } catch (e) {
+                  console.log('ℹ️ Document Firestore déjà supprimé ou inexistant');
+                }
+              }
+              
+              // Supprimer le compte Firebase (nécessite une session récente: OK juste après inscription)
+              try {
+                await auth.currentUser?.delete();
+                console.log('✅ Compte Firebase supprimé');
+              } catch (deleteError: any) {
+                if (deleteError?.code === 'auth/requires-recent-login') {
+                  // Si la session est trop ancienne, déconnecter et demander de se reconnecter
+                  await signOut(auth);
+                  setUser?.(null);
+                  Alert.alert(
+                    'Reconnexion requise',
+                    'Pour supprimer ce compte, veuillez vous reconnecter puis réessayer.',
+                    [{ text: 'OK' }]
+                  );
+                  setLoading(false);
+                  return;
+                }
+                throw deleteError;
+              }
+              
+              // Déconnecter et mettre à jour le contexte
+              try {
+                await signOut(auth);
+              } catch (signOutError) {
+                console.log('ℹ️ SignOut après suppression (non bloquant):', signOutError);
+              }
+              
+              // Mettre à jour le contexte pour déclencher la redirection automatique dans App.tsx
+              setUser?.(null);
+              
+              Alert.alert(
+                'Compte supprimé',
+                'Votre compte non vérifié a été supprimé. Vous pouvez recommencer l\'inscription.',
+                [{ text: 'OK' }]
+              );
+              
+              // App.tsx détectera user = null et redirigera automatiquement vers Login
+            } catch (e: any) {
+              console.error('❌ Erreur suppression compte:', e);
+              Alert.alert(
+                'Suppression impossible',
+                e?.message || 'Nous n\'avons pas pu supprimer le compte. Essayez de vous reconnecter puis de relancer la suppression.',
+                [{ text: 'OK' }]
+              );
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -188,8 +329,57 @@ export default function VerifyEmailScreen({ navigation }: any) {
       
       <Text style={styles.instructions}>
         Cliquez sur le lien dans l'email pour activer votre compte.{'\n\n'}
-        Si vous ne trouvez pas l'email, vérifiez votre dossier spam.
+        Si vous ne trouvez pas l'email :
+        {'\n'}• Vérifiez votre dossier spam/indésirable
+        {'\n'}• Vérifiez le dossier Promotions (Gmail)
+        {'\n'}• Attendez 2-3 minutes (les emails peuvent prendre du temps)
+        {'\n'}• Si vous avez fait plusieurs tentatives, attendez 5-10 minutes avant de réessayer
+        {'\n\n'}
+        Vous pouvez aussi coller le lien de vérification manuellement ci-dessous si vous avez reçu l'email sur un autre appareil.
       </Text>
+
+      {/* Option pour coller le lien manuellement */}
+      <TouchableOpacity 
+        style={styles.linkToggleButton}
+        onPress={() => setShowLinkInput(!showLinkInput)}
+      >
+        <MaterialCommunityIcons 
+          name={showLinkInput ? "chevron-up" : "chevron-down"} 
+          size={20} 
+          color="#174C3C" 
+        />
+        <Text style={styles.linkToggleText}>
+          {showLinkInput ? 'Masquer' : 'Vérifier manuellement (app et email sur deux appareils)'}
+        </Text>
+      </TouchableOpacity>
+
+      {showLinkInput && (
+        <View style={styles.linkInputContainer}>
+          <Text style={styles.linkInputLabel}>
+            Collez le lien de vérification depuis votre email :
+          </Text>
+          <TextInput
+            style={styles.linkInput}
+            placeholder="https://attaqwa-confidentialite.vercel.app/?mode=verifyEmail&oobCode=..."
+            value={verificationLink}
+            onChangeText={setVerificationLink}
+            multiline
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholderTextColor="#999"
+          />
+          <TouchableOpacity
+            style={[styles.button, styles.verifyLinkButton, { opacity: loading || !verificationLink.trim() ? 0.6 : 1 }]}
+            onPress={handleVerifyLinkManually}
+            disabled={loading || !verificationLink.trim()}
+          >
+            <MaterialCommunityIcons name="check-circle" size={20} color="white" />
+            <Text style={styles.buttonText}>
+              {loading ? 'Vérification...' : 'Vérifier ce lien'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
@@ -321,5 +511,52 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
     fontStyle: 'italic',
+  },
+  linkToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    backgroundColor: '#E8F5E8',
+    borderRadius: 8,
+    width: '100%',
+  },
+  linkToggleText: {
+    fontSize: 14,
+    color: '#174C3C',
+    fontWeight: '500',
+  },
+  linkInputContainer: {
+    width: '100%',
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  linkInputLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+    fontWeight: '500',
+  },
+  linkInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#333',
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+    backgroundColor: '#F8F9FA',
+  },
+  verifyLinkButton: {
+    backgroundColor: '#174C3C',
   },
 }); 

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Image, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import chaptersData from '../../data/chapitres.json';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import colors from '../theme/colors';
 import { getQuizProfile } from '../utils/quizSession';
 import { read as readUserStorage } from '../utils/userStorage';
@@ -153,7 +153,7 @@ const exercicesFiles: { [key: string]: any[] | { quiz: any[] } } = {
 
 export default function CertificateScreen() {
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [isEligible, setIsEligible] = useState(false);
   const [completionDate, setCompletionDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);

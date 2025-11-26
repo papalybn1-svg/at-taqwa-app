@@ -20,7 +20,7 @@ import chaptersData from '../../data/chapitres.json';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import colors from '../theme/colors';
 import { useEntitlements } from '../contexts/EntitlementsContext';
-import { AuthContext } from './LoginScreen';
+import { useAuthContext } from '../contexts/AuthContext';
 import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
 import { usePaymentService } from '../lib/paymentService';
 import { Image as ExpoImage } from 'expo-image';
@@ -126,7 +126,7 @@ Le raccourcissement et la combinaison des prières sont permis au voyageur pour 
 export default function HomeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { entitlements } = useEntitlements();
-  const { user } = React.useContext(AuthContext);
+  const { user } = useAuthContext();
   const { checkEntitlements: fetchEntitlements } = usePaymentService();
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
@@ -249,7 +249,8 @@ export default function HomeScreen() {
   const { refreshEntitlements } = useEntitlements();
   useFocusEffect(
     React.useCallback(() => {
-      refreshEntitlements(true).catch(()=>{});
+      // Ne pas forcer pour éviter les boucles infinies
+      refreshEntitlements(false).catch(()=>{});
       (async () => {
         try {
           const latest = await fetchEntitlements();
@@ -287,8 +288,9 @@ export default function HomeScreen() {
   };
 
   const handleChapterPress = async (chapter: Chapter) => {
-    // Forcer un refresh avant la décision
-    try { await refreshEntitlements(true); } catch {}
+    // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
+    // Ne pas forcer pour éviter les boucles infinies
+    try { await refreshEntitlements(false); } catch {}
     // Lire un snapshot frais côté backend pour éviter un état obsolète
     let latest = entitlements;
     try { latest = await fetchEntitlements(); } catch {}
@@ -327,8 +329,9 @@ export default function HomeScreen() {
 
   const openFullChapter = async () => {
     if (!selectedChapter) return;
-    // Rafraîchir et relire les droits auprès du backend avant décision
-    try { await refreshEntitlements(true); } catch {}
+    // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
+    // Ne pas forcer pour éviter les boucles infinies
+    try { await refreshEntitlements(false); } catch {}
     let latest = entitlements;
     try { latest = await fetchEntitlements(); } catch {}
     const isPremium = selectedChapter.partie === 'deuxieme_partie' || selectedChapter.partie === 'troisieme_partie';

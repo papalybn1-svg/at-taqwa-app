@@ -4,7 +4,7 @@ import React from 'react';
 import { Animated, Dimensions, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import imageMap from '../../assets/chapterImages';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import colors from '../theme/colors';
 import { read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
@@ -12,7 +12,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export default function FavoritesScreen() {
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [favorites, setFavorites] = React.useState<{ id: string; title: string; desc: string; author?: string; image?: string; partie?: string; chapterData?: any }[]>([]); 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
