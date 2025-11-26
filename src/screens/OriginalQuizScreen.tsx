@@ -585,21 +585,30 @@ export default function OriginalQuizScreen() {
                          (data && typeof data === 'object' && 'quiz' in data && Array.isArray((data as any).quiz) && (data as any).quiz.length > 0);
                 });
                 
+                // Calculer la moyenne de tous les quiz
+                let totalScore = 0;
+                let completedCount = 0;
                 let allCompleted = true;
+                
                 for (const key of allChapters) {
                   const chapterScore = scores[key] ?? bestScores[key];
-                  if (chapterScore === undefined || chapterScore < 100) {
+                  if (chapterScore === undefined) {
                     allCompleted = false;
                     break;
                   }
+                  completedCount++;
+                  totalScore += chapterScore;
                 }
                 
-                if (allCompleted) {
+                const averageScore = completedCount > 0 ? Math.round(totalScore / completedCount) : 0;
+                
+                // Éligible si tous les quiz sont complétés et moyenne >= 80%
+                if (allCompleted && completedCount === allChapters.length && averageScore >= 80) {
                   // Afficher une alerte de félicitations après un court délai
                   setTimeout(() => {
                     Alert.alert(
                       '🎉 Félicitations !',
-                      'Vous avez complété tous les quiz à 100% !\n\nVotre attestation est maintenant disponible dans les Paramètres.',
+                      `Vous avez complété tous les quiz avec une moyenne de ${averageScore}% !\n\nVotre attestation est maintenant disponible dans les Paramètres.`,
                       [
                         { text: 'OK', style: 'default' },
                         { 

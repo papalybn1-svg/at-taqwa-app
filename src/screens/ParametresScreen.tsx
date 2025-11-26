@@ -66,14 +66,28 @@ export default function ParametresScreen() {
         })
       ).filter((k: string | null): k is string => !!k);
       if (allChapters.length === 0) return false;
-      // Exiger 100% sur chaque chapitre disposant d'un quiz
+      
+      // Calculer la moyenne de tous les quiz
+      let totalScore = 0;
+      let completedCount = 0;
+      
       for (const key of allChapters) {
         const score = (scores as any)[key] ?? (bestScores as any)[key];
-        if (score === undefined || score < 100) {
+        if (score !== undefined) {
+          completedCount++;
+          totalScore += score;
+        } else {
+          // Si un quiz n'est pas complété, pas éligible
+          console.log(`❌ Quiz ${key} non complété - attestation non disponible`);
           return false;
         }
       }
-      return true;
+      
+      // Vérifier que tous les quiz sont complétés et que la moyenne est >= 80%
+      const averageScore = completedCount > 0 ? totalScore / completedCount : 0;
+      const isEligible = completedCount === allChapters.length && averageScore >= 80;
+      console.log(`📊 Vérification attestation (Paramètres): ${completedCount}/${allChapters.length} quiz complétés, moyenne: ${averageScore.toFixed(1)}%, éligible: ${isEligible}`);
+      return isEligible;
     } catch {
       return false;
     }
@@ -107,7 +121,7 @@ export default function ParametresScreen() {
     if (!ok) {
       Alert.alert(
         'Attestation indisponible',
-        'Pour obtenir votre attestation, completez d\'abord tous les quiz a 100%.\n\nRendez-vous dans la section Quiz.',
+        'Pour obtenir votre attestation, completez tous les quiz avec une moyenne d\'au moins 80%.\n\nRendez-vous dans la section Quiz.',
         [
           { text: 'Annuler', style: 'cancel' },
           { text: 'Aller au Quiz', onPress: () => navigation.navigate('Accueil', { screen: 'QuizChapterSelect' }) }

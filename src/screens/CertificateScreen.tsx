@@ -200,32 +200,46 @@ export default function CertificateScreen() {
         })
       ).filter((key): key is string => key !== null);
 
-      // Vérifier que tous les quiz sont complétés avec un score de 100%
+      // Vérifier que la moyenne de tous les quiz est >= 80%
       let completedCount = 0;
       let totalScore = 0;
-      let allCompleted = true;
       let latestCompletionDate: Date | null = null;
+
+      console.log('📊 Vérification éligibilité attestation:');
+      console.log('  - Nombre total de quiz:', allChapters.length);
+      console.log('  - Scores depuis quizScores:', scores);
+      console.log('  - Meilleurs scores depuis profil:', bestScores);
 
       for (const chapterKey of allChapters) {
         const score =
           (scores as Record<string, number>)[chapterKey] ??
           (bestScores as Record<string, number>)[chapterKey];
-        if (score === undefined || score < 100) {
-          allCompleted = false;
-        } else {
+        if (score !== undefined) {
           completedCount++;
           totalScore += score;
-          // Pour la date de complétion, on utilise la date actuelle si tous sont complétés
+          console.log(`  - Quiz ${chapterKey}: ${score}%`);
+          // Pour la date de complétion, on utilise la date actuelle
           if (!latestCompletionDate) {
             latestCompletionDate = new Date();
           }
+        } else {
+          console.log(`  - Quiz ${chapterKey}: non complété`);
         }
       }
 
-      if (allCompleted && completedCount > 0) {
+      // Calculer la moyenne
+      const averageScoreValue = completedCount > 0 ? Math.round(totalScore / completedCount) : 0;
+      console.log(`  - Quiz complétés: ${completedCount}/${allChapters.length}`);
+      console.log(`  - Moyenne calculée: ${averageScoreValue}%`);
+      
+      // Éligible si la moyenne est >= 80% ET tous les quiz sont complétés
+      const isEligible = averageScoreValue >= 80 && completedCount === allChapters.length;
+      console.log(`  - Éligible: ${isEligible} (moyenne >= 80%: ${averageScoreValue >= 80}, tous complétés: ${completedCount === allChapters.length})`);
+      
+      if (isEligible) {
         setIsEligible(true);
         setCompletionDate(latestCompletionDate || new Date());
-        setAverageScore(Math.round(totalScore / completedCount));
+        setAverageScore(averageScoreValue);
       } else {
         setIsEligible(false);
       }
@@ -340,7 +354,7 @@ export default function CertificateScreen() {
             <MaterialCommunityIcons name="certificate" size={80} color={colors.disabled} />
             <Text style={styles.notEligibleTitle}>Attestation non disponible</Text>
             <Text style={styles.notEligibleText}>
-              Pour obtenir votre attestation, vous devez compléter tous les quiz avec un score de 100%.
+              Pour obtenir votre attestation, vous devez compléter tous les quiz avec une moyenne d'au moins 80%.
             </Text>
             <Text style={styles.notEligibleSubtext}>
               Continuez vos efforts pour débloquer cette récompense !
