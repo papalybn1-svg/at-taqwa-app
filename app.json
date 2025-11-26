@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "At-Taqwa",
-    "owner": "attaqwa",
+    "owner": "ibrahimaly8991",
     "slug": "at-taqwa-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
 
-      "buildNumber": "2.2.0",
+      "buildNumber": "2.2.3",
       
       "icon": "./assets/LOGO_AT_TAQWA.png",
       "associatedDomains": ["applinks:attaqwa-confidentialite.vercel.app"],
@@ -66,10 +66,6 @@
       "expo-notifications"
     ],
     "scheme": "attaqwa",
-    "extra": {
-      "eas": {
-        "projectId": "7adb7538-df61-4e7b-bfb9-faa37d646dc1"
-      }
-    }
+    "extra": {}
   }
 }
