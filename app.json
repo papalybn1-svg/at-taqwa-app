@@ -11,11 +11,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-
       "buildNumber": "2.2.3",
-      
       "icon": "./assets/LOGO_AT_TAQWA.png",
-      "associatedDomains": ["applinks:attaqwa-confidentialite.vercel.app"],
+      "associatedDomains": [
+        "applinks:attaqwa-confidentialite.vercel.app"
+      ],
       "infoPlist": {
         "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
@@ -43,7 +43,10 @@
               "pathPrefix": "/"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "edgeToEdgeEnabled": false,
@@ -66,6 +69,10 @@
       "expo-notifications"
     ],
     "scheme": "attaqwa",
-    "extra": {}
+    "extra": {
+      "eas": {
+        "projectId": "05af331a-9245-4df9-bada-ac87f1d4d0fe"
+      }
+    }
   }
 }
