@@ -670,8 +670,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E8F5E8',
-    alignSelf: 'center',
-    width: '100%',
+    marginHorizontal: isTablet ? 20 : 16,
   },
   backButton: { 
     width: 44,
@@ -691,15 +690,13 @@ const styles = StyleSheet.create({
     width: 44,
   },
   headerContainer: { 
-    height: isTablet ? 160 : (isSmallScreen ? 120 : 140), 
+    height: isTablet ? 200 : (isSmallScreen ? 160 : 180), 
     borderRadius: isTablet ? 22 : 18, 
     marginHorizontal: isTablet ? 32 : 20, 
     marginTop: 12, 
     overflow: 'hidden', 
     position: 'relative',
     backgroundColor: colors.primary,
-    alignSelf: 'center',
-    width: '100%',
   },
   headerImage: { 
     width: '100%', 
@@ -721,8 +718,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 2,
     zIndex: 2,
-    alignSelf: 'center',
-    width: '100%',
   },
   dateIconContainer: {
     width: isTablet ? 32 : 28,
@@ -770,8 +765,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 1,
-    alignSelf: 'center',
-    width: '100%',
   },
   cityInfo: {
     flexDirection: 'row',
@@ -832,8 +825,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    alignSelf: 'center',
-    width: '100%',
   },
   prayerListContent: {
     flex: 1,

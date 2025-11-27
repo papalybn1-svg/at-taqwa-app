@@ -2,12 +2,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Image as RNImage, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AuthUser } from '../hooks/useAuth';
 import { auth } from './firebaseConfig';
 
-import { useAuthContext } from '../contexts/AuthContext';
+// Créer le contexte utilisateur
+export const AuthContext = createContext<{ user: AuthUser | null, setUser: (u: AuthUser | null) => void }>({ 
+  user: null, 
+  setUser: () => {} 
+});
 
 // Ajouter un composant Toast moderne
 function Toast({ visible, message, type, onHide }: { visible: boolean, message: string, type: 'success' | 'error', onHide: () => void }) {
@@ -44,19 +48,13 @@ export default function LoginScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const { user, setUser } = useAuthContext();
+  const { user, setUser } = useContext(AuthContext);
   const [toast, setToast] = useState<{ visible: boolean, message: string, type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
   const [passwordStrength, setPasswordStrength] = useState<{ score: number; percent: number; label: 'Faible' | 'Moyen' | 'Fort' | 'Très fort' } | null>(null);
   const [isPasswordValid, setIsPasswordValid] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ visible: true, message, type });
-  };
-
-  const isValidEmailFormat = (value: string) => {
-    // Simple validation suffisante pour éviter les valeurs manifestement invalides
-    const re = /^\S+@\S+\.\S+$/;
-    return re.test(value);
   };
 
   const evaluatePassword = (pwd: string) => {
@@ -118,60 +116,25 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   const handleAuth = async () => {
-    const trimmedEmail = (email || '').trim();
-    const safePassword = typeof password === 'string' ? password : '';
-
-    // Garde-fous : éviter tout appel Firebase avec valeurs undefined/vides
-    if (!trimmedEmail || !safePassword) {
-      setErrorMessage('Veuillez saisir un email et un mot de passe.');
-      return;
-    }
-    if (!isValidEmailFormat(trimmedEmail)) {
-      setErrorMessage('Adresse email invalide.');
-      return;
-    }
-
     setLoading(true);
     try {
       if (screen === 'register') {
-        if (!isPasswordValid) {
-          setErrorMessage('Le mot de passe est trop faible.');
-          setLoading(false);
-          return;
-        }
-        const userCred = await createUserWithEmailAndPassword(auth, trimmedEmail, safePassword);
-        try {
-          await updateProfile(userCred.user, { displayName: `${prenom} ${nom}`.trim() });
-        } catch (e) {
-          console.log('⚠️ Échec updateProfile (non bloquant):', e);
-        }
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCred.user, { displayName: `${prenom} ${nom}` });
         
-        // Envoyer l'email de vérification (avec URL d'action du site pour Universal Links)
-        const actionCodeSettings = {
-          url: 'https://attaqwa-confidentialite.vercel.app/index.html',
-          handleCodeInApp: false,
-          iOS: { bundleId: 'com.attaqwa.app' },
-          android: { packageName: 'com.attaqwa.app', installApp: false, minimumVersion: '1' },
-        } as any;
+        // Envoyer l'email de vérification
+        await sendEmailVerification(userCred.user);
+        console.log('📧 Email de vérification envoyé à:', userCred.user.email);
         
-        try {
-          await sendEmailVerification(userCred.user, actionCodeSettings);
-          console.log('📧 Email de vérification envoyé à:', userCred.user.email);
-          showToast('Email de vérification envoyé. Consultez votre boîte de réception et le dossier spam.', 'success');
-        } catch (emailError: any) {
-          console.error('❌ Erreur envoi email de vérification:', emailError);
-          let errorMsg = 'L\'email de vérification n\'a pas pu être envoyé.';
-          if (emailError.code === 'auth/too-many-requests') {
-            errorMsg = 'Trop de tentatives d\'envoi d\'email. Veuillez attendre quelques minutes avant de réessayer. Vous pouvez quand même vérifier votre email si vous en avez déjà reçu un.';
-          } else if (emailError.code === 'auth/network-request-failed') {
-            errorMsg = 'Erreur de connexion. Vérifiez votre connexion internet et réessayez.';
-          }
-          showToast(errorMsg, 'error');
-          // Continuer quand même : l'utilisateur peut utiliser "Renvoyer l'email" plus tard
-        }
-        
-        // IMPORTANT: Ne PAS créer ici le document Firestore users
-        // On attend la vérification réelle côté Firebase avant de persister en base
+        // Créer le document utilisateur avec le rôle par défaut
+        // emailVerified sera mis à jour après vérification
+        await setDoc(doc(db, 'users', userCred.user.uid), {
+          email: userCred.user.email,
+          role: 'user',
+          emailVerified: false,
+          createdAt: new Date(),
+          displayName: `${prenom} ${nom}`,
+        });
 
         // Sauvegarder les données utilisateur localement pour Expo Go
         try {
@@ -186,34 +149,49 @@ export default function LoginScreen({ navigation }: any) {
           console.error('❌ Erreur sauvegarde locale:', error);
         }
 
+        showToast('Inscription réussie ! Vérifiez votre email pour activer votre compte.', 'success');
         console.log('✅ Inscription réussie pour:', userCred.user.email);
-        // Ne pas naviguer manuellement : App.tsx gérera automatiquement la redirection vers VerifyEmail
-        // car useAuth détectera l'utilisateur avec emailVerified: false
+        
+        // Afficher une alerte explicative
+        Alert.alert(
+          'Inscription réussie !',
+          'Un email de vérification a été envoyé à votre adresse. Veuillez vérifier votre boîte de réception et cliquer sur le lien pour activer votre compte.',
+          [
+            { 
+              text: 'Vérifier mon email', 
+              onPress: () => {
+                // Rediriger vers l'écran de vérification email (sans déconnecter)
+                navigation.navigate('VerifyEmail' as never);
+              }
+            }
+          ]
+        );
       } else {
-        const userCred = await signInWithEmailAndPassword(auth, trimmedEmail, safePassword);
-        // Recharger l'état Firebase pour obtenir emailVerified à jour
-        await userCred.user.reload();
-        const currentUser = auth.currentUser;
-        if (!currentUser?.emailVerified) {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        
+        // Vérifier si l'email est vérifié (seulement pour les nouveaux utilisateurs)
+        const userDocRef = doc(db, 'users', userCred.user.uid);
+        let userDoc = await getDoc(userDocRef);
+        let userData = userDoc.data();
+        
+        if (!userCred.user.emailVerified && !userData) {
           showToast('Veuillez vérifier votre email avant de vous connecter.', 'error');
           setLoading(false);
-          navigation.navigate('VerifyEmail' as never);
           return;
         }
-        // Ici emailVerified === true → s'assurer que le doc Firestore existe
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        let userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) {
+
+        if (!userData) {
+          // Si le document n'existe pas, on le crée automatiquement
           await setDoc(userDocRef, {
-            email: currentUser.email,
+            email: userCred.user.email,
             role: 'user',
-            emailVerified: true,
+            emailVerified: userCred.user.emailVerified,
             createdAt: new Date(),
-            displayName: currentUser.displayName || '',
+            displayName: userCred.user.displayName || '',
           });
           userDoc = await getDoc(userDocRef);
+          userData = userDoc.data();
         }
-        const userData = userDoc.data();
 
         // Vérifier si c'est un nouvel utilisateur
         const isNewUser = userCred.user.metadata.creationTime === userCred.user.metadata.lastSignInTime;
@@ -603,8 +581,8 @@ export default function LoginScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   introContainer: { flex: 1, backgroundColor: '#174C3C' },
-  imageTopSection: { flex: 2, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginBottom: -40 },
-  coupleImage: { width: '200%', height: '160%', resizeMode: 'contain', marginBottom: -120, marginLeft: 20 },
+  imageTopSection: { flex: 2, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginBottom: -80 },
+  coupleImage: { width: '200%', height: '160%', resizeMode: 'contain', marginBottom: -160, marginLeft: 20 },
   whiteBottomCard: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 32,

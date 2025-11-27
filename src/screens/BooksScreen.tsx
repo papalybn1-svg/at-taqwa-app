@@ -507,7 +507,7 @@ export default function BooksScreen() {
                               </View>
                               <Text style={[
                                 styles.partCardTitle,
-                                isUnlocked ? { color: '#4CAF50', fontWeight: 'bold' } : {}
+                                isUnlocked ? { color: colors.primary, fontWeight: 'bold' } : {}
                               ]}>
                                 Partie {pidx + 1}
                                 {isUnlocked ? ' ✓' : ''}
@@ -515,7 +515,7 @@ export default function BooksScreen() {
                               {isPremium && (
                                 <View style={[
                                   styles.premiumBadge,
-                                  isUnlocked ? { backgroundColor: '#4CAF50' } : {}
+                                  isUnlocked ? { backgroundColor: colors.primary } : {}
                                 ]}>
                                   <Text style={[
                                     styles.premiumBadgeText,

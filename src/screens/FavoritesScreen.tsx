@@ -246,7 +246,7 @@ export default function FavoritesScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
           {/* Header épuré */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 20,
     paddingBottom: 10,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
@@ -307,9 +307,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: colors.text,
+    letterSpacing: 0.3,
   },
   headerSpacer: {
     width: 32,

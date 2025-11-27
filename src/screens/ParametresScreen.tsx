@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { deleteUser, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
-import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,6 +93,35 @@ export default function ParametresScreen() {
     }
   };
 
+  // Charger la photo de profil depuis Firestore ou le contexte
+  useEffect(() => {
+    const loadPhoto = async () => {
+      // D'abord, utiliser la photo du contexte utilisateur si disponible
+      if (contextUser?.photoURL) {
+        setEditPhoto(contextUser.photoURL);
+        return;
+      }
+      
+      // Sinon, charger depuis Firestore
+      if (firebaseUser?.uid) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userData = userDoc.data();
+          if (userData?.photoURL) {
+            setEditPhoto(userData.photoURL);
+            // Mettre à jour le contexte utilisateur aussi
+            if (contextUser) {
+              setUser({ ...contextUser, photoURL: userData.photoURL });
+            }
+          }
+        } catch (error) {
+          console.error('❌ Erreur chargement photo Firestore:', error);
+        }
+      }
+    };
+    loadPhoto();
+  }, [firebaseUser?.uid, contextUser?.photoURL]);
+
   // Vérifier l'éligibilité au chargement et quand l'écran devient actif
   useEffect(() => {
     const checkEligibility = async () => {
@@ -106,30 +135,38 @@ export default function ParametresScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const checkEligibility = async () => {
+      const loadPhotoAndCheckEligibility = async () => {
+        // Recharger la photo depuis Firestore si nécessaire
+        if (firebaseUser?.uid && !contextUser?.photoURL) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+            const userData = userDoc.data();
+            if (userData?.photoURL) {
+              setEditPhoto(userData.photoURL);
+              if (contextUser) {
+                setUser({ ...contextUser, photoURL: userData.photoURL });
+              }
+            }
+          } catch (error) {
+            console.error('❌ Erreur chargement photo Firestore:', error);
+          }
+        } else if (contextUser?.photoURL) {
+          setEditPhoto(contextUser.photoURL);
+        }
+        
+        // Vérifier l'éligibilité
         if (firebaseUser?.uid) {
           const eligible = await checkCertificateEligibility();
           setIsCertificateEligible(eligible);
         }
       };
-      checkEligibility();
-    }, [firebaseUser?.uid])
+      loadPhotoAndCheckEligibility();
+    }, [firebaseUser?.uid, contextUser?.photoURL])
   );
 
-  const handleOpenCertificate = async () => {
-    const ok = await checkCertificateEligibility();
-    if (!ok) {
-      Alert.alert(
-        'Attestation indisponible',
-        'Pour obtenir votre attestation, completez tous les quiz avec une moyenne d\'au moins 80%.\n\nRendez-vous dans la section Quiz.',
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { text: 'Aller au Quiz', onPress: () => navigation.navigate('Accueil', { screen: 'QuizChapterSelect' }) }
-        ]
-      );
-      return;
-    }
-    // Naviguer vers le CertificateScreen dans le stack Accueil
+  const handleOpenCertificate = () => {
+    // Naviguer directement vers le CertificateScreen
+    // Le CertificateScreen gérera l'affichage si l'utilisateur n'est pas éligible
     navigation.navigate('Accueil', { screen: 'Certificate' });
   };
 
@@ -437,40 +474,28 @@ export default function ParametresScreen() {
 
         {/* Carte profil */}
         <LinearGradient colors={['#174C3C', '#19514A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCard}>
-          <View style={styles.profileTopRow}>
+          <View style={styles.profileContent}>
             <TouchableOpacity onPress={() => setProfileModal(true)} activeOpacity={0.9}>
-          {contextUser?.photoURL ? (
+              {contextUser?.photoURL ? (
                 <ExpoImage source={{ uri: contextUser.photoURL }} style={styles.avatarXL} contentFit="cover" />
-          ) : (
+              ) : (
                 <View style={styles.avatarXLPlaceholder}>
                   <MaterialCommunityIcons name="account-circle" size={72} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.profileNameXL}>{contextUser?.displayName || 'Utilisateur'}</Text>
+            <Text style={styles.profileEmailXL}>{contextUser?.email}</Text>
+            <View style={styles.userBadgeXL}>
+              <MaterialCommunityIcons 
+                name={contextUser?.role === 'admin' ? 'shield-account' : 'account'} 
+                size={16} 
+                color="#FFD666"
+              />
+              <Text style={styles.userRoleXL}>
+                {contextUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+              </Text>
             </View>
-          )}
-        </TouchableOpacity>
-            <View style={styles.profileTextCol}>
-              <Text style={styles.profileNameXL}>{contextUser?.displayName || 'Utilisateur'}</Text>
-              <Text style={styles.profileEmailXL}>{contextUser?.email}</Text>
-              <View style={styles.userBadgeXL}>
-          <MaterialCommunityIcons 
-            name={contextUser?.role === 'admin' ? 'shield-account' : 'account'} 
-            size={16} 
-                  color="#FFD666"
-          />
-                <Text style={styles.userRoleXL}>
-            {contextUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
-          </Text>
-        </View>
-      </View>
-          </View>
-          <View style={styles.profileQuickRow}>
-            <TouchableOpacity style={styles.quickAction} onPress={() => setProfileModal(true)}>
-              <MaterialCommunityIcons name="account-edit" size={18} color="#174C3C" />
-              <Text style={styles.quickActionText}>Modifier</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickAction} onPress={handleOpenCertificate}>
-              <MaterialCommunityIcons name="certificate" size={18} color="#174C3C" />
-              <Text style={styles.quickActionText}>Attestation</Text>
-            </TouchableOpacity>
           </View>
         </LinearGradient>
 
@@ -494,7 +519,7 @@ export default function ParametresScreen() {
                   </View>
                 )}
               </View>
-              <View style={{ marginLeft: 12, flex: 1 }}>
+              <View>
                 <Text style={[styles.listText, isCertificateEligible && { color: "#D4AF37", fontWeight: 'bold' }]}>
                   Mon attestation
                 </Text>
@@ -641,28 +666,34 @@ export default function ParametresScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F5F7' },
-  scrollContent: { paddingTop: 28, paddingBottom: 24 },
+  scrollContent: { paddingTop: 16, paddingBottom: 24 },
   header: { alignItems: 'center', marginBottom: 16 },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#174C3C', marginBottom: 8 },
   headerSubtitle: { fontSize: 14, color: '#58736B', textAlign: 'center' },
 
   profileCard: {
-    marginHorizontal: 0,
-    borderRadius: 0,
-    padding: 20,
+    marginHorizontal: 16,
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     marginBottom: 16,
     alignSelf: 'stretch',
-    width: '100%',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#BB9B4E',
   },
-  profileTopRow: { flexDirection: 'row', alignItems: 'center' },
-  avatarXL: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#ffffff33' },
+  profileContent: { 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  avatarXL: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#ffffff33', marginBottom: 16, borderWidth: 1, borderColor: '#BB9B4E' },
   avatarXLPlaceholder: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center'
+    width: 80, height: 80, borderRadius: 40, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#BB9B4E'
   },
-  profileTextCol: { marginLeft: 12, flex: 1 },
-  profileNameXL: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  profileEmailXL: { color: '#E6F1EE', fontSize: 13, marginTop: 2 },
-  userBadgeXL: { flexDirection: 'row', alignItems: 'center', marginTop: 8, backgroundColor: '#ffffff22', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  profileNameXL: { color: '#fff', fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 8 },
+  profileEmailXL: { color: '#E6F1EE', fontSize: 14, textAlign: 'center', marginBottom: 12 },
+  userBadgeXL: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff22', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
   userRoleXL: { color: '#FFD666', fontSize: 12, fontWeight: '700', marginLeft: 6 },
   profileQuickRow: { flexDirection: 'row', marginTop: 14 },
   quickAction: { backgroundColor: '#FFF', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginRight: 10, flexDirection: 'row', alignItems: 'center' },
@@ -695,7 +726,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
     borderRadius: 10,
     width: 18,
     height: 18,
@@ -706,7 +737,7 @@ const styles = StyleSheet.create({
   },
   certificateAvailableText: {
     fontSize: 12,
-    color: '#4CAF50',
+    color: colors.primary,
     fontWeight: '600',
     marginTop: 2,
   },

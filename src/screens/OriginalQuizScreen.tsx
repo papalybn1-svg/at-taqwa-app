@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // Les imports des fichiers de quiz sont maintenant gérés dynamiquement via exercicesFiles
@@ -615,7 +615,7 @@ export default function OriginalQuizScreen() {
                           text: 'Voir mon attestation', 
                           style: 'default',
                           onPress: () => {
-                            navigation.navigate('Accueil' as never, { screen: 'Certificate' } as never);
+                            (navigation as any).navigate('Accueil', { screen: 'Certificate' });
                           }
                         }
                       ]
@@ -704,14 +704,14 @@ export default function OriginalQuizScreen() {
     return !!(route.params as any)?.returnToChapter;
   };
 
-  // Fonction pour vérifier si le quiz suivant est débloqué
-  const isNextQuizUnlocked = () => {
+  // Fonction pour vérifier s'il y a un quiz suivant dans la même partie
+  const hasNextQuizInSamePart = () => {
     if (isComingFromChapter()) {
       // Si on vient d'un chapitre, on navigue vers le chapitre suivant (pas de quiz)
       return true;
     }
 
-    // Pour les quiz normaux, vérifier si le quiz suivant est débloqué
+    // Pour les quiz normaux, vérifier s'il y a un quiz suivant dans la même partie
     const chaptersData = require('../../data/chapitres.json');
     
     // Trouver la partie actuelle
@@ -727,14 +727,6 @@ export default function OriginalQuizScreen() {
     });
 
     if (!currentPartieKey) return false;
-
-    // Vérifier l'accès à la partie si c'est une partie payante
-    if (currentPartieKey === 'deuxieme_partie' && !userEntitlements.part2) {
-      return false; // Pas d'accès à la partie 2
-    }
-    if (currentPartieKey === 'troisieme_partie' && !userEntitlements.part3) {
-      return false; // Pas d'accès à la partie 3
-    }
 
     // Obtenir tous les chapitres de la partie actuelle qui ont des quiz
     // Filtrer uniquement les chapitres qui ont réellement des exercices
@@ -756,12 +748,62 @@ export default function OriginalQuizScreen() {
     // Trouver l'index du quiz actuel dans sa partie
     const currentIndexInPartie = partieChapters.indexOf(exercicesKey);
     
+    // Retourner true s'il y a un quiz suivant dans la même partie
+    return currentIndexInPartie !== -1 && currentIndexInPartie < partieChapters.length - 1;
+  };
+
+  // Fonction pour vérifier si le quiz suivant est débloqué
+  const isNextQuizUnlocked = () => {
+    if (isComingFromChapter()) {
+      return true;
+    }
+
+    if (!hasNextQuizInSamePart()) return false;
+
+    const chaptersData = require('../../data/chapitres.json');
+    let currentPartieKey = null;
+    Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
+      partie.chapitres.forEach((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        if (numKey === exercicesKey) {
+          currentPartieKey = partieKey;
+        }
+      });
+    });
+
+    if (!currentPartieKey) return false;
+
+    // Vérifier l'accès à la partie si c'est une partie payante
+    if (currentPartieKey === 'deuxieme_partie' && !userEntitlements.part2) {
+      return false;
+    }
+    if (currentPartieKey === 'troisieme_partie' && !userEntitlements.part3) {
+      return false;
+    }
+
+    const partieChapters = chaptersData[currentPartieKey].chapitres
+      .map((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        return numKey;
+      })
+      .filter((numKey: string) => {
+        const exercices = exercicesFiles[numKey];
+        const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
+                       (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
+                        Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
+        return hasQuiz;
+      });
+
+    const currentIndexInPartie = partieChapters.indexOf(exercicesKey);
+    
     if (currentIndexInPartie !== -1 && currentIndexInPartie < partieChapters.length - 1) {
       const nextQuizKey = partieChapters[currentIndexInPartie + 1];
       return isQuizUnlocked(nextQuizKey, quizScores);
     }
     
-    return false; // Pas de quiz suivant
+    return false;
   };
 
   // Fonction pour naviguer vers le quiz suivant ou le chapitre suivant
@@ -830,7 +872,7 @@ export default function OriginalQuizScreen() {
     
     // Trouver le chapitre actuel et sa partie
     let currentChapter = null;
-    let currentPartieKey = null;
+    let currentPartieKey: string | null = null;
     
     Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
       partie.chapitres.forEach((ch: any) => {
@@ -878,31 +920,37 @@ export default function OriginalQuizScreen() {
       const nextQuizKey = partieChapters[currentIndexInPartie + 1];
       console.log('➡️ Vérification du quiz suivant dans la même partie:', nextQuizKey);
       
-      // Vérifier l'accès à la partie si c'est une partie payante
-      let hasAccessToPart = true;
-      if (currentPartieKey === 'deuxieme_partie' && !userEntitlements.part2) {
-        hasAccessToPart = false;
-      }
-      if (currentPartieKey === 'troisieme_partie' && !userEntitlements.part3) {
-        hasAccessToPart = false;
-      }
+      // Recharger les scores à jour avant de vérifier le déblocage
+      readUserStorage<Record<string, number>>(user?.uid, 'quizScores').then((updatedScores) => {
+        const currentQuizScores = updatedScores || {};
+        setQuizScores(currentQuizScores); // Mettre à jour l'état local
+        
+        // Vérifier l'accès à la partie si c'est une partie payante
+        let hasAccessToPart = true;
+        if (currentPartieKey === 'deuxieme_partie' && !userEntitlements.part2) {
+          hasAccessToPart = false;
+        }
+        if (currentPartieKey === 'troisieme_partie' && !userEntitlements.part3) {
+          hasAccessToPart = false;
+        }
 
-      if (!hasAccessToPart) {
-        console.log('🔒 Accès à la partie payante requis');
-        // Afficher le modal de verrouillage avec message de paiement
-        setLockedQuizInfo({ key: nextQuizKey, score: undefined });
-        setShowLockModal(true);
-      } else if (isQuizUnlocked(nextQuizKey, quizScores)) {
-        console.log('✅ Quiz suivant débloqué, navigation vers:', nextQuizKey);
-        // Utiliser replace pour forcer le rechargement de l'écran
-        (navigation as any).replace('OriginalQuiz', { exercicesKey: nextQuizKey });
-      } else {
-        console.log('🔒 Quiz suivant verrouillé, affichage du modal');
-        // Afficher le modal de verrouillage
-        const currentScore = quizScores[exercicesKey];
-        setLockedQuizInfo({ key: nextQuizKey, score: currentScore });
-        setShowLockModal(true);
-      }
+        if (!hasAccessToPart) {
+          console.log('🔒 Accès à la partie payante requis');
+          // Afficher le modal de verrouillage avec message de paiement
+          setLockedQuizInfo({ key: nextQuizKey, score: undefined });
+          setShowLockModal(true);
+        } else if (isQuizUnlocked(nextQuizKey, currentQuizScores)) {
+          console.log('✅ Quiz suivant débloqué, navigation vers:', nextQuizKey);
+          // Utiliser replace pour forcer le rechargement de l'écran
+          (navigation as any).replace('OriginalQuiz', { exercicesKey: nextQuizKey });
+        } else {
+          console.log('🔒 Quiz suivant verrouillé, affichage du modal');
+          // Afficher le modal de verrouillage
+          const currentScore = currentQuizScores[exercicesKey];
+          setLockedQuizInfo({ key: nextQuizKey, score: currentScore });
+          setShowLockModal(true);
+        }
+      });
     } else {
       // C'était le dernier quiz de la partie, retourner à la sélection des chapitres
       console.log('🏠 Retour à la sélection des chapitres (dernier quiz de la partie)');
@@ -967,67 +1015,11 @@ export default function OriginalQuizScreen() {
             {/* Espace pour pousser le bouton vers le bas */}
             <View style={styles.spacer} />
             
-            {canProceedToNext && isNextQuizUnlocked() ? (
+            {canProceedToNext && hasNextQuizInSamePart() ? (
               <TouchableOpacity style={styles.restartButton} onPress={goToNextQuiz}>
                 <Text style={styles.restartButtonText}>
                   {isComingFromChapter() ? 'Chapitre suivant' : 'Quiz suivant'}
                 </Text>
-              </TouchableOpacity>
-            ) : canProceedToNext ? (
-              <TouchableOpacity style={styles.restartButton} onPress={() => {
-                // Afficher le modal de verrouillage
-                const chaptersData = require('../../data/chapitres.json');
-                let nextQuizKey = '';
-                let isPremiumLock = false;
-                
-                // Trouver la partie actuelle et le quiz suivant
-                let currentPartieKey = null;
-                Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
-                  partie.chapitres.forEach((ch: any) => {
-                    const num = (ch as any).numero || ch.image || '1';
-                    const numKey = String(parseInt(num, 10));
-                    if (numKey === exercicesKey) {
-                      currentPartieKey = partieKey;
-                    }
-                  });
-                });
-
-                if (currentPartieKey) {
-                  // Vérifier l'accès à la partie si c'est une partie payante
-                  if (currentPartieKey === 'deuxieme_partie' && !userEntitlements.part2) {
-                    isPremiumLock = true;
-                  }
-                  if (currentPartieKey === 'troisieme_partie' && !userEntitlements.part3) {
-                    isPremiumLock = true;
-                  }
-
-                  // Filtrer uniquement les chapitres qui ont réellement des exercices
-                  const partieChapters = chaptersData[currentPartieKey].chapitres
-                    .map((ch: any) => {
-                      const num = (ch as any).numero || ch.image || '1';
-                      const numKey = String(parseInt(num, 10));
-                      return numKey;
-                    })
-                    .filter((numKey: string) => {
-                      // Vérifier que le chapitre a réellement des exercices
-                      const exercices = exercicesFiles[numKey];
-                      const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
-                                     (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
-                                      Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
-                      return hasQuiz;
-                    });
-
-                  const currentIndexInPartie = partieChapters.indexOf(exercicesKey);
-                  if (currentIndexInPartie !== -1 && currentIndexInPartie < partieChapters.length - 1) {
-                    nextQuizKey = partieChapters[currentIndexInPartie + 1];
-                  }
-                }
-
-                const currentScore = isPremiumLock ? undefined : quizScores[exercicesKey];
-                setLockedQuizInfo({ key: nextQuizKey, score: currentScore });
-                setShowLockModal(true);
-              }}>
-                <Text style={styles.restartButtonText}>Quiz suivant</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
@@ -1369,7 +1361,7 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
 
   characterSection: {
     position: 'absolute',
-    top: 25, // Réduit de 40 à 25 pour faire monter l'image un peu
+    top: 100, // Augmenté pour faire descendre l'image sur les cadres empilés
     left: 0,
     right: 0,
     justifyContent: 'center',

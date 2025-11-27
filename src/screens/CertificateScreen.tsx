@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Dimensions, Image, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import chaptersData from '../../data/chapitres.json';
 import { useAuthContext } from '../contexts/AuthContext';
@@ -9,7 +10,6 @@ import colors from '../theme/colors';
 import { getQuizProfile } from '../utils/quizSession';
 import { read as readUserStorage } from '../utils/userStorage';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Dimensions A4 portrait (210mm x 297mm)
 // Ratio : 297/210 = 1.414 (hauteur/largeur)
@@ -24,30 +24,72 @@ const CertificateContent = ({
   userName, 
   averageScore, 
   dateStr, 
-  isForCapture = false 
+  isForCapture = false,
+  fontScale = 1,
+  screenWidth = 375
 }: { 
   userName: string; 
   averageScore: number; 
   dateStr: string; 
   isForCapture?: boolean;
+  fontScale?: number;
+  screenWidth?: number;
 }) => {
   const contentStyles = isForCapture ? styles.certificateContentForCapture : styles.certificateContentDisplay;
   const watermarkSize = isForCapture ? 400 : 300;
-  const scale = isForCapture ? 1 : 1; // Même échelle, mais styles différents
   
-  // Tailles optimisées pour A4 portrait - tout doit tenir sur une page
+  // Tailles de base pour l'affichage
   // Pour la capture très haute résolution (4134px), multiplier par 4.13
-  const titleSize = isForCapture ? 83 : 16;
-  const textSize = isForCapture ? 66 : 13;
-  const userNameSize = isForCapture ? 91 : 18;
-  const bookTitleSize = isForCapture ? 78 : 15;
-  const scoreSize = isForCapture ? 132 : 26;
-  const dateSize = isForCapture ? 58 : 12;
-  const dateLabelSize = isForCapture ? 50 : 11;
-  const signatureSize = isForCapture ? 58 : 11;
-  const badgeSize = isForCapture ? 74 : 14;
-  const logoSize = isForCapture ? 290 : 55;
-  const trophySize = isForCapture ? 165 : 32;
+  // Pour l'affichage normal, utiliser les tailles de base ajustées par fontScale
+  const baseTitleSize = isForCapture ? 83 : 16;
+  const baseTextSize = isForCapture ? 66 : 13;
+  const baseUserNameSize = isForCapture ? 91 : 18;
+  const baseBookTitleSize = isForCapture ? 78 : 15;
+  const baseScoreSize = isForCapture ? 132 : 26;
+  const baseDateSize = isForCapture ? 58 : 12;
+  const baseLogoSize = isForCapture ? 290 : 55;
+  const baseTrophySize = isForCapture ? 165 : 32;
+  
+  // Appliquer le scale uniquement pour l'affichage (pas pour la capture)
+  // Pour le titre, utiliser un minimum plus bas pour les petits écrans
+  const titleSize = isForCapture ? baseTitleSize : Math.max(12, baseTitleSize * fontScale);
+  const textSize = isForCapture ? baseTextSize : Math.max(11, baseTextSize * fontScale);
+  const userNameSize = isForCapture ? baseUserNameSize : Math.max(16, baseUserNameSize * fontScale);
+  const bookTitleSize = isForCapture ? baseBookTitleSize : Math.max(13, baseBookTitleSize * fontScale);
+  const scoreSize = isForCapture ? baseScoreSize : Math.max(22, baseScoreSize * fontScale);
+  const dateSize = isForCapture ? baseDateSize : Math.max(10, baseDateSize * fontScale);
+  const logoSize = isForCapture ? baseLogoSize : Math.max(45, baseLogoSize * fontScale);
+  const trophySize = isForCapture ? baseTrophySize : Math.max(26, baseTrophySize * fontScale);
+  
+  // Espacements uniformes - tous les espacements entre éléments sont similaires
+  // Base d'espacement : 6px pour petits écrans, 8px pour écrans normaux
+  const baseSpacing = isForCapture ? 10 : Math.max(5, 6 * fontScale);
+  const mediumSpacing = isForCapture ? 12 : Math.max(6, 8 * fontScale);
+  
+  const headerPaddingTop = isForCapture ? 15 : Math.max(6, 10 * fontScale);
+  const logoMarginBottom = baseSpacing;
+  const titleMarginBottom = baseSpacing;
+  const decorativeLineWidth = isForCapture ? 180 : Math.max(100, 130 * fontScale);
+  const decorativeLineHeight = isForCapture ? 2.5 : Math.max(1.5, 2 * fontScale);
+  const bodyPaddingVertical = isForCapture ? 15 : Math.max(4, 6 * fontScale);
+  // Pour les écrans moyens (360-400px), augmenter encore plus l'espacement du trophée
+  const trophyMarginTop = isForCapture ? 8 : (
+    screenWidth >= 360 && screenWidth < 400 
+      ? Math.max(12, 14 * fontScale) // Encore plus d'espace pour écrans moyens
+      : mediumSpacing
+  );
+  const trophyMarginBottom = baseSpacing;
+  const textMarginBottom = baseSpacing;
+  // Espacement très réduit pour le texte final "démontrant..." pour le faire remonter
+  const finalTextMarginTop = isForCapture ? 8 : -Math.max(2, 3 * fontScale); // MarginTop négatif pour remonter le texte
+  const textLineHeight = isForCapture ? 24 : Math.max(16, 20 * fontScale);
+  const userNameMarginVertical = baseSpacing;
+  const bookTitleMarginVertical = baseSpacing;
+  const scoreMarginVertical = baseSpacing;
+  const footerPaddingTop = mediumSpacing;
+  const footerPaddingBottom = isForCapture ? 20 : Math.max(10, 16 * fontScale);
+  const footerPaddingHorizontal = isForCapture ? 20 : Math.max(12, 15 * fontScale);
+  const borderHeight = isForCapture ? 4 : Math.max(2, 3 * fontScale);
   
   return (
     <View style={contentStyles}>
@@ -61,68 +103,123 @@ const CertificateContent = ({
       </View>
 
       {/* Bordure décorative en haut (derrière le contenu) */}
-      <View style={[styles.decorativeBorderTop, { height: isForCapture ? 4 : 3 }]} />
+      <View style={[styles.decorativeBorderTop, { height: borderHeight }]} />
 
       {/* En-tête avec logo et titre */}
-      <View style={[styles.certificateHeader, { paddingTop: isForCapture ? 15 : 12 }]}>
-        <View style={[styles.logoContainer, { width: logoSize, height: logoSize, marginBottom: isForCapture ? 10 : 8 }]}>
+      <View style={[styles.certificateHeader, { paddingTop: headerPaddingTop }]}>
+        <View style={[styles.logoContainer, { width: logoSize, height: logoSize, marginBottom: logoMarginBottom }]}>
           <Image 
             source={require('../../assets/LOGO_AT_TAQWA.png')} 
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
-        <Text allowFontScaling={false} style={[styles.certificateTitle, { fontSize: titleSize, marginBottom: isForCapture ? 8 : 6 }]}>
+        <Text 
+          allowFontScaling={false} 
+          numberOfLines={1}
+          adjustsFontSizeToFit={true}
+          minimumFontScale={0.7}
+          style={[styles.certificateTitle, { fontSize: titleSize, marginBottom: titleMarginBottom }]}
+        >
           ATTESTATION DE COMPLÉTION
         </Text>
-        <View style={[styles.decorativeLine, { width: isForCapture ? 180 : 130, height: isForCapture ? 2.5 : 2 }]} />
+        <View style={[styles.decorativeLine, { width: decorativeLineWidth, height: decorativeLineHeight }]} />
       </View>
 
       {/* Corps principal de l'attestation */}
-      <View style={[styles.certificateBody, { paddingVertical: isForCapture ? 15 : 12 }]}>
+      <View style={[styles.certificateBody, { paddingVertical: bodyPaddingVertical }]}>
         {/* Trophée avant "Nous certifions que" */}
-        <View style={[styles.trophyContainer, { marginBottom: isForCapture ? 12 : 10 }]}>
+        <View style={[styles.trophyContainer, { 
+          marginTop: trophyMarginTop,
+          marginBottom: trophyMarginBottom 
+        }]}>
           <MaterialCommunityIcons name="trophy" size={trophySize} color={colors.secondary} />
         </View>
         
-        <Text allowFontScaling={false} style={[styles.certificateText, { fontSize: textSize, marginBottom: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
+        <Text 
+          allowFontScaling={false} 
+          numberOfLines={1}
+          adjustsFontSizeToFit={false}
+          style={[styles.certificateText, { fontSize: textSize, marginBottom: textMarginBottom, lineHeight: textLineHeight }]}
+        >
           Nous certifions que
         </Text>
         
-        <Text allowFontScaling={false} style={[styles.userName, { fontSize: userNameSize, marginVertical: isForCapture ? 10 : 8 }]}>
+        <Text 
+          allowFontScaling={false} 
+          numberOfLines={1}
+          adjustsFontSizeToFit={true}
+          minimumFontScale={0.7}
+          style={[styles.userName, { fontSize: userNameSize, marginVertical: userNameMarginVertical }]}
+        >
           {userName}
         </Text>
         
-        <Text allowFontScaling={false} style={[styles.certificateText, { fontSize: textSize, marginBottom: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
+        <Text 
+          allowFontScaling={false} 
+          numberOfLines={2}
+          adjustsFontSizeToFit={false}
+          style={[styles.certificateText, { fontSize: textSize, marginBottom: textMarginBottom, lineHeight: textLineHeight }]}
+        >
           a complété avec succès tous les exercices du livre
         </Text>
         
-        <Text allowFontScaling={false} style={[styles.bookTitle, { fontSize: bookTitleSize, marginVertical: isForCapture ? 8 : 6 }]}>
+        <Text 
+          allowFontScaling={false} 
+          numberOfLines={2}
+          adjustsFontSizeToFit={false}
+          style={[styles.bookTitle, { fontSize: bookTitleSize, marginVertical: bookTitleMarginVertical }]}
+        >
           "Les réparations de la prière en islam"
         </Text>
         
-        <Text allowFontScaling={false} style={[styles.certificateText, { fontSize: textSize, marginBottom: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
+        <Text 
+          allowFontScaling={false} 
+          numberOfLines={1}
+          adjustsFontSizeToFit={false}
+          style={[styles.certificateText, { fontSize: textSize, marginBottom: textMarginBottom, lineHeight: textLineHeight }]}
+        >
           avec une moyenne de
         </Text>
         
-        <Text allowFontScaling={false} style={[styles.score, { fontSize: scoreSize, marginVertical: isForCapture ? 10 : 8 }]}>
+        <Text 
+          allowFontScaling={false} 
+          numberOfLines={1}
+          adjustsFontSizeToFit={false}
+          style={[styles.score, { fontSize: scoreSize, marginVertical: scoreMarginVertical }]}
+        >
           {averageScore}%
         </Text>
         
-        <Text allowFontScaling={false} style={[styles.certificateText, { fontSize: textSize, marginTop: isForCapture ? 8 : 6, lineHeight: isForCapture ? 24 : 20 }]}>
+        <Text 
+          allowFontScaling={false} 
+          numberOfLines={2}
+          adjustsFontSizeToFit={false}
+          style={[styles.certificateText, { fontSize: textSize, marginTop: finalTextMarginTop, lineHeight: textLineHeight }]}
+        >
           démontrant une compréhension approfondie des concepts enseignés.
         </Text>
       </View>
 
       {/* Footer avec date et signature */}
-      <View style={[styles.certificateFooter, { paddingTop: isForCapture ? 18 : 14, paddingBottom: isForCapture ? 20 : 18 }]}>
+      <View style={[styles.certificateFooter, { paddingTop: footerPaddingTop, paddingBottom: footerPaddingBottom }]}>
         {/* Date et signature en bas */}
-        <View style={[styles.footerBottom, { paddingHorizontal: isForCapture ? 20 : 15 }]}>
-          <Text allowFontScaling={false} style={[styles.dateValue, { fontSize: dateSize }]}>
+        <View style={[styles.footerBottom, { paddingHorizontal: footerPaddingHorizontal }]}>
+          <Text 
+            allowFontScaling={false} 
+            numberOfLines={1}
+            adjustsFontSizeToFit={false}
+            style={[styles.dateValue, { fontSize: dateSize }]}
+          >
             {dateStr}
           </Text>
           <View style={styles.signatureContainer}>
-            <Text allowFontScaling={false} style={[styles.signatureLabel, { fontSize: dateSize }]}>
+            <Text 
+              allowFontScaling={false} 
+              numberOfLines={1}
+              adjustsFontSizeToFit={false}
+              style={[styles.signatureLabel, { fontSize: dateSize }]}
+            >
               Aly Anta Sow
             </Text>
           </View>
@@ -130,7 +227,7 @@ const CertificateContent = ({
       </View>
 
       {/* Bordure décorative en bas */}
-      <View style={[styles.decorativeBorderBottom, { height: isForCapture ? 4 : 3 }]} />
+      <View style={[styles.decorativeBorderBottom, { height: borderHeight }]} />
     </View>
   );
 };
@@ -154,12 +251,57 @@ const exercicesFiles: { [key: string]: any[] | { quiz: any[] } } = {
 export default function CertificateScreen() {
   const navigation = useNavigation();
   const { user } = useAuthContext();
+  const insets = useSafeAreaInsets();
   const [isEligible, setIsEligible] = useState(false);
   const [completionDate, setCompletionDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [averageScore, setAverageScore] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
   const certificateRef = useRef<ViewShot>(null);
+  
+  // Obtenir les dimensions réelles de l'écran
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  
+  // Calculer la largeur du certificat en fonction de l'écran
+  // Pour les très petits écrans (<= 320px): utiliser largeur - 20px avec padding très réduit
+  // Pour les petits écrans (320-360px): utiliser largeur - 30px avec padding réduit
+  // Pour les écrans moyens (360-400px): utiliser largeur - 50px pour plus d'espace
+  // Pour les grands écrans (> 400px): utiliser max 400px
+  let certificateWidth: number;
+  let certificatePadding: number;
+  
+  if (screenWidth <= 320) {
+    // Très petit écran (iPhone SE) - utiliser presque toute la largeur
+    certificateWidth = screenWidth - 20; // Seulement 10px de marge de chaque côté
+    certificatePadding = 12; // Padding très réduit
+  } else if (screenWidth < 360) {
+    // Petit écran
+    certificateWidth = screenWidth - 30;
+    certificatePadding = 16;
+  } else if (screenWidth < 400) {
+    // Écran moyen - réduire un peu plus pour que ça tienne mieux
+    certificateWidth = screenWidth - 50; // Plus de marge pour les écrans moyens
+    certificatePadding = 20; // Padding réduit pour écrans moyens
+  } else {
+    // Grand écran
+    certificateWidth = Math.min(screenWidth - 40, 400);
+    certificatePadding = 34;
+  }
+  
+  // Scale pour ajuster les tailles de police (basé sur largeur 375px comme référence)
+  // Pour les très petits écrans, utiliser un scale plus agressif pour que tout tienne
+  let fontScale: number;
+  if (screenWidth <= 320) {
+    fontScale = 0.80; // Scale plus agressif pour les très petits écrans
+  } else if (screenWidth < 360) {
+    fontScale = 0.90; // Scale modéré pour petits écrans
+  } else if (screenWidth < 375) {
+    fontScale = 0.95; // Scale légèrement réduit pour écrans moyens proches de 375px
+  } else if (screenWidth < 400) {
+    fontScale = 0.98; // Scale presque à 1 pour écrans moyens
+  } else {
+    fontScale = 1;
+  }
 
   useEffect(() => {
     checkEligibility();
@@ -331,7 +473,7 @@ export default function CertificateScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Vérification en cours...</Text>
         </View>
@@ -341,8 +483,8 @@ export default function CertificateScreen() {
 
   if (!isEligible) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.headerNotEligible}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
           </TouchableOpacity>
@@ -377,7 +519,7 @@ export default function CertificateScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
@@ -399,13 +541,18 @@ export default function CertificateScreen() {
             quality: 1.0,
             result: 'tmpfile',
           }}
-          style={styles.certificateContainer}
+          style={[styles.certificateContainer, { 
+            width: certificateWidth, 
+            padding: certificatePadding 
+          }]}
         >
           <CertificateContent 
             userName={userName}
             averageScore={averageScore}
             dateStr={dateStr}
             isForCapture={false}
+            fontScale={fontScale}
+            screenWidth={screenWidth}
           />
         </ViewShot>
 
@@ -443,6 +590,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  headerNotEligible: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingTop: 10,      // Exactement comme HorairesScreen
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8F5E8',  // Exactement comme HorairesScreen
+    alignSelf: 'center',
+    width: '100%',
   },
   backButton: {
     padding: 8,
@@ -531,11 +691,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   certificateContainer: {
-    width: '100%',
+    // width et padding seront définis dynamiquement dans le composant
     aspectRatio: 0.707, // Ratio A4 portrait (210/297)
-    maxWidth: screenWidth - 24,
     backgroundColor: '#FAF8F5', // Fond ivoire/beige clair pour un aspect authentique
-    padding: 34,
     justifyContent: 'space-between',
     borderRadius: 20,
     shadowColor: colors.shadow,
@@ -545,6 +703,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     marginBottom: 20,
     overflow: 'hidden', // Important pour la capture
+    alignSelf: 'center', // Centrer le conteneur
   },
   certificateContentDisplay: {
     width: '100%',
@@ -606,6 +765,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 15,
     textAlign: 'center',
+    includeFontPadding: false,
   },
   decorativeLine: {
     width: 100,
@@ -626,6 +786,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 26,
     marginBottom: 12,
+    includeFontPadding: false,
   },
   userName: {
     fontSize: 24,
@@ -633,6 +794,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginVertical: 15,
     textAlign: 'center',
+    includeFontPadding: false,
   },
   bookTitle: {
     fontSize: 18,
@@ -641,6 +803,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginVertical: 12,
     textAlign: 'center',
+    includeFontPadding: false,
   },
   score: {
     fontSize: 32,
@@ -648,6 +811,7 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     marginVertical: 15,
     textAlign: 'center',
+    includeFontPadding: false,
   },
   certificateFooter: {
     borderTopWidth: 1,
@@ -665,6 +829,7 @@ const styles = StyleSheet.create({
   dateValue: {
     fontWeight: '600',
     color: colors.text,
+    includeFontPadding: false,
   },
   signatureContainer: {
     alignItems: 'flex-end',
@@ -677,6 +842,7 @@ const styles = StyleSheet.create({
   signatureLabel: {
     fontWeight: '600',
     color: colors.text,
+    includeFontPadding: false,
   },
   badgeContainer: {
     alignItems: 'center',

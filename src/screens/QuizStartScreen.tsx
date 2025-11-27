@@ -3,7 +3,7 @@ import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/nativ
 import React, { useCallback, useEffect } from 'react';
 import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View, BackHandler } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -22,6 +22,7 @@ const isLargeScreen = screenHeight > 900;
 export default function QuizStartScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
 
   // Gestion du bouton retour Android pour aller à l'accueil
   useFocusEffect(
@@ -68,14 +69,14 @@ export default function QuizStartScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <PanGestureHandler onHandlerStateChange={onGestureEvent}>
-    <SafeAreaView style={styles.container}>
-      {/* Bouton retour */}
-      <TouchableOpacity 
-        style={styles.backButton} 
-        onPress={goHome}
-      >
-        <MaterialCommunityIcons name="arrow-left" size={getResponsiveSize(24)} color="white" />
-      </TouchableOpacity>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+          {/* Bouton retour */}
+          <TouchableOpacity 
+            style={[styles.backButton, { top: insets.top + getResponsiveSize(20, false) }]} 
+            onPress={goHome}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={getResponsiveSize(24)} color="white" />
+          </TouchableOpacity>
 
       {/* Contenu principal - Image de l'homme */}
       <View style={styles.mainContent}>
@@ -103,7 +104,7 @@ export default function QuizStartScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+        </View>
       </PanGestureHandler>
     </GestureHandlerRootView>
   );
@@ -113,11 +114,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#174C3C',
+    paddingTop: 0, // Selon référence
     paddingBottom: getResponsiveSize(30, false),
   },
   backButton: {
     position: 'absolute',
-    top: getResponsiveSize(20, false),
     left: getResponsiveSize(20),
     zIndex: 30,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
     height: screenHeight * (isSmallScreen ? 0.7 : isLargeScreen ? 1.0 : 0.9),
     maxWidth: getResponsiveSize(isSmallScreen ? 600 : isLargeScreen ? 900 : 800),
     maxHeight: getResponsiveSize(isSmallScreen ? 700 : isLargeScreen ? 1200 : 1000, false),
-    marginTop: getResponsiveSize(isSmallScreen ? -150 : isLargeScreen ? -250 : -200, false),
+    marginTop: getResponsiveSize(isSmallScreen ? -100 : isLargeScreen ? -200 : -150, false), // Réduit encore pour faire descendre l'image
     zIndex: 400,
   },
   cardStack: {

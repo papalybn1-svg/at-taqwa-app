@@ -581,8 +581,8 @@ export default function HomeScreen() {
   );
 
   return (
-    <View style={styles.safeArea}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top }}>
+    <View style={[styles.safeArea, { paddingTop: insets.top }]}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
           <View>
             <Text style={styles.bismillah}>بسم الله الرحمن الرحيم</Text>
@@ -599,7 +599,7 @@ export default function HomeScreen() {
             {avatarUri ? (
               <ExpoImage source={{ uri: avatarUri }} style={styles.avatarSmall} contentFit="cover" />
             ) : (
-              <MaterialCommunityIcons name="account-circle" size={28} color="#174C3C" />
+              <MaterialCommunityIcons name="account-circle" size={40} color="#174C3C" />
             )}
           </TouchableOpacity>
       </View>
@@ -708,7 +708,7 @@ export default function HomeScreen() {
                         return (
                           <View style={[
                             styles.premiumBadge,
-                            unlocked ? { backgroundColor: '#4CAF50' } : {}
+                            unlocked ? { backgroundColor: colors.primary } : {}
                           ]}>
                             <MaterialCommunityIcons name="crown" size={16} color={unlocked ? '#fff' : colors.secondary} />
                             <Text style={[styles.premiumText, unlocked ? { color: '#fff' } : {}]}>
@@ -801,9 +801,9 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => Sty
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: responsive.horizontalPadding,
-    paddingTop: 10,
+    paddingTop: 20,      // Restauré selon référence
     paddingBottom: 10,
-    marginTop: 10,
+    marginTop: 15,       // Restauré selon référence
     marginBottom: 20,
     alignSelf: 'center',
     width: '100%',
@@ -822,8 +822,8 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => Sty
     marginTop: responsiveStyle.spacing.xs,
   },
   avatarButton: {
-    padding: 2,
-    borderRadius: 20,
+    padding: 3,
+    borderRadius: 25,
     backgroundColor: '#FFF',
     elevation: 4,
     shadowColor: '#000',
@@ -832,9 +832,9 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => Sty
     shadowOffset: { width: 0, height: 3 },
   },
   avatarSmall: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#EEE',
   },
   notificationButton: {
@@ -880,7 +880,7 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => Sty
     shadowRadius: 10,
     marginBottom: 20,
     position: 'relative',
-    overflow: 'hidden', // éviter que l'image absolue capture les touches en dehors
+    overflow: 'visible', // Permettre à l'image de sortir du cadre
   },
   bannerTextContainer: {
     flex: 1,
@@ -907,9 +907,9 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => Sty
     fontSize: 13,
   },
   bannerImage: {
-    // Agrandir nettement l'illustration pour une meilleure lisibilité
-    width: Math.min(responsive.isTablet ? 320 : 220, responsive.width * (responsive.isTablet ? 0.28 : 0.45)),
-    height: Math.min(responsive.isTablet ? 340 : 240, responsive.width * (responsive.isTablet ? 0.3 : 0.5)),
+    // Illustration ajustée pour mieux s'intégrer dans le cadre
+    width: Math.min(responsive.isTablet ? 280 : 180, responsive.width * (responsive.isTablet ? 0.25 : 0.38)),
+    height: Math.min(responsive.isTablet ? 300 : 200, responsive.width * (responsive.isTablet ? 0.27 : 0.42)),
     resizeMode: 'contain',
     position: 'absolute',
     right: responsive.isTablet ? -20 : -24,

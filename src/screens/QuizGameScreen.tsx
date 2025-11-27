@@ -46,23 +46,22 @@ export default function QuizGameScreen() {
 
   const toArray = (mod: any): any[] =>
     Array.isArray(mod) ? mod : (mod && Array.isArray((mod as any).quiz) ? (mod as any).quiz : []);
-  const firstN = (mod: any, n: number): any[] => toArray(mod).slice(0, n);
 
   // Combiner toutes les questions des différents chapitres
   useEffect(() => {
     const allQuestions: Question[] = [
       ...toArray(exercicesChap1),
-      ...firstN(exercicesChap2, 5), // Limiter le nombre de questions
-      ...firstN(exercicesChap3, 3),
-      ...firstN(exercicesChap4, 3),
-      ...firstN(exercicesChap5, 5),
-      ...firstN(exercicesChap6, 5),
-      ...firstN(exercicesChap7, 3),
-      ...firstN(exercicesChap8, 3),
-      ...firstN(exercicesChap9, 3),
-      ...firstN(exercicesChap10, 3),
-      ...firstN(exercicesChap11, 3),
-      ...firstN(exercicesChap12, 3)
+      ...toArray(exercicesChap2).slice(0, 5), // Limiter le nombre de questions
+      ...toArray(exercicesChap3).slice(0, 3),
+      ...toArray(exercicesChap4).slice(0, 3),
+      ...toArray(exercicesChap5).slice(0, 5),
+      ...toArray(exercicesChap6).slice(0, 5),
+      ...toArray(exercicesChap7).slice(0, 3),
+      ...toArray(exercicesChap8).slice(0, 3),
+      ...toArray(exercicesChap9).slice(0, 3),
+      ...toArray(exercicesChap10).slice(0, 3),
+      ...toArray(exercicesChap11).slice(0, 3),
+      ...toArray(exercicesChap12).slice(0, 3)
     ].filter(q => q.question && q.question.trim() !== '' && ((q as any).reponse && (q as any).reponse.trim() !== '' || (q as any).contenu && (q as any).contenu.trim() !== ''));
 
     // Mélanger les questions et prendre les 10 premières
@@ -102,17 +101,17 @@ export default function QuizGameScreen() {
     // Remélanger les questions
     const allQuestions: Question[] = [
       ...toArray(exercicesChap1),
-      ...firstN(exercicesChap2, 5),
-      ...firstN(exercicesChap3, 3),
-      ...firstN(exercicesChap4, 3),
-      ...firstN(exercicesChap5, 5),
-      ...firstN(exercicesChap6, 5),
-      ...firstN(exercicesChap7, 3),
-      ...firstN(exercicesChap8, 3),
-      ...firstN(exercicesChap9, 3),
-      ...firstN(exercicesChap10, 3),
-      ...firstN(exercicesChap11, 3),
-      ...firstN(exercicesChap12, 3)
+      ...toArray(exercicesChap2).slice(0, 5),
+      ...toArray(exercicesChap3).slice(0, 3),
+      ...toArray(exercicesChap4).slice(0, 3),
+      ...toArray(exercicesChap5).slice(0, 5),
+      ...toArray(exercicesChap6).slice(0, 5),
+      ...toArray(exercicesChap7).slice(0, 3),
+      ...toArray(exercicesChap8).slice(0, 3),
+      ...toArray(exercicesChap9).slice(0, 3),
+      ...toArray(exercicesChap10).slice(0, 3),
+      ...toArray(exercicesChap11).slice(0, 3),
+      ...toArray(exercicesChap12).slice(0, 3)
          ].filter(q => q.question && q.question.trim() !== '' && ((q as any).reponse && (q as any).reponse.trim() !== '' || (q as any).contenu && (q as any).contenu.trim() !== ''));
      
      const shuffledQuestions = allQuestions.sort(() => Math.random() - 0.5).slice(0, 10);

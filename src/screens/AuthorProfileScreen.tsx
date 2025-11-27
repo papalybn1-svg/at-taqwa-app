@@ -3,10 +3,12 @@ import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
 
 export default function AuthorProfileScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   // Gestionnaire de geste de swipe
   const onGestureEvent = (event: any) => {
@@ -21,7 +23,7 @@ export default function AuthorProfileScreen() {
   return (
     <GestureHandlerRootView style={styles.safeArea}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
-        <View style={styles.safeArea}>
+        <View style={[styles.safeArea, { paddingTop: insets.top }]}>
             <ScrollView 
               style={styles.container} 
               showsVerticalScrollIndicator={false}
