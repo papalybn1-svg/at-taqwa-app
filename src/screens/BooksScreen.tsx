@@ -304,13 +304,13 @@ export default function BooksScreen() {
       // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
       console.log('🔄 Vérification des droits premium...');
       // Ne pas forcer pour éviter les boucles infinies
-      try { await refreshEntitlements(false); } catch (e) { 
+      try { await refreshEntitlements(false); } catch (e: any) { 
         if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
           console.error('Erreur refreshEntitlements:', e);
         }
       }
       let fresh = userEntitlements;
-      try { fresh = await fetchEntitlements(); } catch (e) { 
+      try { fresh = await fetchEntitlements(); } catch (e: any) { 
         if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
           console.error('Erreur fetchEntitlements:', e);
         }
@@ -545,44 +545,59 @@ export default function BooksScreen() {
           {/* Modal Paywall harmonisé */}
           <Modal visible={paywallOpen.open} transparent animationType="fade" onRequestClose={closePaywall}>
             <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-              <View style={{ width: '100%', maxWidth: 420 }}>
-                <LinearGradient colors={['#174C3C', '#1F5F4F']} style={{ borderRadius: 20, padding: 20 }}>
-                  <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>
-                    Débloquer le contenu premium
-                  </Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.9)', marginBottom: 16 }}>
-                    Accès complet et illimité. Montant: 3000 F CFA.
-                  </Text>
-                  <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 16, marginBottom: 16 }}>
-                    <Text style={{ color: '#174C3C', fontWeight: 'bold', marginBottom: 4 }}>
-                      Partie concernée
-                    </Text>
-                    <Text style={{ color: '#174C3C' }}>
-                      {paywallOpen.partKey ? data[paywallOpen.partKey as keyof ChaptersData].titre : ''}
+              <View style={{ width: '100%', maxWidth: 420, backgroundColor: colors.white, borderRadius: 20, borderWidth: 2, borderColor: '#BB9B4E', padding: 24, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <MaterialCommunityIcons name="crown" size={24} color="#BB9B4E" />
+                    <Text style={{ color: colors.primary, fontSize: 20, fontWeight: 'bold', marginLeft: 8 }}>
+                      Contenu Premium
                     </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <TouchableOpacity
-                      onPress={closePaywall}
-                      style={{ flex: 1, paddingVertical: 12, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}
-                    >
-                      <Text style={{ color: 'white', fontWeight: '600' }}>Annuler</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        const planId = paywallOpen.partKey === 'deuxieme_partie' ? 'BOOK_PART_2' : 'BOOK_PART_3';
-                        const titre = paywallOpen.partKey ? data[paywallOpen.partKey as keyof ChaptersData].titre : '';
-                        handlePayment(planId as any, titre);
-                      }}
-                      disabled={isLoadingPayment}
-                      style={{ flex: 1, paddingVertical: 12, backgroundColor: 'white', opacity: isLoadingPayment ? 0.6 : 1, borderRadius: 12, alignItems: 'center' }}
-                    >
-                      <Text style={{ color: '#174C3C', fontWeight: '700' }}>
-                        {isLoadingPayment ? 'Traitement…' : 'Débloquer 3000 F'}
-                      </Text>
-                    </TouchableOpacity>
+                  <TouchableOpacity onPress={closePaywall} style={{ padding: 4 }}>
+                    <MaterialCommunityIcons name="close" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+                
+                <Text style={{ color: colors.text, fontSize: 16, marginBottom: 20, lineHeight: 22 }}>
+                  Accès complet et illimité à cette partie premium.
+                </Text>
+                
+                <View style={{ backgroundColor: '#F8F9FA', borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                  <Text style={{ color: colors.primary, fontWeight: '600', marginBottom: 6, fontSize: 14 }}>
+                    Partie concernée
+                  </Text>
+                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '500' }}>
+                    {paywallOpen.partKey ? data[paywallOpen.partKey as keyof ChaptersData].titre : ''}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
+                    <MaterialCommunityIcons name="cash" size={20} color={colors.primary} />
+                    <Text style={{ color: colors.primary, fontSize: 18, fontWeight: 'bold', marginLeft: 6 }}>
+                      3000 F CFA
+                    </Text>
                   </View>
-                </LinearGradient>
+                </View>
+                
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <TouchableOpacity
+                    onPress={closePaywall}
+                    style={{ flex: 1, paddingVertical: 14, backgroundColor: '#F3F4F6', borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' }}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: '600', fontSize: 16 }}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const planId = paywallOpen.partKey === 'deuxieme_partie' ? 'BOOK_PART_2' : 'BOOK_PART_3';
+                      const titre = paywallOpen.partKey ? data[paywallOpen.partKey as keyof ChaptersData].titre : '';
+                      handlePayment(planId as any, titre);
+                    }}
+                    disabled={isLoadingPayment}
+                    style={{ flex: 1, paddingVertical: 14, backgroundColor: colors.primary, opacity: isLoadingPayment ? 0.6 : 1, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.primary }}
+                  >
+                    <Text style={{ color: colors.white, fontWeight: '700', fontSize: 16 }}>
+                      {isLoadingPayment ? 'Traitement…' : 'Débloquer'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </Modal>

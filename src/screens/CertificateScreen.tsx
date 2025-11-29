@@ -121,7 +121,7 @@ const CertificateContent = ({
           minimumFontScale={0.7}
           style={[styles.certificateTitle, { fontSize: titleSize, marginBottom: titleMarginBottom }]}
         >
-          ATTESTATION DE COMPLÉTION
+          ATTESTATION DE RÉUSSITE
         </Text>
         <View style={[styles.decorativeLine, { width: decorativeLineWidth, height: decorativeLineHeight }]} />
       </View>

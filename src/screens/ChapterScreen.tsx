@@ -112,7 +112,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const { entitlements, refreshEntitlements } = useEntitlements();
   const { checkEntitlements: fetchEntitlements } = usePaymentService();
   const insets = useSafeAreaInsets();
-  const { chapter } = route.params;
+  const { chapter, fromHomePreview } = route.params;
   
   // Tous les useState
   const [textSize, setTextSize] = useState(16);
@@ -422,9 +422,15 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
 
   // updateChapterProgress et markChapterAsComplete sont déjà définis en useCallback ci-dessus
 
-  // Fonction pour gérer le retour vers la page des chapitres de cette partie
+  // Fonction pour gérer le retour vers la bonne page selon l'origine
   const handleBackPress = () => {
-    // Toujours retourner vers la page des chapitres de cette partie
+    // Si on vient de l'aperçu du livre sur la page d'accueil, retour direct à l'accueil
+    if (fromHomePreview) {
+      navigation.navigate('HomeMain');
+      return;
+    }
+
+    // Sinon, comportement existant : retourner vers la page des chapitres de cette partie
     const allChapters = getAllChapters();
     const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
     if (currentChapterData) {
@@ -470,7 +476,9 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       returnToChapter: {
         image: chapter.image,
         title: chapter.title,
-        section: currentSectionIndex
+        section: currentSectionIndex,
+        // Propager l'info si on vient de l'aperçu du livre (Accueil)
+        fromHomePreview: !!fromHomePreview,
       }
     });
   };
@@ -995,10 +1003,14 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         borderTopWidth: 1, 
         borderTopColor: '#eee', 
         position: 'absolute', 
-        bottom: insets.bottom, 
+        bottom: 0, 
         left: 0, 
         right: 0,
-        paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 8) : 0,
+        // On colle la barre tout en bas et on compense avec le safe-area en padding.
+        // Légère réduction sur iOS pour faire descendre visuellement la rangée de boutons.
+        paddingBottom: Platform.OS === 'android' 
+          ? Math.max(insets.bottom, 8) 
+          : Math.max(insets.bottom - 6, 0),
       }}>
         {/* Bouton Favoris */}
         <TouchableOpacity

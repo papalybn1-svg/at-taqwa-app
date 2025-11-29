@@ -22,7 +22,7 @@ import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import colors from '../theme/colors';
 import { useEntitlements } from '../contexts/EntitlementsContext';
 import { useAuthContext } from '../contexts/AuthContext';
-import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
+import { auth, db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
 import { usePaymentService } from '../lib/paymentService';
 import { Image as ExpoImage } from 'expo-image';
 
@@ -127,7 +127,8 @@ Le raccourcissement et la combinaison des prières sont permis au voyageur pour 
 export default function HomeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { entitlements } = useEntitlements();
-  const { user } = useAuthContext();
+  // On récupère aussi setUser pour pouvoir synchroniser la photo comme dans Parametres
+  const { user, setUser } = useAuthContext();
   const { checkEntitlements: fetchEntitlements } = usePaymentService();
   const responsive = useResponsive();
   const responsiveStyle = getResponsiveStyle(responsive);
@@ -158,7 +159,9 @@ export default function HomeScreen() {
   
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [newNotificationsCount, setNewNotificationsCount] = React.useState(0);
-  const [avatarUri, setAvatarUri] = React.useState<string | undefined>(undefined);
+  // Même logique que Parametres : initialiser avec la photo de l'utilisateur Firebase si disponible
+  const initialAvatar = auth.currentUser?.photoURL || undefined;
+  const [avatarUri, setAvatarUri] = React.useState<string | undefined>(initialAvatar);
 
   const [previewModalVisible, setPreviewModalVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter | null>(null);
@@ -203,25 +206,71 @@ export default function HomeScreen() {
     testConnection();
   }, []);
 
-  // Charger l'avatar depuis Firestore si absent dans le contexte
+  // Charger l'avatar depuis Firestore si absent dans le contexte (même logique que Paramètres)
   React.useEffect(() => {
     const loadAvatar = async () => {
       try {
         if (!user?.uid) return;
-        // Préférer la valeur dans le contexte si disponible
+        // D'abord, utiliser la photo du contexte utilisateur si disponible
         if (user.photoURL) {
           setAvatarUri(user.photoURL);
-          return;
         }
-        const snap = await getDoc(doc(db, 'users', user.uid));
-        const url = (snap.data() as any)?.photoURL as string | undefined;
-        if (url) setAvatarUri(url);
+        
+        // Toujours charger depuis Firestore pour avoir la dernière version (même si on a déjà une valeur)
+        try {
+          const snap = await getDoc(doc(db, 'users', user.uid));
+          const url = (snap.data() as any)?.photoURL as string | undefined;
+          if (url) {
+            setAvatarUri(url);
+            // Mettre à jour le contexte utilisateur aussi
+            if (!user.photoURL || user.photoURL !== url) {
+              setUser({ ...(user as any), photoURL: url });
+            }
+          }
+        } catch (error) {
+          console.error('❌ Erreur chargement photo Firestore:', error);
+        }
       } catch {
         // silencieux
       }
     };
     loadAvatar();
-  }, [user?.uid, user?.photoURL]);
+  }, [user?.uid]);
+
+  // S'assurer que l'avatar est bien synchronisé à chaque retour sur l'écran d'accueil,
+  // sans dépendre de l'état "Firestore connecté" (même logique que Paramètres).
+  useFocusEffect(
+    React.useCallback(() => {
+      const syncAvatarOnFocus = async () => {
+        try {
+          if (!user?.uid) return;
+          // Si le contexte a déjà la photo, l'utiliser directement
+          if (user.photoURL) {
+            setAvatarUri(user.photoURL);
+          }
+          
+          // Toujours tenter de recharger depuis Firestore pour avoir la dernière version
+          try {
+            const snap = await getDoc(doc(db, 'users', user.uid));
+            const url = (snap.data() as any)?.photoURL as string | undefined;
+            if (url) {
+              setAvatarUri(url);
+              // Mettre à jour le contexte si la photo a changé
+              if (!user.photoURL || user.photoURL !== url) {
+                setUser({ ...(user as any), photoURL: url });
+              }
+            }
+          } catch (error) {
+            console.error('❌ Erreur chargement photo Firestore:', error);
+          }
+        } catch {
+          // silencieux (si Firestore ne répond pas, on garde ce qu'on a)
+        }
+      };
+
+      syncAvatarOnFocus();
+    }, [user?.uid])
+  );
 
   // Données de fallback pour le mode hors ligne
   const fallbackNotifications: Notification[] = [
@@ -361,7 +410,8 @@ export default function HomeScreen() {
         return;
       }
       closePreviewModal();
-      navigation.navigate('Chapter', { chapter: selectedChapter });
+      // Indiquer que l'utilisateur vient de l'aperçu du livre sur l'écran d'accueil
+      (navigation as any).navigate('Chapter', { chapter: selectedChapter, fromHomePreview: true });
   };
 
   const loadNotifications = React.useCallback(async () => {

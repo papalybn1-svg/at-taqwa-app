@@ -17,6 +17,9 @@ import { db } from './firebaseConfig';
 import { useAuthContext } from '../contexts/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+// Hauteur approximative de la barre de navigation du bas (TabBar)
+// Légèrement réduite pour que les cartes ne montent pas trop
+const TAB_BAR_SPACE = 88;
 
 // L'ancien mapping chapterMap a été remplacé par exercicesFiles
 
@@ -424,7 +427,9 @@ export default function OriginalQuizScreen() {
           title: returnToChapter.title,
           desc: returnToChapter.title
         },
-        initialSection: returnToChapter.section
+        initialSection: returnToChapter.section,
+        // Si le chapitre venait de l'aperçu du livre (Accueil), on propage l'info
+        fromHomePreview: returnToChapter.fromHomePreview,
       });
     } else {
       // Sinon, naviguer vers la page de sélection des chapitres
@@ -851,12 +856,15 @@ export default function OriginalQuizScreen() {
         const nextChapter = partieChapters[currentIndex + 1];
         console.log('➡️ Navigation vers le chapitre suivant:', nextChapter.title);
         
+        const returnToChapter = (route.params as any)?.returnToChapter;
         (navigation as any).navigate('Chapter', {
           chapter: {
             image: nextChapter.image,
             title: nextChapter.title,
             desc: nextChapter.desc || nextChapter.title
-          }
+          },
+          // Si le premier chapitre venait de l'aperçu du livre, on garde ce comportement
+          fromHomePreview: returnToChapter?.fromHomePreview,
         });
       } else {
         // C'était le dernier chapitre de la partie, retourner à la sélection des chapitres
@@ -990,13 +998,28 @@ export default function OriginalQuizScreen() {
         {/* Cartes empilées - identiques aux autres pages */}
         <View style={styles.quizCardContainer}>
           {/* Carte arrière (la plus profonde) - Vert foncé */}
-          <View style={styles.backCard} />
+          <View 
+            style={[
+              styles.backCard,
+              isComingFromChapter() && styles.backCardFromChapter
+            ]} 
+          />
           
           {/* Carte du milieu - Dorée */}
-          <View style={styles.middleCard} />
+          <View 
+            style={[
+              styles.middleCard,
+              isComingFromChapter() && styles.middleCardFromChapter
+            ]} 
+          />
           
           {/* Carte blanche principale avec résultats */}
-          <View style={styles.whiteCard}>
+          <View 
+            style={[
+              styles.whiteCard,
+              isComingFromChapter() && styles.whiteCardFromChapter
+            ]}
+          >
             <Text style={styles.resultsTitle}>Quiz Terminé !</Text>
             <Text style={styles.scoreText}>
               Votre score : {score} / {quizData.length}
@@ -1018,7 +1041,7 @@ export default function OriginalQuizScreen() {
             {canProceedToNext && hasNextQuizInSamePart() ? (
               <TouchableOpacity style={styles.restartButton} onPress={goToNextQuiz}>
                 <Text style={styles.restartButtonText}>
-                  {isComingFromChapter() ? 'Chapitre suivant' : 'Quiz suivant'}
+                  Continuer
                 </Text>
               </TouchableOpacity>
             ) : (
@@ -1063,13 +1086,29 @@ export default function OriginalQuizScreen() {
       <View style={styles.quizCardContainer}>
         {/* Cartes empilées exactement comme dans QuizStartScreen */}
         {/* Carte arrière (la plus profonde) - Vert foncé */}
-        <View style={styles.backCard} />
+        <View 
+          style={[
+            styles.backCard,
+            isComingFromChapter() && styles.backCardFromChapter
+          ]} 
+        />
         
         {/* Carte du milieu - Dorée */}
-        <View style={styles.middleCard} />
+        <View 
+          style={[
+            styles.middleCard,
+            isComingFromChapter() && styles.middleCardFromChapter
+          ]} 
+        />
         
         {/* Carte blanche principale */}
-        <Animated.View style={[styles.whiteCard, { opacity: fadeAnim }]}>
+        <Animated.View 
+          style={[
+            styles.whiteCard, 
+            isComingFromChapter() && styles.whiteCardFromChapter,
+            { opacity: fadeAnim }
+          ]}
+        >
           {showQuestionPage ? (
             // PAGE 1: QUESTION SEULEMENT
             <>
@@ -1163,10 +1202,11 @@ export default function OriginalQuizScreen() {
                 </View>
               );
             })}
-            <Text style={styles.hintText} numberOfLines={0} ellipsizeMode="tail">
-              Clique sur le texte pour voir toute la réponse
-            </Text>
           </View>
+          {/* Texte d'aide toujours visible, en dehors du conteneur avec overflow hidden */}
+          <Text style={styles.hintText} numberOfLines={2} ellipsizeMode="tail">
+            Clique sur le texte pour voir toute la réponse
+          </Text>
 
               {/* Section des boutons avec espace réservé */}
               <View style={styles.buttonSection}>
@@ -1396,10 +1436,12 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     marginTop: 20, // Réduit de 30 à 20
   },
   optionsContainer: { 
-    marginBottom: 8, // Réduit de 12 à 8
-    marginTop: 15, // Réduit de 30 à 15
+    marginBottom: 4, // Légèrement réduit pour gagner de la place
+    marginTop: 12, // Légèrement réduit pour gagner de la place
     width: '100%', // Assure que le conteneur prend toute la largeur
-    maxHeight: '70%', // Limite la hauteur pour éviter le débordement
+    // On limite un peu plus la hauteur des options pour laisser de la place
+    // au texte d'aide et au bouton du bas sur les petits écrans
+    maxHeight: '65%', 
     overflow: 'hidden', // Cache le contenu qui déborde
   },
 
@@ -1563,6 +1605,16 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     zIndex: 15,
     overflow: 'hidden',
   },
+  // Variantes quand on vient d'un chapitre : laisser une marge équivalente à la TabBar
+  backCardFromChapter: {
+    bottom: 3 + TAB_BAR_SPACE,
+  },
+  middleCardFromChapter: {
+    bottom: 10 + TAB_BAR_SPACE,
+  },
+  whiteCardFromChapter: {
+    bottom: 15 + TAB_BAR_SPACE,
+  },
 
   spacer: {
     flex: 1,
@@ -1648,10 +1700,10 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     fontStyle: 'italic',
   },
   hintText: {
-    fontSize: responsive.isLandscape ? 10 : 12,
+    fontSize: responsive.isLandscape ? 10 : 11,
     color: '#19514A',
     textAlign: 'center',
-    marginTop: 15,
+    marginTop: 10,
     marginHorizontal: responsive.isLandscape ? 10 : 20, // Marges adaptatives
     fontStyle: 'italic',
     fontWeight: '500',
