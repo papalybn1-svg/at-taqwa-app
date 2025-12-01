@@ -22,7 +22,7 @@
   {
     "numero": 3,
     "question": "Vous venez de terminer la prière. Vous vous souvenez d’une impureté à ce moment. Devez-vous recommencer la prière ?",
-    "reponse": "Oui, vous devez à l’instant, recommencer la prière.",
+    "reponse": "Oui, vous devez recommencer la prière.",
     "fausses_reponses": [
       "Non, il suffit de faire des ablutions pour les prochaines prières.",
       "Non, car la prière accomplie est toujours valide.",
@@ -52,7 +52,7 @@
   {
     "numero": 6,
     "question": "Vous venez juste de terminer les ablutions ; vous constatez avoir oublié de laver le bras droit. Que devez-vous faire ?",
-    "reponse": "Vous lavez et vous continuez les ablutions jusqu’à la fin.",
+    "reponse": "Vous lavez le bras droit et vous continuez les ablutions jusqu’à la fin.",
     "fausses_reponses": [
       "Recommencer entièrement les ablutions.",
       "Ignorer car l’oubli n’est pas grave.",
@@ -91,8 +91,8 @@
   },
   {
     "numero": 10,
-    "question": "Le fidèle a fait le tayammom à la prière du Maghreb. Une heure plus tard, c’est la prière d’Ichâ. Constatant qu’il n’a rien fait qui puisse nécessiter une nouvelle ablution, le fidèle fait la prière de ichâ sans renouveler son tayammom. A-t-il raison ou tort ?",
-    "reponse": "Il a tort. Un seul tayammom ne permet pas de faire 2 prières obligatoires.",
+    "question": "Le fidèle a fait le tayammom à la prière du Maghreb. Une heure plus tard, c’est la prière d’Icha ; sans refaire le tayammom, il accomplit la prière de Ichâ. A-t-il raison ou tort ?",
+    "reponse": "Il a tort. Un seul tayammom ne permet pas de faire 2 prières d'obligation divine.",
     "fausses_reponses": [
       "Il a raison, car le tayammom dure toute la journée.",
       "Il a raison si aucune impureté n’est survenue.",
@@ -112,7 +112,7 @@
   {
     "numero": 12,
     "question": "Vous êtes en voyage ; il est l’heure de prier l’Asr et vous n’avez pas d’eau. Cependant, vous pensez trouver de l’eau dans une heure. Que devez-vous faire ?",
-    "reponse": "Si vous êtes certain de trouver de l’eau au moment fixé, vous attendez. Sinon, vous ferez le tayammom dès le début du temps de prière.",
+    "reponse": "Si vous êtes certain de trouver de l’eau avant la fin de la période de validité, vous attendez. Sinon, vous faites le tayammom et vous priez immédiatement l’Asr.",
     "fausses_reponses": [
       "Toujours attendre, même si l’eau risque de manquer.",
       "Toujours prier avec le tayammom, même si l’eau est disponible après.",
@@ -171,8 +171,8 @@
   },
   {
     "numero": 18,
-    "question": "Le fidèle n’a pas d’eau pour faire ses ablutions alors qu’il est l’heure de Zohra. La radio annonce que l’eau reviendra avant Asr. Que doit-il faire ?",
-    "reponse": "Il doit attendre l’arrivée de l’eau jusqu’à la limite. Si le délai risque d’être dépassé, il fera le tayammom et priera.",
+    "question": "Le fidèle n’a pas d’eau pour faire ses ablutions alors qu’il est l’heure de prier Zohr. La radio annonce que l’eau reviendra avant Asr. Que doit-il faire ?",
+    "reponse": "Il peut attendre l’arrivée de l’eau jusqu’à la limite du temps prévu pour cette prière. Si le délai risque d’être dépassé, le fidèle fera le tayammom et accomplira sa prière sans délai.",
     "fausses_reponses": [
       "Il doit prier immédiatement avec tayammom sans attendre.",
       "Il doit annuler la prière et la rattraper le lendemain.",

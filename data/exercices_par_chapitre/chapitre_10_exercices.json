@@ -41,8 +41,8 @@
   },
   {
     "numero": 5,
-    "question": "Un fidèle prie derrière l’imam. Celui-ci s’assoit à tort à la 3ème raka du Dzohr. Que fait le fidèle et comment termine-t-il sa prière ?",
-    "reponse": "Il reste debout et attend l’imam pour continuer la prière.",
+    "question": "Un fidèle prie derrière l’imam. Celui-ci s’assoit à tort à la 3ème raka de la prière de Zohr. Que fait le fidèle et comment termine-t-il sa prière ?",
+    "reponse": "Il reste debout et attend que l’imam pour continuer la prière.",
     "fausses_reponses": [
       "Il s’assoit avec l’imam malgré l’erreur.",
       "Il termine sa prière immédiatement.",
@@ -62,7 +62,7 @@
   {
     "numero": 7,
     "question": "L’imam prononce le salut final après la 2ème raka du Maghreb. Que devez-vous faire ?",
-    "reponse": "Je dis « subhanallah ». Si l’imam me donne raison, il dit « allahu akbar », se lève en disant encore « allahu akbar » et continue sa prière. Après le salut final, il fera sujûd bahda salam.",
+    "reponse": "Je dis « subhanallah ». Si l’imam me donne raison, il dit « allahu akbar » en position assise. Puis il se lève en disant encore « allahu akbar » et continue sa prière. Après le salut final, il fera sujûd bahda salam.",
     "fausses_reponses": [
       "Je fais le salut final immédiatement.",
       "J’ignore l’erreur et continue la prière normalement.",

@@ -12,8 +12,8 @@
       },
       {
         "numero": 2,
-        "question": "Quel est le premier takbir qui marque l’entrée en prière et la sacralisation ?",
-        "reponse": "Le takbiratul ihram consiste à dire « Allahu akbar » en levant les mains à hauteur des épaules.",
+        "question": "Comment apelle t-on le premier takbir qui marque l’entrée en prière et la sacralisation ?",
+        "reponse": "Le takbiratul ihram. Il consiste à dire « Allahu akbar » en levant les mains à hauteur des épaules.",
         "fausses_reponses": [
           "Le takbir du rukû.",
           "Le takbir de la sujûd.",

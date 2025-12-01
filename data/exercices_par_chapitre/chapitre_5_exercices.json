@@ -2,7 +2,7 @@
   {
     "numero": 1,
     "question": "Un fidèle prie la 1ère raka de Zohr. Il récite à voix haute la Fatiha et la sourate. Mais il s’en rend compte avant le rukû. Comment doit-il corriger sa prière ?",
-    "reponse": "Lorsque vous constatez avoir oublié quelque chose avant le rukû, vous devez reprendre ce qui a été oublié. Donc le fidèle doit reprendre la Fatiha et la sourate à voix basse puisqu’il s’agit de la prière de Zohr. Après le salut final, il fait sujud ba’da salam pour réparer ce qu’il a ajouté à tort dans la prière.",
+    "reponse": "Le fidèle doit reprendre la Fatiha et la sourate à voix basse puisqu’il s’agit de la prière de Zohr. Après le salut final, il fait sujud bahda salam pour réparer ce qu’il a ajouté à tort dans la prière.",
     "fausses_reponses": [
       "Ignorer l’oubli et continuer la prière normalement.",
       "Interrompre complètement la prière et recommencer depuis le début.",
@@ -11,8 +11,8 @@
   },
   {
     "numero": 2,
-    "question": "Un fidèle a fait la même erreur que le précédent. Mais il s’en est rendu compte après rukû. Comment doit-il corriger sa prière ?",
-    "reponse": "Lorsqu’on a oublié une sunna, on ne revient pas après le rukû pour la réparer. On note qu’on a oublié quelque chose, puis on continue la prière. Donc, le fidèle doit continuer sa prière et avant le salut final, il fait hâbla salam pour réparer ce qu’il a oublié.",
+    "question": "Un autre fidèle a fait la même erreur que le précédent. Mais il s’en est rendu compte après rukû. Comment doit-il corriger sa prière ?",
+    "reponse": "Le fidèle doit continuer sa prière et après le salut final, il fait bahda salam pour réparer ce qu’il a ajouté.",
     "fausses_reponses": [
       "Reprendre immédiatement ce qui a été oublié après le rukû.",
       "Recommencer toute la prière depuis le début.",
@@ -22,7 +22,7 @@
   {
     "numero": 3,
     "question": "Vous avez répété la Fatiha à la 1ère raka. Que faire ?",
-    "reponse": "En répétant la Fatiha vous avez parlé en trop ; vous avez ajouté quelque chose à la prière. Après le salut final, ba’da salam.",
+    "reponse": "En répétant la Fatiha vous avez parlé en trop ; vous avez ajouté quelque chose à la prière. Après le salut final, bahda salam.",
     "fausses_reponses": [
       "Recommencer la raka depuis le début.",
       "Ignorer l’erreur car cela ne change rien.",
@@ -31,8 +31,8 @@
   },
   {
     "numero": 4,
-    "question": "Un fidèle a oublié de dire la Salatul Ibrahim à la fin de sa 2ème tahiyya. Il s’en rend compte après le salut final. Que doit-il faire ?",
-    "reponse": "Il n’a rien à faire, car la Salatul Ibrahim n’est qu’un acte méritoire. Cela ne demande pas une réparation.",
+    "question": "Que fait celui qui a oublié de réciter à voix haute la fatiha ou la surate, lors de la prière de Subh, de Maghreb ou de Icha ?",
+    "reponse": "Il a fait une diminution de la prière. A la fin de la dernière raka, après le tachahoud (taya), au lieu de prononcer le salut final, faire double soujoud suivie d’une taya courte, puis salut final. C’est sujud Habla salam.",
     "fausses_reponses": [
       "Recommencer toute la prière.",
       "Faire une prosternation supplémentaire pour réparer l’oubli.",
@@ -62,7 +62,7 @@
   {
     "numero": 7,
     "question": "Que fait celui qui oublie la prosternation réparatrice avant le salut final ?",
-    "reponse": "Peu après la prière, faire la prosternation immédiatement ; longtemps après, la prosternation et la prière ne sont plus valables, si l’oubli porte sur 2 sunnas, sinon la prière est valable.",
+    "reponse": "Peu après la prière, faire la prosternation immédiatement ; longtemps après, la prosternation et la prière ne sont plus valables ; il y a tolérance si l’oubli porte sur une seule sunna.",
     "fausses_reponses": [
       "Ignorer l’oubli car cela n’affecte pas la validité de la prière.",
       "Recommencer toute la prière de la première raka.",
