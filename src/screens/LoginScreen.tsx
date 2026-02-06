@@ -5,6 +5,7 @@ import { addDoc, collection, doc, getDoc, getFirestore, serverTimestamp, setDoc 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Image as RNImage, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AuthUser } from '../hooks/useAuth';
+import { useResponsive, getResponsiveStyle } from '../hooks/useResponsive';
 import { auth } from './firebaseConfig';
 
 // Créer le contexte utilisateur
@@ -14,7 +15,7 @@ export const AuthContext = createContext<{ user: AuthUser | null, setUser: (u: A
 });
 
 // Ajouter un composant Toast moderne
-function Toast({ visible, message, type, onHide }: { visible: boolean, message: string, type: 'success' | 'error', onHide: () => void }) {
+function Toast({ visible, message, type, onHide, dynamicStyles }: { visible: boolean, message: string, type: 'success' | 'error', onHide: () => void, dynamicStyles?: any }) {
   useEffect(() => {
     if (visible) {
       const timer = setTimeout(onHide, 2500);
@@ -22,8 +23,38 @@ function Toast({ visible, message, type, onHide }: { visible: boolean, message: 
     }
   }, [visible]);
   if (!visible) return null;
+  
+  // Styles par défaut si dynamicStyles n'est pas disponible
+  const defaultStyles = {
+    toast: {
+      position: 'absolute' as const,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: 16,
+      backgroundColor: '#fff',
+      borderTopWidth: 1,
+      borderTopColor: type === 'success' ? '#4CAF50' : '#f44336',
+    },
+    toastText: {
+      fontSize: 16,
+      fontWeight: 'bold' as const,
+      color: '#174C3C',
+    },
+  };
+  
+  const styles = dynamicStyles || defaultStyles;
+  
+  // Gérer le cas où toastSuccess ou toastError n'existent pas
+  const toastStyle = [
+    styles.toast,
+    type === 'success' 
+      ? (styles.toastSuccess || { borderTopColor: '#4CAF50' })
+      : (styles.toastError || { borderTopColor: '#f44336' })
+  ];
+  
   return (
-    <View style={[styles.toast, type === 'success' ? styles.toastSuccess : styles.toastError]}>
+    <View style={toastStyle}>
       <Text style={styles.toastText}>{message}</Text>
     </View>
   );
@@ -40,6 +71,8 @@ const STORAGE_KEYS = {
 };
 
 export default function LoginScreen({ navigation }: any) {
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
   const [screen, setScreen] = useState<'intro' | 'login' | 'register' | 'forgot'>('intro');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +89,29 @@ export default function LoginScreen({ navigation }: any) {
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ visible: true, message, type });
   };
+
+  // Fonction pour réinitialiser tous les champs
+  const resetAllFields = () => {
+    setEmail('');
+    setPassword('');
+    setPrenom('');
+    setNom('');
+    setErrorMessage('');
+    setPasswordStrength(null);
+    setIsPasswordValid(false);
+    setIsPasswordVisible(false);
+    setToast({ visible: false, message: '', type: 'success' });
+  };
+
+  // Réinitialiser les champs quand on change d'écran (sauf au premier rendu)
+  const prevScreenRef = React.useRef<'intro' | 'login' | 'register' | 'forgot' | null>(null);
+  useEffect(() => {
+    // Ne pas réinitialiser au premier rendu (quand prevScreenRef.current est null)
+    if (prevScreenRef.current !== null && prevScreenRef.current !== screen) {
+      resetAllFields();
+    }
+    prevScreenRef.current = screen;
+  }, [screen]);
 
   const evaluatePassword = (pwd: string) => {
     const hasMinLen = pwd.length >= 8;
@@ -122,16 +178,31 @@ export default function LoginScreen({ navigation }: any) {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCred.user, { displayName: `${prenom} ${nom}` });
         
-        // Envoyer l'email de vérification
-        await sendEmailVerification(userCred.user);
-        console.log('📧 Email de vérification envoyé à:', userCred.user.email);
+        // ═══════════════════════════════════════════════════════════════════════════
+        // 🔒 VÉRIFICATION D'EMAIL DÉSACTIVÉE (v1.0.4) - Code commenté pour réutilisation future
+        // ═══════════════════════════════════════════════════════════════════════════
+        // 
+        // AVANT (vérification d'email activée) :
+        // // Envoyer l'email de vérification avec actionCodeSettings pour les deep links
+        // const actionCodeSettings = {
+        //   url: 'https://attaqwa-confidentialite.vercel.app/?mode=verifyEmail',
+        //   handleCodeInApp: true, // ✅ Important : permet l'ouverture directe de l'app sur Android/iOS
+        //   iOS: { bundleId: 'com.attaqwa.app' },
+        //   android: { packageName: 'com.attaqwaAly.app', installApp: false, minimumVersion: '1' },
+        // } as any;
+        // await sendEmailVerification(userCred.user, actionCodeSettings);
+        // console.log('📧 Email de vérification envoyé à:', userCred.user.email);
+        //
+        // ═══════════════════════════════════════════════════════════════════════════
+        // ✅ NOUVEAU COMPORTEMENT : Accès direct sans vérification d'email
+        // ═══════════════════════════════════════════════════════════════════════════
         
-        // Créer le document utilisateur avec le rôle par défaut
-        // emailVerified sera mis à jour après vérification
+        // Créer le document utilisateur avec emailVerified: true automatiquement
+        // L'utilisateur accède directement à l'app sans vérification d'email
         await setDoc(doc(db, 'users', userCred.user.uid), {
           email: userCred.user.email,
           role: 'user',
-          emailVerified: false,
+          emailVerified: true, // ✅ Marqué comme vérifié automatiquement (pas de vérification d'email requise)
           createdAt: new Date(),
           displayName: `${prenom} ${nom}`,
         });
@@ -149,36 +220,59 @@ export default function LoginScreen({ navigation }: any) {
           console.error('❌ Erreur sauvegarde locale:', error);
         }
 
-        showToast('Inscription réussie ! Vérifiez votre email pour activer votre compte.', 'success');
+        // ═══════════════════════════════════════════════════════════════════════════
+        // 🔒 MESSAGES D'INSCRIPTION MODIFIÉS (v1.0.4) - Code commenté pour réutilisation future
+        // ═══════════════════════════════════════════════════════════════════════════
+        //
+        // AVANT (avec vérification d'email) :
+        // showToast('Inscription réussie ! Vérifiez votre email pour activer votre compte.', 'success');
+        // Alert.alert(
+        //   'Inscription réussie !',
+        //   'Un email de vérification a été envoyé à votre adresse. Veuillez vérifier votre boîte de réception et cliquer sur le lien pour activer votre compte.',
+        //   [
+        //     { 
+        //       text: 'Vérifier mon email', 
+        //       onPress: () => {
+        //         navigation.navigate('VerifyEmail' as never);
+        //       }
+        //     }
+        //   ]
+        // );
+        //
+        // ═══════════════════════════════════════════════════════════════════════════
+        // ✅ NOUVEAU COMPORTEMENT : Message de bienvenue direct
+        // ═══════════════════════════════════════════════════════════════════════════
+        
+        showToast('Inscription réussie ! Bienvenue sur At-Taqwa.', 'success');
         console.log('✅ Inscription réussie pour:', userCred.user.email);
         
-        // Afficher une alerte explicative
-        Alert.alert(
-          'Inscription réussie !',
-          'Un email de vérification a été envoyé à votre adresse. Veuillez vérifier votre boîte de réception et cliquer sur le lien pour activer votre compte.',
-          [
-            { 
-              text: 'Vérifier mon email', 
-              onPress: () => {
-                // Rediriger vers l'écran de vérification email (sans déconnecter)
-                navigation.navigate('VerifyEmail' as never);
-              }
-            }
-          ]
-        );
+        // L'utilisateur sera automatiquement redirigé vers l'accueil via App.tsx
+        // Pas besoin d'alerte, la navigation se fait automatiquement
       } else {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         
-        // Vérifier si l'email est vérifié (seulement pour les nouveaux utilisateurs)
+        // ═══════════════════════════════════════════════════════════════════════════
+        // 🔒 VÉRIFICATION D'EMAIL DÉSACTIVÉE (v1.0.4) - Code commenté pour réutilisation future
+        // ═══════════════════════════════════════════════════════════════════════════
+        //
+        // AVANT (vérification d'email requise) :
+        // // Vérifier si l'email est vérifié (seulement pour les nouveaux utilisateurs)
+        // const userDocRef = doc(db, 'users', userCred.user.uid);
+        // let userDoc = await getDoc(userDocRef);
+        // let userData = userDoc.data();
+        // if (!userCred.user.emailVerified && !userData) {
+        //   showToast('Veuillez vérifier votre email avant de vous connecter.', 'error');
+        //   setLoading(false);
+        //   return;
+        // }
+        //
+        // ═══════════════════════════════════════════════════════════════════════════
+        // ✅ NOUVEAU COMPORTEMENT : Connexion directe sans vérification d'email
+        // ═══════════════════════════════════════════════════════════════════════════
+        
         const userDocRef = doc(db, 'users', userCred.user.uid);
         let userDoc = await getDoc(userDocRef);
         let userData = userDoc.data();
-        
-        if (!userCred.user.emailVerified && !userData) {
-          showToast('Veuillez vérifier votre email avant de vous connecter.', 'error');
-          setLoading(false);
-          return;
-        }
 
         if (!userData) {
           // Si le document n'existe pas, on le crée automatiquement
@@ -253,35 +347,37 @@ export default function LoginScreen({ navigation }: any) {
     setLoading(false);
   };
 
+  const dynamicStyles = createStyles(responsive, responsiveStyle);
+
   // Ecran d'intro
   if (screen === 'intro') {
     return (
-      <View style={styles.introContainer}>
+      <View style={dynamicStyles.introContainer}>
         {/* Image du couple en haut */}
-        <View style={styles.imageTopSection}>
-          <Image source={require('../../assets/couple-livre.png')} style={styles.coupleImage} />
+        <View style={dynamicStyles.imageTopSection}>
+          <Image source={require('../../assets/couple-livre.png')} style={dynamicStyles.coupleImage} />
         </View>
         {/* Bloc blanc en bas avec le contenu */}
-        <View style={styles.whiteBottomCard}>
-          <Text style={styles.mainTitle}>Réparer mes prières</Text>
-          <Text style={styles.descriptionText}>
+        <View style={dynamicStyles.whiteBottomCard}>
+          <Text style={dynamicStyles.mainTitle}>Réparer mes prières</Text>
+          <Text style={dynamicStyles.descriptionText}>
             Rien n'est perdu:{"\n"}chaque prière réparée{"\n"}est un pas vers Allah.
           </Text>
           {/* Boutons */}
-          <View style={styles.buttonsContainer}>
-            <TouchableOpacity style={styles.connectButton} onPress={() => setScreen('login')}>
-              <Text style={styles.connectButtonText}>Se connecter</Text>
+          <View style={dynamicStyles.buttonsContainer}>
+            <TouchableOpacity style={dynamicStyles.connectButton} onPress={() => setScreen('login')}>
+              <Text style={dynamicStyles.connectButtonText}>Se connecter</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.registerButton} onPress={() => setScreen('register')}>
-              <Text style={styles.registerButtonText}>S'inscrire</Text>
+            <TouchableOpacity style={dynamicStyles.registerButton} onPress={() => setScreen('register')}>
+              <Text style={dynamicStyles.registerButtonText}>S'inscrire</Text>
             </TouchableOpacity>
           </View>
           {/* Barre de progression en bas */}
-          <View style={styles.progressIndicator}>
-            <View style={styles.progressDot} />
+          <View style={dynamicStyles.progressIndicator}>
+            <View style={dynamicStyles.progressDot} />
           </View>
         </View>
-        <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
+        <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} dynamicStyles={dynamicStyles} />
       </View>
     );
   }
@@ -291,13 +387,13 @@ export default function LoginScreen({ navigation }: any) {
     return (
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-          <View style={styles.loginContainer}>
-            <View style={styles.loginMainSection}>
-              <Text style={styles.loginTitle}>Mot de passe oublié</Text>
-              <View style={styles.loginInputWrapper}>
-                <MaterialCommunityIcons name="email-outline" size={20} color="#174C3C" style={styles.loginInputIcon} />
+          <View style={dynamicStyles.loginContainer}>
+            <View style={dynamicStyles.loginMainSection}>
+              <Text style={dynamicStyles.loginTitle}>Mot de passe oublié</Text>
+              <View style={dynamicStyles.loginInputWrapper}>
+                <MaterialCommunityIcons name="email-outline" size={20} color="#174C3C" style={dynamicStyles.loginInputIcon} />
                 <TextInput
-                  style={[styles.loginInput, styles.loginInputWithIcon]}
+                  style={[dynamicStyles.loginInput, dynamicStyles.loginInputWithIcon]}
                   placeholder="E-mail"
                   placeholderTextColor="#174C3C"
                   value={email}
@@ -306,14 +402,14 @@ export default function LoginScreen({ navigation }: any) {
                   keyboardType="email-address"
                 />
               </View>
-              <TouchableOpacity style={styles.loginButton} onPress={handleForgotPassword} disabled={loading || !email.trim()}>
-                {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Envoyer le lien de réinitialisation</Text>}
+              <TouchableOpacity style={dynamicStyles.loginButton} onPress={handleForgotPassword} disabled={loading || !email.trim()}>
+                {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={dynamicStyles.loginButtonText}>Envoyer le lien de réinitialisation</Text>}
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setScreen('login')} style={styles.registerLinkContainer} disabled={loading}>
-                <Text style={styles.registerLinkText}>Retour à la connexion</Text>
+              <TouchableOpacity onPress={() => setScreen('login')} style={dynamicStyles.registerLinkContainer} disabled={loading}>
+                <Text style={dynamicStyles.registerLinkText}>Retour à la connexion</Text>
               </TouchableOpacity>
             </View>
-            <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
+            <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} dynamicStyles={dynamicStyles} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -325,28 +421,28 @@ export default function LoginScreen({ navigation }: any) {
     return (
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-      <View style={styles.registerContainer}>
+      <View style={dynamicStyles.registerContainer}>
         {/* Etoile en haut à droite */}
-        <View style={styles.registerStarContainer}>
-          <RNImage source={require('../../assets/etoile.png')} style={styles.registerStar} />
+        <View style={dynamicStyles.registerStarContainer}>
+          <RNImage source={require('../../assets/etoile.png')} style={dynamicStyles.registerStar} />
         </View>
         
         {/* Section principale */}
-        <View style={styles.registerMainSection}>
+        <View style={dynamicStyles.registerMainSection}>
           {/* Titre */}
-          <Text style={styles.registerTitle}>Créez un compte</Text>
-          <Text style={styles.registerSubtitle}>Découvrez la voie de la piété</Text>
+          <Text style={dynamicStyles.registerTitle}>Créez un compte</Text>
+          <Text style={dynamicStyles.registerSubtitle}>Découvrez la voie de la piété</Text>
           
           {/* Champs de saisie */}
-          <View style={styles.registerInputWrapper}>
+          <View style={dynamicStyles.registerInputWrapper}>
             <MaterialCommunityIcons 
               name="account-outline" 
               size={20} 
               color="#174C3C" 
-              style={styles.registerInputIcon} 
+              style={dynamicStyles.registerInputIcon} 
             />
           <TextInput 
-              style={[styles.registerInput, styles.registerInputWithIcon]} 
+              style={[dynamicStyles.registerInput, dynamicStyles.registerInputWithIcon]} 
               placeholder="Prénom" 
               placeholderTextColor="#174C3C"
               value={prenom} 
@@ -354,15 +450,15 @@ export default function LoginScreen({ navigation }: any) {
             />
           </View>
           
-          <View style={styles.registerInputWrapper}>
+          <View style={dynamicStyles.registerInputWrapper}>
             <MaterialCommunityIcons 
               name="account-outline" 
               size={20} 
               color="#174C3C" 
-              style={styles.registerInputIcon} 
+              style={dynamicStyles.registerInputIcon} 
             />
             <TextInput 
-              style={[styles.registerInput, styles.registerInputWithIcon]} 
+              style={[dynamicStyles.registerInput, dynamicStyles.registerInputWithIcon]} 
               placeholder="Nom" 
               placeholderTextColor="#174C3C"
               value={nom} 
@@ -370,15 +466,15 @@ export default function LoginScreen({ navigation }: any) {
             />
           </View>
           
-          <View style={styles.registerInputWrapper}>
+          <View style={dynamicStyles.registerInputWrapper}>
             <MaterialCommunityIcons 
               name="email-outline" 
               size={20} 
               color="#174C3C" 
-              style={styles.registerInputIcon} 
+              style={dynamicStyles.registerInputIcon} 
             />
             <TextInput 
-              style={[styles.registerInput, styles.registerInputWithIcon]} 
+              style={[dynamicStyles.registerInput, dynamicStyles.registerInputWithIcon]} 
               placeholder="Email" 
               placeholderTextColor="#174C3C"
               value={email} 
@@ -388,15 +484,15 @@ export default function LoginScreen({ navigation }: any) {
             />
           </View>
           
-          <View style={styles.registerInputWrapper}>
+          <View style={dynamicStyles.registerInputWrapper}>
             <MaterialCommunityIcons 
               name="lock-outline" 
               size={20} 
               color="#174C3C" 
-              style={styles.registerInputIcon} 
+              style={dynamicStyles.registerInputIcon} 
             />
           <TextInput
-              style={[styles.registerInput, styles.registerInputWithIcon]}
+              style={[dynamicStyles.registerInput, dynamicStyles.registerInputWithIcon]}
             placeholder="Mot de passe"
               placeholderTextColor="#174C3C"
             value={password}
@@ -404,7 +500,7 @@ export default function LoginScreen({ navigation }: any) {
             secureTextEntry={!isPasswordVisible}
           />
             <TouchableOpacity 
-              style={styles.registerEyeButton} 
+              style={dynamicStyles.registerEyeButton} 
               onPress={() => setIsPasswordVisible(v => !v)}
             >
               <MaterialCommunityIcons 
@@ -432,7 +528,7 @@ export default function LoginScreen({ navigation }: any) {
           
           {/* Bouton principal S'inscrire */}
           <TouchableOpacity 
-            style={styles.registerPrimaryButton} 
+            style={dynamicStyles.registerPrimaryButton} 
             onPress={() => {
               if (!isPasswordValid) {
                 setErrorMessage('Le mot de passe est trop faible.');
@@ -445,7 +541,7 @@ export default function LoginScreen({ navigation }: any) {
             {loading ? (
               <ActivityIndicator color="#174C3C" />
             ) : (
-              <Text style={styles.registerPrimaryButtonText}>S'inscrire</Text>
+              <Text style={dynamicStyles.registerPrimaryButtonText}>S'inscrire</Text>
             )}
           </TouchableOpacity>
           
@@ -455,18 +551,18 @@ export default function LoginScreen({ navigation }: any) {
           <TouchableOpacity 
             onPress={() => setScreen('login')} 
             disabled={loading}
-            style={styles.registerLoginLink}
+            style={dynamicStyles.registerLoginLink}
           >
-            <Text style={styles.registerLoginText}>Déjà un membre? Se connecter.</Text>
+            <Text style={dynamicStyles.registerLoginText}>Déjà un membre? Se connecter.</Text>
           </TouchableOpacity>
         </View>
         
         {/* Barre de progression en bas */}
-        <View style={styles.registerProgressContainer}>
-          <View style={styles.registerProgressBar} />
+        <View style={dynamicStyles.registerProgressContainer}>
+          <View style={dynamicStyles.registerProgressBar} />
         </View>
         
-        <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
+        <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} dynamicStyles={dynamicStyles} />
       </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -477,27 +573,27 @@ export default function LoginScreen({ navigation }: any) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-    <View style={styles.loginContainer}>
+    <View style={dynamicStyles.loginContainer}>
       {/* Section principale du formulaire */}
-      <View style={styles.loginMainSection}>
+      <View style={dynamicStyles.loginMainSection}>
         {/* Etoile en haut à droite */}
-        <View style={styles.loginStarContainer}>
-          <RNImage source={require('../../assets/etoile.png')} style={styles.loginStar} />
+        <View style={dynamicStyles.loginStarContainer}>
+          <RNImage source={require('../../assets/etoile.png')} style={dynamicStyles.loginStar} />
       </View>
         
         {/* Titre */}
-        <Text style={styles.loginTitle}>Bismillah,{"\n"}Se connecter</Text>
+        <Text style={dynamicStyles.loginTitle}>Bismillah,{"\n"}Se connecter</Text>
         
         {/* Champs de saisie */}
-        <View style={styles.loginInputWrapper}>
+        <View style={dynamicStyles.loginInputWrapper}>
           <MaterialCommunityIcons 
             name="email-outline" 
             size={20} 
             color="#174C3C" 
-            style={styles.loginInputIcon}
+            style={dynamicStyles.loginInputIcon}
           />
           <TextInput 
-            style={[styles.loginInput, styles.loginInputWithIcon]} 
+            style={[dynamicStyles.loginInput, dynamicStyles.loginInputWithIcon]} 
             placeholder="E-mail" 
             placeholderTextColor="#174C3C"
             value={email} 
@@ -511,15 +607,15 @@ export default function LoginScreen({ navigation }: any) {
           />
       </View>
         
-        <View style={styles.loginInputWrapper}>
+        <View style={dynamicStyles.loginInputWrapper}>
           <MaterialCommunityIcons 
             name="lock-outline" 
             size={20} 
             color="#174C3C" 
-            style={styles.loginInputIcon}
+            style={dynamicStyles.loginInputIcon}
           />
         <TextInput
-            style={[styles.loginInput, styles.loginInputWithIcon]}
+            style={[dynamicStyles.loginInput, dynamicStyles.loginInputWithIcon]}
           placeholder="Mot de passe"
             placeholderTextColor="#174C3C"
           value={password}
@@ -530,7 +626,7 @@ export default function LoginScreen({ navigation }: any) {
           secureTextEntry={!isPasswordVisible}
             editable={!loading}
         />
-          <TouchableOpacity style={styles.loginEyeButton} onPress={() => setIsPasswordVisible(v => !v)}>
+          <TouchableOpacity style={dynamicStyles.loginEyeButton} onPress={() => setIsPasswordVisible(v => !v)}>
             <MaterialCommunityIcons 
               name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'} 
               size={20} 
@@ -541,45 +637,45 @@ export default function LoginScreen({ navigation }: any) {
         
         {/* Message d'erreur */}
         {errorMessage ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{errorMessage}</Text>
+          <View style={dynamicStyles.errorContainer}>
+            <Text style={dynamicStyles.errorText}>{errorMessage}</Text>
           </View>
         ) : null}
         
         {/* Bouton Se connecter */}
-        <TouchableOpacity style={styles.loginButton} onPress={handleAuth} disabled={loading}>
-          {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.loginButtonText}>Se connecter</Text>}
+        <TouchableOpacity style={dynamicStyles.loginButton} onPress={handleAuth} disabled={loading}>
+          {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={dynamicStyles.loginButtonText}>Se connecter</Text>}
         </TouchableOpacity>
         
         {/* Mot de passe oublié */}
         <TouchableOpacity 
-          style={styles.forgotPasswordContainer}
+          style={dynamicStyles.forgotPasswordContainer}
           onPress={() => setScreen('forgot')}
           disabled={loading}
         >
-          <Text style={styles.forgotPassword}>Mot de passe oublié ?</Text>
+          <Text style={dynamicStyles.forgotPassword}>Mot de passe oublié ?</Text>
         </TouchableOpacity>
         
         {/* Lien inscription */}
         <TouchableOpacity 
           onPress={() => setScreen('register')} 
           disabled={loading}
-          style={styles.registerLinkContainer}
+          style={dynamicStyles.registerLinkContainer}
         >
-          <Text style={styles.registerLinkText}>S'inscrire.</Text>
+          <Text style={dynamicStyles.registerLinkText}>S'inscrire.</Text>
         </TouchableOpacity>
       </View>
 
 
       
-      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} dynamicStyles={dynamicStyles} />
     </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
   introContainer: { flex: 1, backgroundColor: '#174C3C' },
   imageTopSection: { flex: 2, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, marginBottom: -80 },
   coupleImage: { width: '200%', height: '160%', resizeMode: 'contain', marginBottom: -160, marginLeft: 20 },
@@ -587,21 +683,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    padding: 32,
-    paddingTop: 32,
-    paddingBottom: 16,
+    padding: responsiveStyle.spacing['2xl'],
+    paddingTop: responsiveStyle.spacing['2xl'],
+    paddingBottom: responsiveStyle.spacing.base,
     width: '100%',
     alignItems: 'center',
     minHeight: 320,
     justifyContent: 'center',
   },
-  mainTitle: { fontSize: 24, fontWeight: '800', color: '#174C3C', marginBottom: 10, textAlign: 'center' },
-  descriptionText: { fontSize: 16, color: '#4B5563', textAlign: 'center', marginBottom: 20, fontWeight: '500' },
-  buttonsContainer: { flexDirection: 'row', justifyContent: 'center', width: '100%', marginBottom: 12 },
-  connectButton: { backgroundColor: '#174C3C', borderRadius: 22, paddingVertical: 13, width: '48%', marginHorizontal: 4, elevation: 3 },
-  registerButton: { backgroundColor: '#E7C97B', borderRadius: 22, paddingVertical: 13, width: '48%', marginHorizontal: 4, elevation: 3 },
-  connectButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15, textAlign: 'center' },
-  registerButtonText: { color: '#174C3C', fontWeight: 'bold', fontSize: 15, textAlign: 'center' },
+  mainTitle: { fontSize: responsiveStyle.fontSize['2xl'], fontWeight: '800', color: '#174C3C', marginBottom: responsiveStyle.spacing.base, textAlign: 'center' },
+  descriptionText: { fontSize: responsiveStyle.fontSize.base, color: '#4B5563', textAlign: 'center', marginBottom: responsiveStyle.spacing.lg, fontWeight: '500' },
+  buttonsContainer: { flexDirection: 'row', justifyContent: 'center', width: '100%', marginBottom: responsiveStyle.spacing.base },
+  connectButton: { backgroundColor: '#174C3C', borderRadius: 22, paddingVertical: responsiveStyle.spacing.base, width: '48%', marginHorizontal: 4, elevation: 3 },
+  registerButton: { backgroundColor: '#E7C97B', borderRadius: 22, paddingVertical: responsiveStyle.spacing.base, width: '48%', marginHorizontal: 4, elevation: 3 },
+  connectButtonText: { color: '#fff', fontWeight: 'bold', fontSize: responsiveStyle.fontSize.base, textAlign: 'center' },
+  registerButtonText: { color: '#174C3C', fontWeight: 'bold', fontSize: responsiveStyle.fontSize.base, textAlign: 'center' },
   progressIndicator: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 6 },
   progressDot: { width: 40, height: 3, backgroundColor: '#E7C97B', borderRadius: 2 },
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F5F7', padding: 24 },
@@ -660,17 +756,17 @@ const styles = StyleSheet.create({
   loginButton: { 
     backgroundColor: '#D4AF37', 
     borderRadius: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    marginTop: 16, 
-    marginBottom: 16, 
+    paddingVertical: responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing['2xl'],
+    marginTop: responsiveStyle.spacing.base, 
+    marginBottom: responsiveStyle.spacing.base, 
     width: '100%', 
     maxWidth: 340 
   },
   loginButtonText: { 
     color: '#FFFFFF', 
     fontWeight: 'bold', 
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.sm,
     textAlign: 'center' 
   },
   forgotPasswordContainer: { alignItems: 'center', marginTop: 16, marginBottom: 16 },
@@ -797,11 +893,11 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     backgroundColor: '#D4AF37',
     borderRadius: 20,
-    paddingVertical: 12,
+    paddingVertical: responsiveStyle.spacing.base,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: responsiveStyle.spacing.base,
+    marginBottom: responsiveStyle.spacing.base,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -809,7 +905,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   registerPrimaryButtonText: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.sm,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -818,12 +914,12 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     backgroundColor: '#000000',
     borderRadius: 25,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: responsiveStyle.spacing.base,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -833,11 +929,11 @@ const styles = StyleSheet.create({
   registerAppleIcon: {
     width: 32,
     height: 32,
-    marginRight: 10,
+    marginRight: responsiveStyle.spacing.base,
     tintColor: '#FFFFFF',
   },
   registerAppleButtonText: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.sm,
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -846,8 +942,8 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     backgroundColor: '#FFFFFF',
     borderRadius: 25,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -864,10 +960,10 @@ const styles = StyleSheet.create({
   registerGoogleIcon: {
     width: 32,
     height: 32,
-    marginRight: 10,
+    marginRight: responsiveStyle.spacing.base,
   },
   registerGoogleButtonText: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.sm,
     fontWeight: '600',
     color: '#174C3C',
   },

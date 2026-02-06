@@ -1,9 +1,10 @@
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as NavigationBar from 'expo-navigation-bar';
 import * as SystemUI from 'expo-system-ui';
 import React, { useEffect, useState } from 'react';
-import { Image, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, StatusBar, StyleSheet, Text, View } from 'react-native';
 
 import RootErrorBoundary from './src/components/RootErrorBoundary';
 import { AuthProvider, useAuthContext } from './src/contexts/AuthContext';
@@ -102,22 +103,55 @@ function RootNavigator() {
   const navigationRef = React.useRef<NavigationContainerRef<any>>(null);
 
   return (
-    <NavigationContainer ref={navigationRef} onReady={() => {
-      console.log('✅ NavigationContainer prêt');
-    }}>
+    <NavigationContainer 
+      ref={navigationRef} 
+      onReady={() => {
+        console.log('✅ NavigationContainer prêt');
+      }}
+      theme={{
+        dark: false,
+        colors: {
+          primary: '#19514A',
+          background: '#F3F5F7', // ✅ Couleur de fond pour éviter l'écran gris
+          card: '#FFFFFF',
+          text: '#1D1818',
+          border: '#E5E5E5',
+          notification: '#19514A',
+        },
+      }}
+    >
       <PayDunyaDeepLinkHandler navigationRef={navigationRef} />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user && user.emailVerified ? (
+        {/* ═══════════════════════════════════════════════════════════════════════════
+            🔒 VÉRIFICATION D'EMAIL DÉSACTIVÉE (v1.0.4) - Code commenté pour réutilisation future
+            ═══════════════════════════════════════════════════════════════════════════
+            
+            AVANT (avec vérification d'email) :
+            {user && user.emailVerified ? (
+              <Stack.Screen name="MainTabs" component={MainTabsWithEntitlements} />
+            ) : user && !user.emailVerified ? (
+              <>
+                <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+                <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+              </>
+            ) : (
+              <>
+                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+              </>
+            )}
+            
+            ═══════════════════════════════════════════════════════════════════════════
+            ✅ NOUVEAU COMPORTEMENT : Accès direct pour tous les utilisateurs connectés
+            ═══════════════════════════════════════════════════════════════════════════ */}
+        {user ? (
           <Stack.Screen name="MainTabs" component={MainTabsWithEntitlements} />
-        ) : user && !user.emailVerified ? (
-          <>
-            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-          </>
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            {/* VerifyEmail reste disponible mais n'est plus utilisé automatiquement */}
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
           </>
         )}
       </Stack.Navigator>
@@ -142,6 +176,15 @@ function AppShell() {
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
   const [splashStep, setSplashStep] = useState(0);
   const [quickSplashDone, setQuickSplashDone] = useState(false);
+  const [appShown, setAppShown] = useState(false); // ✅ État pour verrouiller l'affichage de l'app
+
+  // Masquer la barre de navigation système Android
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setVisibilityAsync('hidden');
+      NavigationBar.setBehaviorAsync('overlay-swipe');
+    }
+  }, []);
 
   useEffect(() => {
     const loadFlag = async () => {
@@ -193,14 +236,32 @@ function AppShell() {
     }
   }, [isFirstLaunch, splashStep, quickSplashDone, loading]);
 
-  if (isFirstLaunch === null) {
-    return null;
-  }
-
+  // ✅ Calculer si l'app doit être affichée (une seule fois)
   const shouldShowApp = isFirstLaunch
     ? splashStep >= 2 && !loading
     : quickSplashDone && !loading;
 
+  // ✅ Marquer l'app comme affichée une fois qu'elle doit être montrée
+  useEffect(() => {
+    if (shouldShowApp && !appShown) {
+      setAppShown(true);
+    }
+  }, [shouldShowApp, appShown]);
+
+  // ✅ Si l'app a déjà été affichée, ne plus revenir au splash screen
+  // ✅ Cela évite la boucle si loading change après l'affichage initial
+  if (appShown) {
+    console.log('[App] rendu racine');
+    return <RootNavigator />;
+  }
+
+  // ✅ Pendant le chargement initial, afficher immédiatement le splash screen
+  // ✅ Cela évite l'écran gris pendant le chargement du flag AsyncStorage
+  if (isFirstLaunch === null) {
+    return <SplashLogo statusText="Initialisation…" />;
+  }
+
+  // ✅ Afficher le splash screen seulement si l'app n'a pas encore été montrée
   if (!shouldShowApp) {
     if (isFirstLaunch) {
       if (splashStep === 0) {

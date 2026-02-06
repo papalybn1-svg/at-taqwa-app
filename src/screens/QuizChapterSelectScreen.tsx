@@ -201,7 +201,7 @@ export default function QuizChapterSelectScreen() {
       console.error('Erreur lors du chargement des scores:', error);
     }
   }, [user?.uid]);
-  
+
   // TOUS les useEffect et useFocusEffect doivent être AVANT le return null
   // Charger les scores des quiz depuis le stockage local
   useEffect(() => {
@@ -399,7 +399,7 @@ export default function QuizChapterSelectScreen() {
       }
     }
   };
-
+  
   // Logs détaillés par partie
   console.log("📋 Chapitres détectés avec quiz:", allChapters.map(ch => `${ch.exercicesKey} (${ch.partieKey})`));
   console.log("📊 Répartition par partie:");

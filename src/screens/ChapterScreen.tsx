@@ -10,6 +10,7 @@ import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { useAuthContext } from '../contexts/AuthContext';
 import { useEntitlements } from '../contexts/EntitlementsContext';
+import { useResponsive, getResponsiveStyle } from '../hooks/useResponsive';
 import { usePaymentService } from '../lib/paymentService';
 import { ChaptersData } from '../types/chapters';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
@@ -112,6 +113,9 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const { entitlements, refreshEntitlements } = useEntitlements();
   const { checkEntitlements: fetchEntitlements } = usePaymentService();
   const insets = useSafeAreaInsets();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const dynamicStyles = createStyles(responsive, responsiveStyle);
   const { chapter, fromHomePreview } = route.params;
   
   // Tous les useState
@@ -134,6 +138,18 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   const screenWidth = Dimensions.get('window').width;
   const scrollViewRef = useRef<ScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  
+  // Calculer dynamiquement la hauteur de la barre de navigation en bas
+  // Bouton Favoris : ~40px (paddingVertical: 10 * 2 + contenu ~20px)
+  // Navigation sections : ~60px (paddingVertical: 12 * 2 + boutons ~36px)
+  // Safe area insets : variable selon l'appareil
+  // Marge de sécurité : 20px
+  const navigationBarHeight = React.useMemo(() => {
+    const favoriteButtonHeight = 40; // paddingVertical: 10 * 2 + contenu
+    const navigationSectionsHeight = 60; // paddingVertical: 12 * 2 + boutons
+    const safetyMargin = 20; // Marge de sécurité
+    return favoriteButtonHeight + navigationSectionsHeight + insets.bottom + safetyMargin;
+  }, [insets.bottom]);
   
   // Fonctions utilisées dans les useEffect - doivent être définies AVANT les useEffect
   const initializeChapterProgress = useCallback(async () => {
@@ -267,15 +283,58 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         if (!cancelled) setAccessStatus('granted');
         return;
       }
-      // Ne pas forcer pour éviter les boucles infinies
-      try { await refreshEntitlements(false); } catch {}
+      
+      // ✅ Amélioration : Forcer un refresh pour s'assurer d'avoir les entitlements les plus récents
+      // Attendre un peu pour que le token Firebase soit prêt (surtout sur Android)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Forcer le refresh même si ça viole le cooldown (important pour Android)
+      try { 
+        await refreshEntitlements(true); // force=true pour bypasser le cooldown
+        // Attendre un peu pour que les entitlements soient mis à jour dans le contexte
+        await new Promise(resolve => setTimeout(resolve, 300));
+      } catch (e: any) {
+        // Ne pas logger en boucle si erreur réseau
+        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+          console.error('Erreur refreshEntitlements:', e);
+        }
+      }
+      
+      // Récupérer les entitlements depuis le contexte (mis à jour par refreshEntitlements)
       let latest = entitlements;
-      try { latest = await fetchEntitlements(); } catch {}
-      const allowed = currentChapter.partieKey === 'deuxieme_partie'
-        ? latest.part2
-        : currentChapter.partieKey === 'troisieme_partie'
-          ? latest.part3
+      
+      // Si les entitlements du contexte sont encore à false, essayer un appel direct
+      const isPremiumPart = currentChapter.partieKey === 'deuxieme_partie' || currentChapter.partieKey === 'troisieme_partie';
+      const needsPart2 = currentChapter.partieKey === 'deuxieme_partie';
+      const needsPart3 = currentChapter.partieKey === 'troisieme_partie';
+      
+      // Si on a besoin d'un accès premium et que les entitlements sont à false, faire un appel direct
+      if (isPremiumPart && !latest.part2 && !latest.part3) {
+        try { 
+          latest = await fetchEntitlements(); 
+          console.log('📡 Entitlements récupérés directement:', latest);
+        } catch (e: any) {
+          // Ne pas logger en boucle si erreur réseau
+          if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+            console.error('Erreur fetchEntitlements:', e);
+          }
+        }
+      }
+      
+      const allowed = needsPart2 
+        ? latest.part2 
+        : needsPart3 
+          ? latest.part3 
           : true;
+      
+      console.log('🔐 Vérification accès premium:', {
+        chapter: currentChapter.partieKey,
+        needsPart2,
+        needsPart3,
+        entitlements: latest,
+        allowed
+      });
+      
       if (!cancelled) setAccessStatus(allowed ? 'granted' : 'denied');
     };
     verify();
@@ -682,8 +741,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       // 4. Gestion des textes arabes (JAUNE)
       if (item.type === "arabe") {
         return (
-          <View key={idx} style={styles.arabicContainer}>
-            <Text style={[styles.arabicText, { fontSize: textSize + 4 }]}> 
+          <View key={idx} style={dynamicStyles.arabicContainer}>
+            <Text style={[dynamicStyles.arabicText, { fontSize: textSize + 4 }]}> 
               {(() => {
                 const parts = item.contenu.split(/(\bAllah\b|\bProphète\b)/gi);
                 return parts.map((part: string, index: number) => {
@@ -705,8 +764,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       // 5. Gestion des explications (type "explication") - VERT
       if (item.type === "explication") {
         return (
-          <View key={idx} style={styles.explanationContainer}>
-            <Text style={[styles.explanationText, { fontSize: textSize }]}> 
+          <View key={idx} style={dynamicStyles.explanationContainer}>
+            <Text style={[dynamicStyles.explanationText, { fontSize: textSize }]}> 
               {(() => {
                 const parts = item.contenu.split(/(\bAllah\b|\bProphète\b)/gi);
                 return parts.map((part: string, index: number) => {
@@ -756,7 +815,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         <Text 
           key={idx} 
           style={[
-            styles.paragraph, 
+            dynamicStyles.paragraph, 
             { 
               fontSize: textSize,
               lineHeight: textSize * 1.6,
@@ -815,7 +874,15 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
-        <View style={{ flex: 1, backgroundColor: '#F4F7F6', paddingTop: insets.top }}>
+        <View style={{ 
+          flex: 1, 
+          backgroundColor: '#F4F7F6', 
+          paddingTop: insets.top,
+          ...(Platform.OS === 'web' && { 
+            height: '100vh', // ✅ Pour le web, utiliser viewport height
+            overflow: 'hidden' // ✅ Empêcher le scroll du conteneur parent sur web
+          })
+        }}>
       {/* Header avec image et titre */}
       <View style={{ position: 'relative', overflow: 'visible' }}>
         <Image
@@ -948,23 +1015,35 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <ScrollView
           ref={scrollViewRef}
-          style={{ flex: 1, width: '100%' }}
+          style={{ 
+            flex: 1, 
+            width: '100%',
+            ...(Platform.OS === 'web' && {
+              // ✅ Styles spécifiques pour le web
+              overflowY: 'auto' as any, // ✅ Permet le scroll vertical sur web
+              WebkitOverflowScrolling: 'touch' as any, // ✅ Scroll fluide sur iOS Safari
+            })
+          }}
           contentContainerStyle={{ 
             paddingHorizontal: 16, 
             paddingTop: currentSectionIndex === 0 ? 20 : 16, 
-            paddingBottom: 120, 
+            paddingBottom: navigationBarHeight, // Calcul dynamique basé sur la hauteur réelle de la barre de navigation
             maxWidth: 420, 
             alignSelf: 'center',
             flexGrow: 1,
           }}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled
+          showsVerticalScrollIndicator={Platform.OS !== 'web'} // ✅ Désactivé sur web pour éviter les conflits
+          nestedScrollEnabled={Platform.OS !== 'web'} // ✅ Désactivé sur web
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          scrollEnabled={true} // ✅ Explicitement activé pour le web
+          bounces={Platform.OS !== 'web'} // ✅ Désactivé sur web pour un scroll natif
+          alwaysBounceVertical={false} // ✅ Désactivé pour le web
             onScroll={e => {
               const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
               const totalScrollable = contentSize.height - layoutMeasurement.height;
-              if (totalScrollable > 0) {
+              // Seuil plus permissif pour détecter le scroll (au moins 50px de différence)
+              if (totalScrollable > 50) {
                 setIsScrollable(true);
                 setScrollProgress(Math.min(1, Math.max(0, contentOffset.y / totalScrollable)));
               } else {
@@ -973,6 +1052,12 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               }
             }}
             scrollEventThrottle={16}
+            onContentSizeChange={(contentWidth, contentHeight) => {
+              // Recalculer si scrollable quand le contenu change
+              const { height: layoutHeight } = Dimensions.get('window');
+              const totalScrollable = contentHeight - layoutHeight;
+              setIsScrollable(totalScrollable > 50);
+            }}
         >
           {renderContent(sections[currentSectionIndex]?.items || [])}
     </ScrollView>
@@ -1015,46 +1100,46 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         {/* Bouton Favoris */}
         <TouchableOpacity
           onPress={toggleFavorite}
-          style={styles.favoriteButton}
+          style={dynamicStyles.favoriteButton}
         >
           <MaterialCommunityIcons 
             name={isFavorite ? "heart" : "heart-outline"} 
             size={18} 
             color="#174C3C"
           />
-          <Text style={[styles.favoriteButtonText, { color: "#174C3C" }]}>
+          <Text style={[dynamicStyles.favoriteButtonText, { color: "#174C3C" }]}>
             {isFavorite ? "Retirer" : "Favoris"}
           </Text>
         </TouchableOpacity>
         
         {/* Navigation sections */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: responsiveStyle.spacing['2xl'], paddingVertical: responsiveStyle.spacing.base }}>
         {totalSections === 1 ? (
           // Navigation compacte pour les chapitres d'une seule page
           <>
             {previousChapter ? (
               <TouchableOpacity
                 onPress={() => navigation.navigate('Chapter', { chapter: previousChapter })}
-                style={{ backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+                style={[dynamicStyles.navButtonCompact, dynamicStyles.navButtonGold]}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre précédent</Text>
+                <Text style={dynamicStyles.navButtonTextCompact}>Chapitre précédent</Text>
               </TouchableOpacity>
             ) : (
-              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre précédent</Text>
+              <View style={[dynamicStyles.navButtonCompact, dynamicStyles.navButtonDisabled]}>
+                <Text style={dynamicStyles.navButtonTextCompact}>Chapitre précédent</Text>
               </View>
             )}
             
             {/* Pagination centrée */}
             <View style={{ minWidth: 40, alignItems: 'center' }}>
-              <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>1/1</Text>
+              <Text style={dynamicStyles.paginationText}>1/1</Text>
             </View>
             
               <TouchableOpacity
               onPress={handleQuizPress}
-              style={{ backgroundColor: '#BB9B4E', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+              style={[dynamicStyles.navButtonCompact, dynamicStyles.navButtonQuiz]}
               >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Faire le quiz</Text>
+              <Text style={dynamicStyles.navButtonTextCompact}>Faire le quiz</Text>
               </TouchableOpacity>
           </>
         ) : (
@@ -1064,42 +1149,42 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               previousChapter ? (
                 <TouchableOpacity
                   onPress={() => navigation.navigate('Chapter', { chapter: previousChapter })}
-                  style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                  style={[dynamicStyles.navButton, dynamicStyles.navButtonGold]}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre précédent</Text>
+                  <Text style={dynamicStyles.navButtonText}>Chapitre précédent</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
+                <View style={[dynamicStyles.navButton, dynamicStyles.navButtonDisabled]}>
+                  <Text style={dynamicStyles.navButtonText}>Précédent</Text>
                 </View>
               )
             ) : (
               <TouchableOpacity
                 onPress={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
-                style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                style={[dynamicStyles.navButton, dynamicStyles.navButtonPrimary]}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
+                <Text style={dynamicStyles.navButtonText}>Précédent</Text>
               </TouchableOpacity>
             )}
             
             {/* Pagination */}
             <View style={{ minWidth: 60, alignItems: 'center' }}>
-              <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{currentSectionIndex + 1}/{totalSections}</Text>
+              <Text style={dynamicStyles.paginationText}>{currentSectionIndex + 1}/{totalSections}</Text>
             </View>
             
             {currentSectionIndex === totalSections - 1 ? (
                 <TouchableOpacity
                 onPress={handleQuizPress}
-                style={{ backgroundColor: '#BB9B4E', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                style={[dynamicStyles.navButton, dynamicStyles.navButtonQuiz]}
                 >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Faire le quiz</Text>
+                <Text style={dynamicStyles.navButtonText}>Faire le quiz</Text>
                 </TouchableOpacity>
             ) : (
               <TouchableOpacity
                 onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
-                style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                style={[dynamicStyles.navButton, dynamicStyles.navButtonPrimary]}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+                <Text style={dynamicStyles.navButtonText}>Suivant</Text>
               </TouchableOpacity>
             )}
           </>
@@ -1116,41 +1201,41 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         animationType="fade"
         onRequestClose={() => setShowLockModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
+        <View style={dynamicStyles.modalOverlay}>
+          <View style={dynamicStyles.modalContent}>
+            <View style={dynamicStyles.modalHeader}>
               <Image
                 source={require('../../assets/lock-closed.png')}
-                style={styles.modalLockIcon}
+                style={dynamicStyles.modalLockIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.modalTitle}>Quiz verrouillé</Text>
+              <Text style={dynamicStyles.modalTitle}>Quiz verrouillé</Text>
             </View>
             
-            <Text style={styles.modalMessage}>
+            <Text style={dynamicStyles.modalMessage}>
               Pour débloquer ce quiz, vous devez obtenir au moins 80% au quiz précédent.
             </Text>
             
             {previousScore !== undefined && (
-              <View style={styles.modalScoreContainer}>
-                <Text style={styles.modalScoreLabel}>Votre score actuel :</Text>
-                <Text style={styles.modalScoreValue}>{previousScore}%</Text>
-                <Text style={styles.modalScoreRequired}>
+              <View style={dynamicStyles.modalScoreContainer}>
+                <Text style={dynamicStyles.modalScoreLabel}>Votre score actuel :</Text>
+                <Text style={dynamicStyles.modalScoreValue}>{previousScore}%</Text>
+                <Text style={dynamicStyles.modalScoreRequired}>
                   Score requis : 80%
                 </Text>
               </View>
             )}
             
-            <View style={styles.modalButtons}>
+            <View style={dynamicStyles.modalButtons}>
               <TouchableOpacity 
-                style={styles.modalButtonSecondary}
+                style={dynamicStyles.modalButtonSecondary}
                 onPress={() => setShowLockModal(false)}
               >
-                <Text style={styles.modalButtonTextSecondary}>Fermer</Text>
+                <Text style={dynamicStyles.modalButtonTextSecondary}>Fermer</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.modalButtonPrimary}
+                style={dynamicStyles.modalButtonPrimary}
                 onPress={() => {
                   setShowLockModal(false);
                   // Naviguer vers le quiz précédent
@@ -1175,7 +1260,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
                   }
                 }}
               >
-                <Text style={styles.modalButtonTextPrimary}>Faire le quiz précédent</Text>
+                <Text style={dynamicStyles.modalButtonTextPrimary}>Faire le quiz précédent</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1185,7 +1270,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
   sectionTitle: {
     fontWeight: 'bold',
     color: '#174C3C',
@@ -1271,15 +1356,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F8FAF9',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing.base,
     borderBottomWidth: 1,
     borderBottomColor: '#E8F5E8',
   },
   favoriteButtonText: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.sm,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  // Styles pour les boutons de navigation
+  navButton: {
+    borderRadius: 18,
+    paddingVertical: responsiveStyle.spacing.sm,
+    paddingHorizontal: responsiveStyle.spacing.lg,
+  },
+  navButtonCompact: {
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: responsiveStyle.spacing.base,
+  },
+  navButtonPrimary: {
+    backgroundColor: '#174C3C',
+  },
+  navButtonGold: {
+    backgroundColor: '#D4AF37',
+  },
+  navButtonQuiz: {
+    backgroundColor: '#BB9B4E',
+  },
+  navButtonDisabled: {
+    opacity: 0.4,
+    backgroundColor: '#174C3C',
+  },
+  navButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: responsiveStyle.fontSize.base,
+  },
+  navButtonTextCompact: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: responsiveStyle.fontSize.sm,
+  },
+  paginationText: {
+    color: '#174C3C',
+    fontWeight: 'bold',
+    fontSize: responsiveStyle.fontSize.base,
   },
   // Styles pour le modal de quiz verrouillé
   modalOverlay: {

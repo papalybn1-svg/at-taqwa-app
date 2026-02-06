@@ -3,7 +3,7 @@
     "name": "At-Taqwa",
     "owner": "ibrahimaly8991",
     "slug": "at-taqwa-app",
-    "version": "1.0.0",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/LOGO_AT_TAQWA.png",
     "userInterfaceStyle": "light",
@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-      "buildNumber": "2.2.8",
+      "buildNumber": "2.3.2",
       "icon": "./assets/LOGO_AT_TAQWA.png",
       "associatedDomains": [
         "applinks:attaqwa-confidentialite.vercel.app"
@@ -28,8 +28,9 @@
       }
     },
     "android": {
+      "icon": "./assets/1024.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo_fond_transparent.png",
+        "foregroundImage": "./assets/1024.png",
         "backgroundColor": "#2E8B57"
       },
       "intentFilters": [
@@ -49,10 +50,11 @@
           ]
         }
       ],
-      "edgeToEdgeEnabled": false,
+      "edgeToEdgeEnabled": true,
       "enableHermes": true,
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.attaqwa.app",
+      "package": "com.attaqwaAly.app",
+      "versionCode": 8,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",

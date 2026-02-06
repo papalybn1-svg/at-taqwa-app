@@ -3,9 +3,9 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { auth, db } from '../screens/firebaseConfig';
 import {
-  clearAuthPersistence,
-  getUserDataWithPersistence,
-  saveUserDataWithPersistence
+    clearAuthPersistence,
+    getUserDataWithPersistence,
+    saveUserDataWithPersistence
 } from '../utils/authPersistence';
 import { cleanupUserQuizSessions } from '../utils/quizSession';
 import { removeAllWithPrefix, remove as removeUserStorage } from '../utils/userStorage';
@@ -96,40 +96,56 @@ export function useAuth() {
         if (firebaseUser) {
           setLoading(true);
           try {
-            // Recharger depuis le réseau uniquement si l'email n'est pas encore vérifié
-            if (!firebaseUser.emailVerified) {
-              await firebaseUser.reload();
-            }
+            // Toujours recharger pour s'assurer d'avoir l'état le plus récent
+            // Cela est particulièrement important après une vérification d'email via deep link
+            await firebaseUser.reload();
           } catch {}
           const refreshedUser = auth.currentUser || firebaseUser;
-          if (!refreshedUser?.emailVerified) {
-            // Email non vérifié → exposer l'utilisateur avec emailVerified: false pour permettre la redirection vers VerifyEmail
-            const freshUserData: AuthUser = {
-              ...refreshedUser,
-              emailVerified: false,
-              role: 'user', // Rôle par défaut
-            } as AuthUser;
-            if (isMounted) {
-              setUser(freshUserData);
-              setLoading(false);
-              if (initializing) setInitializing(false);
-            }
-            return;
-          }
-          // Ici: email vérifié → s'assurer que Firestore reflète l'état
+          
+          // ═══════════════════════════════════════════════════════════════════════════
+          // 🔒 VÉRIFICATION D'EMAIL DÉSACTIVÉE (v1.0.4) - Code commenté pour réutilisation future
+          // ═══════════════════════════════════════════════════════════════════════════
+          //
+          // AVANT (vérification d'email requise) :
+          // // Vérifier à nouveau après le reload pour s'assurer d'avoir l'état le plus récent
+          // if (!refreshedUser?.emailVerified) {
+          //   // Email non vérifié → exposer l'utilisateur avec emailVerified: false pour permettre la redirection vers VerifyEmail
+          //   const freshUserData: AuthUser = {
+          //     ...refreshedUser,
+          //     emailVerified: false,
+          //     role: 'user', // Rôle par défaut
+          //   } as AuthUser;
+          //   if (isMounted) {
+          //     setUser(freshUserData);
+          //     setLoading(false);
+          //     if (initializing) setInitializing(false);
+          //   }
+          //   return;
+          // }
+          //
+          // ═══════════════════════════════════════════════════════════════════════════
+          // ✅ NOUVEAU COMPORTEMENT : Tous les utilisateurs connectés sont considérés comme vérifiés
+          // ═══════════════════════════════════════════════════════════════════════════
+          
+          // S'assurer que Firestore reflète l'état (emailVerified: true pour tous)
           try {
             const userRef = doc(db, 'users', refreshedUser.uid);
             const snap = await getDoc(userRef);
             if (!snap.exists()) {
+              // Créer le document avec emailVerified: true automatiquement
               await setDoc(userRef, {
                 email: refreshedUser.email,
                 role: 'user',
-                emailVerified: true,
+                emailVerified: true, // ✅ Toujours true (pas de vérification d'email requise)
                 createdAt: new Date(),
                 displayName: refreshedUser.displayName || '',
               });
-            } else if (!(snap.data() as any)?.emailVerified) {
-              await updateDoc(userRef, { emailVerified: true });
+            } else {
+              // S'assurer que emailVerified est à true dans Firestore (pour compatibilité)
+              const userData = snap.data() as any;
+              if (!userData?.emailVerified) {
+                await updateDoc(userRef, { emailVerified: true });
+              }
             }
           } catch (e) {
             console.log('ℹ️ Sync Firestore users skipped/failed:', e);
@@ -142,7 +158,13 @@ export function useAuth() {
             const profileSnap = await getDoc(doc(db, 'users', refreshedUser.uid));
             photoURLOverride = (profileSnap.data() as any)?.photoURL || undefined;
           } catch {}
-          const freshUserData = { ...(refreshedUser as any), role: freshRole, photoURL: photoURLOverride || refreshedUser.photoURL };
+          // ✅ Toujours considérer l'utilisateur comme vérifié (emailVerified: true)
+          const freshUserData: AuthUser = { 
+            ...(refreshedUser as any), 
+            role: freshRole, 
+            photoURL: photoURLOverride || refreshedUser.photoURL,
+            emailVerified: true // ✅ Toujours true (pas de vérification d'email requise)
+          };
           console.log('🔥 Rôle Firestore:', freshRole, 'pour', refreshedUser.email, 'UID:', refreshedUser.uid);
 
           if (isMounted) {
@@ -191,8 +213,32 @@ export function useAuth() {
     };
   }, [initializing]);
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔒 POLLING VÉRIFICATION D'EMAIL DÉSACTIVÉ (v1.0.4) - Code commenté pour réutilisation future
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // AVANT (polling pour détecter la vérification d'email) :
   // Polling pour détecter quand l'email devient vérifié (si l'utilisateur est connecté mais non vérifié)
+  // useEffect(() => {
+  //   if (!user || user.emailVerified) return; // Pas besoin de polling si déjà vérifié ou pas d'utilisateur
+  //
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ✅ NOUVEAU COMPORTEMENT : Pas de polling nécessaire (tous les utilisateurs sont considérés comme vérifiés)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  // Polling désactivé - tous les utilisateurs connectés sont considérés comme vérifiés
   useEffect(() => {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ✅ NOUVEAU COMPORTEMENT : Pas de polling nécessaire
+    // Tous les utilisateurs connectés sont considérés comme vérifiés automatiquement
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Ne plus faire de polling car tous les utilisateurs sont considérés comme vérifiés
+    return;
+    
+    /* ═══════════════════════════════════════════════════════════════════════════
+       CODE ORIGINAL DE POLLING (commenté pour réutilisation future) :
+       ═══════════════════════════════════════════════════════════════════════════
+       
     if (!user || user.emailVerified) return; // Pas besoin de polling si déjà vérifié ou pas d'utilisateur
     
     let isMounted = true;
@@ -256,6 +302,8 @@ export function useAuth() {
       isMounted = false;
       if (timer) clearTimeout(timer);
     };
+    
+    ═══════════════════════════════════════════════════════════════════════════ */
   }, [user?.uid, user?.emailVerified]);
 
   const isAdmin = () => user?.role === 'admin';

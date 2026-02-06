@@ -3,18 +3,19 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // Les imports des fichiers de quiz sont maintenant gérés dynamiquement via exercicesFiles
-import { read as readUserStorage, remove as removeUserStorage, write as writeUserStorage } from '../utils/userStorage';
-import { isQuizUnlocked } from '../utils/quizUnlock';
-import { usePaymentService } from '../lib/paymentService';
+import { useAuthContext } from '../contexts/AuthContext';
 import { useEntitlements } from '../contexts/EntitlementsContext';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
+import { usePaymentService } from '../lib/paymentService';
+import { getCardStackPosition, getCharacterPosition, getCharacterSize } from '../utils/quizResponsive';
+import { isQuizUnlocked } from '../utils/quizUnlock';
+import { read as readUserStorage, remove as removeUserStorage, write as writeUserStorage } from '../utils/userStorage';
 import { db } from './firebaseConfig';
-import { useAuthContext } from '../contexts/AuthContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 // Hauteur approximative de la barre de navigation du bas (TabBar)
@@ -986,17 +987,19 @@ export default function OriginalQuizScreen() {
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
         </TouchableOpacity>
 
-        {/* Section du personnage - identique aux autres pages */}
-        <View style={styles.characterSection}>
-          <Image 
-            source={require('../../assets/16 (copie).png')} 
-            style={styles.characterImage}
-            resizeMode="contain"
-          />
+        {/* Contenu principal - Personnage (comme QuizStartScreen) */}
+        <View style={styles.mainContent}>
+          <View style={styles.imageContainer}>
+            <Image 
+              source={require('../../assets/16 (copie).png')} 
+              style={styles.characterImage}
+              resizeMode="contain"
+            />
+          </View>
         </View>
         
-        {/* Cartes empilées - identiques aux autres pages */}
-        <View style={styles.quizCardContainer}>
+        {/* Carte du quiz - Système à 2 pages (positionné en bas comme QuizStartScreen) */}
+        <View style={styles.cardStack}>
           {/* Carte arrière (la plus profonde) - Vert foncé */}
           <View 
             style={[
@@ -1073,17 +1076,19 @@ export default function OriginalQuizScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Section du personnage - Plus compacte */}
-      <View style={styles.characterSection}>
-        <Image 
+      {/* Contenu principal - Personnage (comme QuizStartScreen) */}
+      <View style={styles.mainContent}>
+        <View style={styles.imageContainer}>
+          <Image 
             source={require('../../assets/16 (copie).png')} 
-          style={styles.characterImage}
-          resizeMode="contain"
-        />
+            style={styles.characterImage}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
-      {/* Carte du quiz - Système à 2 pages */}
-      <View style={styles.quizCardContainer}>
+      {/* Carte du quiz - Système à 2 pages (positionné en bas comme QuizStartScreen) */}
+      <View style={styles.cardStack}>
         {/* Cartes empilées exactement comme dans QuizStartScreen */}
         {/* Carte arrière (la plus profonde) - Vert foncé */}
         <View 
@@ -1118,7 +1123,14 @@ export default function OriginalQuizScreen() {
                 contentContainerStyle={styles.questionScrollContent}
                 showsVerticalScrollIndicator={false}
               >
-          <Text style={styles.questionText}>{currentQuestion.question}</Text>
+          <Text 
+            style={styles.questionText}
+            numberOfLines={3}
+            adjustsFontSizeToFit={true}
+            minimumFontScale={0.75}
+          >
+            {currentQuestion.question}
+          </Text>
               </ScrollView>
 
               {/* Bouton toujours visible en bas */}
@@ -1133,7 +1145,15 @@ export default function OriginalQuizScreen() {
           ) : (
             // PAGE 2: RÉPONSES MULTIPLES
             <>
-          <View style={styles.optionsContainer}>
+          <ScrollView 
+            style={styles.optionsContainer}
+            contentContainerStyle={styles.optionsContentContainer}
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
+            scrollEnabled={true}
+            bounces={true}
+          >
             {currentQuestion.options.map((option, index) => {
               const isSelected = selectedAnswerIndex === index;
               const isCorrect = index === currentQuestion.correctAnswerIndex;
@@ -1202,7 +1222,7 @@ export default function OriginalQuizScreen() {
                 </View>
               );
             })}
-          </View>
+          </ScrollView>
           {/* Texte d'aide toujours visible, en dehors du conteneur avec overflow hidden */}
           <Text style={styles.hintText} numberOfLines={2} ellipsizeMode="tail">
             Clique sur le texte pour voir toute la réponse
@@ -1362,11 +1382,17 @@ export default function OriginalQuizScreen() {
   );
 }
 
-const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
-  container: {
-    flex: 1, 
-    backgroundColor: '#174C3C', // Vert principal de l'application
-  },
+const createStyles = (responsive: any, responsiveStyle: any) => {
+  // Utilisation des fonctions utilitaires pour un système responsive unifié
+  const characterSize = getCharacterSize(responsive);
+  const characterPosition = getCharacterPosition(responsive);
+  const cardStackPosition = getCardStackPosition(responsive);
+  
+  return StyleSheet.create({
+    container: {
+      flex: 1, 
+      backgroundColor: '#174C3C', // Vert principal de l'application
+    },
   headerButtons: {
     position: 'absolute',
     top: 50,
@@ -1399,50 +1425,67 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     alignItems: 'center',
   },
 
-  characterSection: {
-    position: 'absolute',
-    top: 100, // Augmenté pour faire descendre l'image sur les cadres empilés
-    left: 0,
-    right: 0,
-    justifyContent: 'center',
+  // Structure comme QuizStartScreen pour cohérence
+  mainContent: {
+    flex: 1,
     alignItems: 'center',
-    zIndex: 50, // Augmenté de 15 à 50 pour mettre l'image en premier plan
+    justifyContent: 'flex-start',
+    paddingTop: 0,
+    pointerEvents: 'none',
+    zIndex: 200,
+  },
+  imageContainer: {
+    pointerEvents: 'none',
+    zIndex: 300,
   },
   characterImage: {
-    width: screenWidth * 0.8, // Réduit de 1.4 à 0.8
-    height: screenHeight * 0.25, // Réduit de 0.45 à 0.25
-    maxWidth: 400, // Réduit de 650 à 400
-    maxHeight: 350, // Réduit de 600 à 350
-    resizeMode: 'contain', // Ajouté pour maintenir les proportions
-    zIndex: 51, // Augmenté de 16 à 51 pour mettre l'image en premier plan
+    // Taille responsive unifiée via getCharacterSize
+    width: characterSize.width,
+    height: characterSize.height,
+    // Position responsive unifiée via getCharacterPosition
+    marginTop: characterPosition.marginTop,
+    zIndex: 400,
   },
-  quizCardContainer: {
-    flex: 1, // Prend tout l'espace disponible
-    justifyContent: 'center',
-    alignItems: 'center', 
-    paddingHorizontal: 8, // Réduit de 16 à 8 pour plus d'espace
-    paddingBottom: 30,
-    position: 'relative',
-    paddingTop: 0,
+  cardStack: {
+    position: 'absolute',
+    bottom: cardStackPosition.bottom,
+    left: responsive.horizontalPadding,
+    right: responsive.horizontalPadding,
+    alignItems: 'center',
+    zIndex: 100,
   },
 
   questionText: { 
-    fontSize: 17,
+    fontSize: responsive.isTablet 
+      ? responsiveStyle.fontSize.xl  // Tablettes : 18px
+      : responsive.breakpoint === 'xs'
+        ? responsiveStyle.fontSize.base  // Très petits écrans : 14px
+        : responsiveStyle.fontSize.lg, // iPhone standard et grands téléphones : 16px
     color: '#333',
     fontWeight: '600', 
     textAlign: 'center', 
-    marginBottom: 15, // Réduit de 22 à 15
-    lineHeight: 24,
-    marginTop: 20, // Réduit de 30 à 20
+    marginBottom: responsiveStyle.spacing.base,
+    lineHeight: responsive.isTablet 
+      ? responsiveStyle.fontSize.xl * 1.4  // Tablettes : 25.2px
+      : responsiveStyle.fontSize.lg * 1.5, // Autres : 24px
+    marginTop: responsiveStyle.spacing.base,
+    // Propriétés pour éviter que le texte soit coupé
+    paddingHorizontal: responsiveStyle.spacing.sm,
+    flexWrap: 'wrap',
   },
   optionsContainer: { 
-    marginBottom: 4, // Légèrement réduit pour gagner de la place
-    marginTop: 12, // Légèrement réduit pour gagner de la place
-    width: '100%', // Assure que le conteneur prend toute la largeur
-    // On limite un peu plus la hauteur des options pour laisser de la place
-    // au texte d'aide et au bouton du bas sur les petits écrans
-    maxHeight: '65%', 
-    overflow: 'hidden', // Cache le contenu qui déborde
+    marginBottom: 2, // Réduit de 4 à 2 pour libérer de l'espace
+    marginTop: 8, // Réduit de 12 à 8 pour libérer de l'espace
+    width: '100%',
+    // Utiliser flex: 1 pour prendre l'espace disponible dans whiteCard
+    // et permettre le scroll quand le contenu dépasse
+    flex: 1,
+    minHeight: 0, // Important pour permettre le scroll dans un conteneur flex
+  },
+  optionsContentContainer: {
+    paddingBottom: 16, // Augmenté pour plus d'espace en bas du scroll
+    paddingTop: 4, // Ajouté pour un peu d'espace en haut
+    // Pas de flexGrow pour permettre le scroll correctement
   },
 
   optionContent: {
@@ -1452,7 +1495,7 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
 
   verifyButton: {
     backgroundColor: '#BB9B4E',
-    padding: 10,
+    padding: responsiveStyle.spacing.base,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 6,
@@ -1463,7 +1506,7 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     backgroundColor: '#CCCCCC',
   },
   verifyButtonText: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.base,
     color: 'white',
     fontWeight: 'bold',
   },
@@ -1545,10 +1588,17 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   backCard: {
     backgroundColor: '#0F3A2E',
     borderRadius: 30,
-    height: screenHeight * 0.55,
+    // Hauteur responsive basée sur les breakpoints
+    height: responsive.isTablet 
+      ? responsive.height * 0.50  // Tablettes : 50% de hauteur
+      : responsive.breakpoint === 'xs'
+        ? responsive.height * 0.55  // Très petits écrans : 55%
+        : responsive.breakpoint === 'sm'
+          ? responsive.height * 0.52  // iPhone standard : 52%
+          : responsive.height * 0.50, // Grands téléphones : 50%
     width: '98%',
     position: 'absolute',
-    bottom: 3,
+    bottom: responsive.isTablet ? -20 : -15,
     borderWidth: 2,
     borderColor: '#0A2D23',
     shadowColor: '#000',
@@ -1564,10 +1614,17 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   middleCard: {
     backgroundColor: '#BB9B4E',
     borderRadius: 30,
-    height: screenHeight * 0.535,
+    // Hauteur responsive basée sur les breakpoints
+    height: responsive.isTablet 
+      ? responsive.height * 0.48  // Tablettes : 48% de hauteur
+      : responsive.breakpoint === 'xs'
+        ? responsive.height * 0.53  // Très petits écrans : 53%
+        : responsive.breakpoint === 'sm'
+          ? responsive.height * 0.50  // iPhone standard : 50%
+          : responsive.height * 0.48, // Grands téléphones : 48%
     width: '95%',
     position: 'absolute',
-    bottom: 10,
+    bottom: responsive.isTablet ? -10 : -8,
     borderWidth: 2,
     borderColor: '#A08642',
     shadowColor: '#000',
@@ -1583,11 +1640,14 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   whiteCard: {
     backgroundColor: 'white',
     borderRadius: 30,
-    paddingHorizontal: 20,
-    paddingTop: 25,
-    paddingBottom: 20,
+    paddingHorizontal: responsive.isTablet ? 30 : 20,
+    paddingTop: responsive.isTablet ? 28 : 22, // Réduit légèrement pour libérer de l'espace
+    paddingBottom: responsive.isTablet ? 22 : 18, // Réduit légèrement pour libérer de l'espace
     alignItems: 'center',
     justifyContent: 'flex-start',
+    // Utiliser flex pour permettre au ScrollView de prendre l'espace disponible
+    display: 'flex',
+    flexDirection: 'column',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1599,11 +1659,19 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     borderWidth: 2,
     borderColor: '#F0F0F0',
     width: '92%',
-    height: screenHeight * 0.525,
+    // Hauteur responsive basée sur les breakpoints - augmentée pour permettre plus d'espace au ScrollView
+    height: responsive.isTablet 
+      ? responsive.height * 0.58  // Tablettes : 58% de hauteur (augmenté de 55%)
+      : responsive.breakpoint === 'xs'
+        ? responsive.height * 0.60  // Très petits écrans : 60% (augmenté de 58%)
+        : responsive.breakpoint === 'sm'
+          ? responsive.height * 0.59  // iPhone standard : 59% (augmenté de 56%)
+          : responsive.height * 0.57, // Grands téléphones : 57% (augmenté de 54%)
     position: 'absolute',
-    bottom: 15,
+    bottom: 0,
     zIndex: 15,
-    overflow: 'hidden',
+    // overflow: 'hidden' retiré pour permettre le scroll des options à l'intérieur
+    // Les coins arrondis sont gérés par borderRadius
   },
   // Variantes quand on vient d'un chapitre : laisser une marge équivalente à la TabBar
   backCardFromChapter: {
@@ -1643,8 +1711,9 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
 
   buttonSection: {
-    marginTop: 8,
+    marginTop: 4, // Réduit de 8 à 4 pour libérer de l'espace pour le ScrollView
     minHeight: 45,
+    flexShrink: 0, // Empêcher la compression de cette section
   },
   // Styles pour le modal
   modalOverlay: {
@@ -1703,7 +1772,8 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     fontSize: responsive.isLandscape ? 10 : 11,
     color: '#19514A',
     textAlign: 'center',
-    marginTop: 10,
+    marginTop: 4, // Réduit de 10 à 4 pour libérer de l'espace pour le ScrollView
+    marginBottom: 2, // Ajouté pour réduire l'espace
     marginHorizontal: responsive.isLandscape ? 10 : 20, // Marges adaptatives
     fontStyle: 'italic',
     fontWeight: '500',
@@ -1777,14 +1847,14 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6, // Réduit pour économiser l'espace
-    paddingVertical: 10, // Réduit pour économiser l'espace
-    paddingHorizontal: 12, // Ajouté pour plus d'espace horizontal
+    marginBottom: 8, // Augmenté pour meilleur espacement
+    paddingVertical: 12, // Augmenté pour meilleure lisibilité
+    paddingHorizontal: 12,
     borderRadius: 12,
     backgroundColor: '#F5F5F5',
-    width: '100%', // Assure que la boîte prend toute la largeur disponible
-    minHeight: 55, // Réduit pour économiser l'espace
-    maxHeight: 55, // Hauteur maximale fixe pour éviter le débordement
+    width: '100%',
+    minHeight: 55, // Minimum pour garantir la taille
+    // Retiré maxHeight pour permettre au texte de s'adapter
   },
   checkboxContainer: {
     width: 30,
@@ -1883,5 +1953,5 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     fontSize: 16,
     fontWeight: 'bold',
   },
-
-});
+  });
+};

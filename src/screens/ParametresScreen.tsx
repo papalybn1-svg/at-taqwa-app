@@ -13,6 +13,7 @@ import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import chaptersData from '../../data/chapitres.json';
 import { useAuthContext } from '../contexts/AuthContext';
+import { useResponsive, getResponsiveStyle } from '../hooks/useResponsive';
 import colors from '../theme/colors';
 import { cleanupUserQuizSessions, getQuizProfile } from '../utils/quizSession';
 import { removeAllWithPrefix, remove as removeUserStorage } from '../utils/userStorage';
@@ -20,6 +21,9 @@ import { auth, db } from './firebaseConfig';
 // (Préférences étendues retirées à la demande)
 
 export default function ParametresScreen() {
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const dynamicStyles = createStyles(responsive, responsiveStyle);
   const { user: contextUser, setUser, logout } = useAuthContext();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -468,31 +472,31 @@ export default function ParametresScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <View style={[dynamicStyles.container, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={dynamicStyles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* En-tête retiré à la demande */}
 
         {/* Carte profil */}
-        <LinearGradient colors={['#174C3C', '#19514A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profileCard}>
-          <View style={styles.profileContent}>
+        <LinearGradient colors={['#174C3C', '#19514A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={dynamicStyles.profileCard}>
+          <View style={dynamicStyles.profileContent}>
             <TouchableOpacity onPress={() => setProfileModal(true)} activeOpacity={0.9}>
               {contextUser?.photoURL ? (
-                <ExpoImage source={{ uri: contextUser.photoURL }} style={styles.avatarXL} contentFit="cover" />
+                <ExpoImage source={{ uri: contextUser.photoURL }} style={dynamicStyles.avatarXL} contentFit="cover" />
               ) : (
-                <View style={styles.avatarXLPlaceholder}>
+                <View style={dynamicStyles.avatarXLPlaceholder}>
                   <MaterialCommunityIcons name="account-circle" size={72} color="#fff" />
                 </View>
               )}
             </TouchableOpacity>
-            <Text style={styles.profileNameXL}>{contextUser?.displayName || 'Utilisateur'}</Text>
-            <Text style={styles.profileEmailXL}>{contextUser?.email}</Text>
-            <View style={styles.userBadgeXL}>
+            <Text style={dynamicStyles.profileNameXL}>{contextUser?.displayName || 'Utilisateur'}</Text>
+            <Text style={dynamicStyles.profileEmailXL}>{contextUser?.email}</Text>
+            <View style={dynamicStyles.userBadgeXL}>
               <MaterialCommunityIcons 
                 name={contextUser?.role === 'admin' ? 'shield-account' : 'account'} 
                 size={16} 
                 color="#FFD666"
               />
-              <Text style={styles.userRoleXL}>
+              <Text style={dynamicStyles.userRoleXL}>
                 {contextUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
               </Text>
             </View>
@@ -500,31 +504,31 @@ export default function ParametresScreen() {
         </LinearGradient>
 
         {/* Section: Mon compte */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Mon compte</Text>
-          <TouchableOpacity style={styles.listItem} onPress={() => setProfileModal(true)}>
-            <View style={styles.listLeft}>
+        <View style={dynamicStyles.sectionCard}>
+          <Text style={dynamicStyles.sectionTitle}>Mon compte</Text>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={() => setProfileModal(true)}>
+            <View style={dynamicStyles.listLeft}>
               <MaterialCommunityIcons name="account-edit" size={20} color={colors.primary} />
-              <Text style={styles.listText}>Modifier le profil</Text>
+              <Text style={dynamicStyles.listText}>Modifier le profil</Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.listItem} onPress={handleOpenCertificate}>
-            <View style={styles.listLeft}>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={handleOpenCertificate}>
+            <View style={dynamicStyles.listLeft}>
               <View style={{ position: 'relative' }}>
                 <MaterialCommunityIcons name="certificate" size={20} color={isCertificateEligible ? "#D4AF37" : colors.primary} />
                 {isCertificateEligible && (
-                  <View style={styles.certificateBadge}>
+                  <View style={dynamicStyles.certificateBadge}>
                     <MaterialCommunityIcons name="check-circle" size={14} color="#fff" />
                   </View>
                 )}
               </View>
               <View>
-                <Text style={[styles.listText, isCertificateEligible && { color: "#D4AF37", fontWeight: 'bold' }]}>
+                <Text style={[dynamicStyles.listText, isCertificateEligible && { color: "#D4AF37", fontWeight: 'bold' }]}>
                   Mon attestation
                 </Text>
                 {isCertificateEligible && (
-                  <Text style={styles.certificateAvailableText}>✅ Disponible !</Text>
+                  <Text style={dynamicStyles.certificateAvailableText}>✅ Disponible !</Text>
                 )}
               </View>
             </View>
@@ -534,47 +538,47 @@ export default function ParametresScreen() {
 
         {/* (Section Application et Prière & rappels retirées) */}
 
-        {/* Section: Sécurité */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Sécurité</Text>
-          <TouchableOpacity style={styles.listItem} onPress={handleSendResetEmail} disabled={sendingReset}>
-            <View style={styles.listLeft}>
-              <MaterialCommunityIcons name="email-lock" size={20} color={colors.primary} />
-              <Text style={styles.listText}>Recevoir un email de réinitialisation</Text>
-            </View>
-            <MaterialCommunityIcons name="send" size={18} color={sendingReset ? '#ccc' : colors.placeholder} />
-        </TouchableOpacity>
-        </View>
-
         {/* Section: Aide */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Aide</Text>
+        <View style={dynamicStyles.sectionCard}>
+          <Text style={dynamicStyles.sectionTitle}>Aide</Text>
           <TouchableOpacity
-            style={styles.listItem}
+            style={dynamicStyles.listItem}
             onPress={() => Linking.openURL('https://attaqwa-confidentialite.vercel.app/contact.html')}
           >
-            <View style={styles.listLeft}>
+            <View style={dynamicStyles.listLeft}>
               <MaterialCommunityIcons name="lifebuoy" size={20} color={colors.primary} />
-              <Text style={styles.listText}>Assistance / Contact</Text>
+              <Text style={dynamicStyles.listText}>Assistance / Contact</Text>
             </View>
             <MaterialCommunityIcons name="open-in-new" size={18} color={colors.placeholder} />
         </TouchableOpacity>
       </View>
 
-        {/* Danger zone */}
-        <View style={[styles.sectionCard, styles.dangerCard]}>
-          <Text style={[styles.sectionTitle, { color: '#B00020' }]}>Danger</Text>
-          <TouchableOpacity style={styles.listItem} onPress={handleDeleteAccount}>
-            <View style={styles.listLeft}>
-              <MaterialCommunityIcons name="account-remove" size={20} color="#B00020" />
-              <Text style={[styles.listText, { color: '#B00020' }]}>Supprimer mon compte</Text>
+        {/* Section: Sécurité */}
+        <View style={dynamicStyles.sectionCard}>
+          <Text style={dynamicStyles.sectionTitle}>Sécurité</Text>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={handleSendResetEmail} disabled={sendingReset}>
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="email-lock" size={20} color={colors.primary} />
+              <Text style={dynamicStyles.listText}>Recevoir un email de réinitialisation</Text>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#B00020" />
+            <MaterialCommunityIcons name="send" size={18} color={sendingReset ? '#ccc' : colors.placeholder} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.listItem} onPress={handleLogout}>
-            <View style={styles.listLeft}>
-              <MaterialCommunityIcons name="logout" size={20} color="#B00020" />
-              <Text style={[styles.listText, { color: '#B00020' }]}>Déconnexion</Text>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={handleLogout}>
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="logout" size={20} color={colors.primary} />
+              <Text style={dynamicStyles.listText}>Déconnexion</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Danger zone */}
+        <View style={[dynamicStyles.sectionCard, dynamicStyles.dangerCard]}>
+          <Text style={[dynamicStyles.sectionTitle, { color: '#B00020' }]}>Danger</Text>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={handleDeleteAccount}>
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="account-remove" size={20} color="#B00020" />
+              <Text style={[dynamicStyles.listText, { color: '#B00020' }]}>Supprimer mon compte</Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#B00020" />
           </TouchableOpacity>
@@ -583,15 +587,15 @@ export default function ParametresScreen() {
 
       {/* Modal modification profil */}
       <Modal visible={profileModal} transparent animationType="fade" onRequestClose={() => setProfileModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Modifier le profil</Text>
+        <View style={dynamicStyles.modalOverlay}>
+          <View style={dynamicStyles.modalContent}>
+            <Text style={dynamicStyles.modalTitle}>Modifier le profil</Text>
             
             {/* Champ nom d'utilisateur */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nom d'utilisateur</Text>
+            <View style={dynamicStyles.inputContainer}>
+              <Text style={dynamicStyles.inputLabel}>Nom d'utilisateur</Text>
             <TextInput 
-              style={styles.input} 
+              style={dynamicStyles.input} 
                 placeholder="Entrez votre nom" 
               value={editName} 
               onChangeText={setEditName} 
@@ -600,53 +604,53 @@ export default function ParametresScreen() {
             </View>
 
             {/* Boutons pour la photo */}
-            <View style={styles.imageButtonsContainer}>
-              <TouchableOpacity style={styles.imageButton} onPress={takePhoto} disabled={loading}>
-              <MaterialCommunityIcons name="camera" size={20} color={colors.primary} />
-                <Text style={styles.imageButtonText}>Caméra</Text>
+            <View style={dynamicStyles.imageButtonsContainer}>
+              <TouchableOpacity style={dynamicStyles.imageButton} onPress={takePhoto} disabled={loading}>
+                <MaterialCommunityIcons name="camera" size={20} color={colors.primary} />
+                <Text style={dynamicStyles.imageButtonText}>Caméra</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.imageButton} onPress={pickImage} disabled={loading}>
+              <TouchableOpacity style={dynamicStyles.imageButton} onPress={pickImage} disabled={loading}>
                 <MaterialCommunityIcons name="image" size={20} color={colors.primary} />
-                <Text style={styles.imageButtonText}>Galerie</Text>
-            </TouchableOpacity>
+                <Text style={dynamicStyles.imageButtonText}>Galerie</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Indicateur de chargement */}
             {loading && (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Téléversement en cours...</Text>
+              <View style={dynamicStyles.loadingContainer}>
+                <Text style={dynamicStyles.loadingText}>Téléversement en cours...</Text>
               </View>
             )}
             
             {/* Aperçu de la photo sélectionnée */}
             {(editPhoto || contextUser?.photoURL) && (
-              <View style={styles.imagePreviewContainer}>
+              <View style={dynamicStyles.imagePreviewContainer}>
                 <ExpoImage 
                   source={{ uri: editPhoto || contextUser?.photoURL || '' }} 
-                  style={styles.imagePreview} 
+                  style={dynamicStyles.imagePreview} 
                   contentFit="cover"
                 />
-                <Text style={styles.imagePreviewText}>
+                <Text style={dynamicStyles.imagePreviewText}>
                   {editPhoto ? 'Nouvelle photo' : 'Photo actuelle'}
                 </Text>
               </View>
             )}
 
             {/* Boutons d'action */}
-            <View style={styles.modalButtons}>
+            <View style={dynamicStyles.modalButtons}>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+                style={[dynamicStyles.modalButton, dynamicStyles.cancelButton]} 
                 onPress={() => setProfileModal(false)}
                 disabled={loading}
               >
-                <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Annuler</Text>
+                <Text style={[dynamicStyles.modalButtonText, dynamicStyles.cancelButtonText]}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton]} 
+                style={[dynamicStyles.modalButton, dynamicStyles.saveButton]} 
                 onPress={handleUpdateName}
                 disabled={loading || !editName.trim()}
               >
-                <Text style={[styles.modalButtonText, styles.saveButtonText]}>
+                <Text style={[dynamicStyles.modalButtonText, dynamicStyles.saveButtonText]}>
                   {loading ? 'Envoi...' : 'Envoyer'}
                 </Text>
               </TouchableOpacity>
@@ -664,7 +668,7 @@ export default function ParametresScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F5F7' },
   scrollContent: { paddingTop: 16, paddingBottom: 24 },
   header: { alignItems: 'center', marginBottom: 16 },
@@ -747,20 +751,20 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.primary, marginBottom: 20, textAlign: 'center' },
   input: { backgroundColor: colors.background, borderRadius: 12, padding: 14, width: '100%', fontSize: 16, borderWidth: 1, borderColor: colors.border },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20 },
-  modalButton: { borderRadius: 16, paddingVertical: 10, paddingHorizontal: 20, flex: 1, marginHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  modalButton: { borderRadius: 16, paddingVertical: responsiveStyle.spacing.base, paddingHorizontal: responsiveStyle.spacing.lg, flex: 1, marginHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
   cancelButton: { backgroundColor: '#DC3545' },
   saveButton: { backgroundColor: colors.secondary },
-  modalButtonText: { fontWeight: 'bold', fontSize: 13 },
-  modalSubtitle: { color: colors.primary, textAlign: 'center', marginBottom: 20, fontSize: 16, lineHeight: 22 },
-  choiceButton: { backgroundColor: colors.background, paddingVertical: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
-  choiceText: { color: colors.primary, fontWeight: '700' },
+  modalButtonText: { fontWeight: 'bold', fontSize: responsiveStyle.fontSize.sm },
+  modalSubtitle: { color: colors.primary, textAlign: 'center', marginBottom: responsiveStyle.spacing.lg, fontSize: responsiveStyle.fontSize.base, lineHeight: 22 },
+  choiceButton: { backgroundColor: colors.background, paddingVertical: responsiveStyle.spacing.base, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  choiceText: { color: colors.primary, fontWeight: '700', fontSize: responsiveStyle.fontSize.base },
 
-  imagePreviewContainer: { alignItems: 'center', marginTop: 16, marginBottom: 12 },
-  imagePreview: { width: 100, height: 100, borderRadius: 50, marginBottom: 8, backgroundColor: colors.secondary },
-  imagePreviewText: { fontSize: 14, color: colors.primary, fontWeight: '500' },
-  imageButtonsContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 16, marginBottom: 8 },
-  imageButton: { backgroundColor: colors.secondary, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center', flex: 1, marginHorizontal: 6 },
-  imageButtonText: { color: colors.primary, fontWeight: 'bold', fontSize: 12, marginTop: 4 },
+  imagePreviewContainer: { alignItems: 'center', marginTop: responsiveStyle.spacing.base, marginBottom: responsiveStyle.spacing.base },
+  imagePreview: { width: 100, height: 100, borderRadius: 50, marginBottom: responsiveStyle.spacing.sm, backgroundColor: colors.secondary },
+  imagePreviewText: { fontSize: responsiveStyle.fontSize.sm, color: colors.primary, fontWeight: '500' },
+  imageButtonsContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: responsiveStyle.spacing.base, marginBottom: responsiveStyle.spacing.sm },
+  imageButton: { backgroundColor: colors.secondary, borderRadius: 16, paddingVertical: responsiveStyle.spacing.base, paddingHorizontal: responsiveStyle.spacing.base, alignItems: 'center', flex: 1, marginHorizontal: 6 },
+  imageButtonText: { color: colors.primary, fontWeight: 'bold', fontSize: responsiveStyle.fontSize.xs, marginTop: 4 },
   loadingText: { color: colors.primary, fontSize: 14, marginTop: 8, fontStyle: 'italic' },
   inputContainer: { width: '100%', marginBottom: 16 },
   inputLabel: { fontSize: 14, color: colors.primary, marginBottom: 6, fontWeight: '600' },

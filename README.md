@@ -45,6 +45,22 @@ npm install
 ---
 
 ## 🏗️ Build & Submit (EAS)
+
+### ⚠️ Configuration initiale requise (première fois seulement)
+
+**Avant le premier build Android**, tu dois générer le keystore en mode interactif :
+
+```bash
+# Se connecter à EAS (si pas déjà fait)
+npx eas-cli@latest login
+
+# Générer le keystore Android (mode interactif - une seule fois)
+npx eas-cli@latest credentials --platform android
+# Choisir le profil "production" et "Generate a new keystore"
+```
+
+**Voir le guide complet :** `EAS_ANDROID_KEYSTORE_SETUP.md`
+
 ### Android
 ```bash
 # APK interne (preview)

@@ -41,6 +41,21 @@ export default function BooksScreen() {
   const responsiveStyle = getResponsiveStyle(responsive);
   const insets = useSafeAreaInsets();
   const styles = createStyles(responsive, responsiveStyle);
+  
+  // Calculer dynamiquement la hauteur de la TabBar
+  // TabBar base : 80px
+  // paddingTop : 12px
+  // paddingBottom : Math.max(insets.bottom, 20) (comme dans TabNavigator)
+  // Marge de sécurité : 20px
+  const tabBarHeight = React.useMemo(() => {
+    const tabBarBaseHeight = 80;
+    const tabBarPaddingTop = 12;
+    const tabBarPaddingBottom = Platform.OS === 'android' 
+      ? Math.max(insets.bottom, 20) 
+      : 20;
+    const safetyMargin = 20; // Marge de sécurité pour éviter que le contenu soit coupé
+    return tabBarBaseHeight + tabBarPaddingTop + tabBarPaddingBottom + safetyMargin;
+  }, [insets.bottom]);
   const [progress, setProgress] = React.useState<{[key:string]:number}>({});
   const [drawerVisible, setDrawerVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter|null>(null);
@@ -303,18 +318,36 @@ export default function BooksScreen() {
       }
       // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
       console.log('🔄 Vérification des droits premium...');
-      // Ne pas forcer pour éviter les boucles infinies
-      try { await refreshEntitlements(false); } catch (e: any) { 
+      
+      // ✅ Amélioration Android : Forcer un refresh pour s'assurer d'avoir les entitlements les plus récents
+      // Attendre un peu pour que le token Firebase soit prêt (surtout sur Android)
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Forcer le refresh même si ça viole le cooldown (important pour Android)
+      try { 
+        await refreshEntitlements(true); // force=true pour bypasser le cooldown
+        // Attendre un peu pour que les entitlements soient mis à jour dans le contexte
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (e: any) { 
         if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
           console.error('Erreur refreshEntitlements:', e);
         }
       }
+      
       let fresh = userEntitlements;
-      try { fresh = await fetchEntitlements(); } catch (e: any) { 
-        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
-          console.error('Erreur fetchEntitlements:', e);
+      
+      // Si les entitlements du contexte sont encore à false, essayer un appel direct
+      if ((partie === 'deuxieme_partie' && !fresh.part2) || (partie === 'troisieme_partie' && !fresh.part3)) {
+        try { 
+          fresh = await fetchEntitlements(); 
+          console.log('📡 Entitlements récupérés directement:', fresh);
+        } catch (e: any) { 
+          if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+            console.error('Erreur fetchEntitlements:', e);
+          }
         }
       }
+      
       const isUnlocked = (partie === 'deuxieme_partie' && fresh.part2) || (partie === 'troisieme_partie' && fresh.part3);
       console.log('🔐 Accès premium:', { partie, isUnlocked, fresh });
       if (isUnlocked) {
@@ -378,7 +411,7 @@ export default function BooksScreen() {
           {/* Contenu scrollable */}
           <ScrollView 
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
+            contentContainerStyle={{ paddingTop: 10, paddingBottom: tabBarHeight }} // Calcul dynamique basé sur la hauteur réelle de la TabBar
             showsVerticalScrollIndicator={false}
             nestedScrollEnabled
             keyboardShouldPersistTaps="handled"

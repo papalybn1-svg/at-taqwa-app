@@ -340,13 +340,45 @@ export default function HomeScreen() {
 
   const handleChapterPress = async (chapter: Chapter) => {
     // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
-    // Ne pas forcer pour éviter les boucles infinies
-    try { await refreshEntitlements(false); } catch {}
+    const isPremium = chapter.partie === 'deuxieme_partie' || chapter.partie === 'troisieme_partie';
+    
+    // ✅ Amélioration Android : Si c'est premium, forcer un refresh pour s'assurer d'avoir les entitlements
+    if (isPremium) {
+      // Attendre un peu pour que le token Firebase soit prêt (surtout sur Android)
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Forcer le refresh même si ça viole le cooldown (important pour Android)
+      try { 
+        await refreshEntitlements(true); // force=true pour bypasser le cooldown
+        // Attendre un peu pour que les entitlements soient mis à jour dans le contexte
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (e: any) {
+        // Ne pas logger en boucle si erreur réseau
+        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+          console.error('Erreur refreshEntitlements:', e);
+        }
+      }
+    } else {
+      // Pour les parties gratuites, refresh normal (respecte le cooldown)
+      try { await refreshEntitlements(false); } catch {}
+    }
+    
     // Lire un snapshot frais côté backend pour éviter un état obsolète
     let latest = entitlements;
-    try { latest = await fetchEntitlements(); } catch {}
+    
+    // Si c'est premium et que les entitlements sont encore à false, essayer un appel direct
+    if (isPremium && !latest.part2 && !latest.part3) {
+      try { 
+        latest = await fetchEntitlements(); 
+        console.log('📡 Entitlements récupérés directement (HomeScreen):', latest);
+      } catch (e: any) {
+        // Ne pas logger en boucle si erreur réseau
+        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+          console.error('Erreur fetchEntitlements:', e);
+        }
+      }
+    }
 
-    const isPremium = chapter.partie === 'deuxieme_partie' || chapter.partie === 'troisieme_partie';
     const hasAccess = !isPremium
       ? true
       : chapter.partie === 'deuxieme_partie'

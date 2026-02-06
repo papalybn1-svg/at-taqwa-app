@@ -4,17 +4,21 @@ import { applyActionCode, sendEmailVerification, signOut } from 'firebase/auth';
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAuthContext } from '../contexts/AuthContext';
+import { useResponsive, getResponsiveStyle } from '../hooks/useResponsive';
 import { auth, db } from './firebaseConfig';
-import { AuthContext } from '../contexts/AuthContext';
 
 export default function VerifyEmailScreen({ navigation }: any) {
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const dynamicStyles = createStyles(responsive, responsiveStyle);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState(auth.currentUser?.email || '');
   const [confirmEnabled, setConfirmEnabled] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [verificationLink, setVerificationLink] = useState('');
   const [showLinkInput, setShowLinkInput] = useState(false);
-  const { setUser } = React.useContext(AuthContext);
+  const { setUser } = useAuthContext();
   
   // Auto-polling: recharger l'état emailVerified toutes les 3s
   // useAuth détectera le changement et App.tsx redirigera automatiquement vers MainTabs
@@ -68,10 +72,10 @@ export default function VerifyEmailScreen({ navigation }: any) {
     setLoading(true);
     try {
       const actionCodeSettings = {
-        url: 'https://attaqwa-confidentialite.vercel.app/index.html',
-        handleCodeInApp: false,
+        url: 'https://attaqwa-confidentialite.vercel.app/?mode=verifyEmail',
+        handleCodeInApp: true, // ✅ Important : permet l'ouverture directe de l'app sur Android/iOS
         iOS: { bundleId: 'com.attaqwa.app' },
-        android: { packageName: 'com.attaqwa.app', installApp: false, minimumVersion: '1' },
+        android: { packageName: 'com.attaqwaAly.app', installApp: false, minimumVersion: '1' },
       } as any;
       await sendEmailVerification(auth.currentUser, actionCodeSettings);
       Alert.alert(
@@ -315,31 +319,31 @@ export default function VerifyEmailScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.content} 
+        style={dynamicStyles.scrollView} 
+        contentContainerStyle={dynamicStyles.content} 
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <View style={styles.iconContainer}>
-          <View style={styles.iconBackground}>
+      <View style={dynamicStyles.iconContainer}>
+          <View style={dynamicStyles.iconBackground}>
             <MaterialCommunityIcons name="email-check" size={40} color="#FFFFFF" />
           </View>
-        </View>
+      </View>
 
-        <Text style={styles.title}>Vérifiez votre email</Text>
-        
-        <Text style={styles.description}>
-          Nous avons envoyé un email de vérification à :
-        </Text>
-        
-        <View style={styles.emailContainer}>
-          <Text style={styles.email} numberOfLines={1} ellipsizeMode="middle">{email}</Text>
+      <Text style={dynamicStyles.title}>Vérifiez votre email</Text>
+      
+      <Text style={dynamicStyles.description}>
+        Nous avons envoyé un email de vérification à :
+      </Text>
+      
+        <View style={dynamicStyles.emailContainer}>
+          <Text style={dynamicStyles.email} numberOfLines={1} ellipsizeMode="middle">{email}</Text>
         </View>
-        
-        <Text style={styles.instructions}>
-          Cliquez sur le lien dans l'email pour activer votre compte.{'\n\n'}
+      
+      <Text style={dynamicStyles.instructions}>
+        Cliquez sur le lien dans l'email pour activer votre compte.{'\n\n'}
           Si vous ne trouvez pas l'email :
           {'\n'}• Vérifiez votre dossier spam/indésirable
           {'\n'}• Vérifiez le dossier Promotions (Gmail)
@@ -347,11 +351,11 @@ export default function VerifyEmailScreen({ navigation }: any) {
           {'\n'}• Si vous avez fait plusieurs tentatives, attendez 5-10 minutes avant de réessayer
           {'\n\n'}
           Vous pouvez aussi coller le lien de vérification manuellement ci-dessous si vous avez reçu l'email sur un autre appareil.
-        </Text>
+      </Text>
 
       {/* Option pour coller le lien manuellement */}
       <TouchableOpacity 
-        style={styles.linkToggleButton}
+        style={dynamicStyles.linkToggleButton}
         onPress={() => setShowLinkInput(!showLinkInput)}
         activeOpacity={0.7}
       >
@@ -360,21 +364,21 @@ export default function VerifyEmailScreen({ navigation }: any) {
           size={20} 
           color="#174C3C" 
         />
-        <Text style={styles.linkToggleText}>
+        <Text style={dynamicStyles.linkToggleText}>
           {showLinkInput ? 'Masquer' : 'Vérifier manuellement (app et email sur deux appareils)'}
         </Text>
       </TouchableOpacity>
 
       {showLinkInput && (
-        <View style={styles.linkInputContainer}>
-          <View style={styles.linkInputHeader}>
+        <View style={dynamicStyles.linkInputContainer}>
+          <View style={dynamicStyles.linkInputHeader}>
             <MaterialCommunityIcons name="link-variant" size={20} color="#174C3C" />
-            <Text style={styles.linkInputLabel}>
+            <Text style={dynamicStyles.linkInputLabel}>
               Collez le lien de vérification depuis votre email :
             </Text>
           </View>
           <TextInput
-            style={styles.linkInput}
+            style={dynamicStyles.linkInput}
             placeholder="https://attaqwa-confidentialite.vercel.app/?mode=verifyEmail&oobCode=..."
             value={verificationLink}
             onChangeText={setVerificationLink}
@@ -392,10 +396,10 @@ export default function VerifyEmailScreen({ navigation }: any) {
               colors={loading || !verificationLink.trim() ? ['#9E9E9E', '#757575'] : ['#174C3C', '#19514A']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={[styles.button, styles.verifyLinkButton]}
+              style={[dynamicStyles.button, dynamicStyles.verifyLinkButton]}
             >
               <MaterialCommunityIcons name="check-circle" size={20} color="white" />
-              <Text style={styles.buttonText}>
+              <Text style={dynamicStyles.buttonText}>
                 {loading ? 'Vérification...' : 'Vérifier ce lien'}
               </Text>
             </LinearGradient>
@@ -403,79 +407,79 @@ export default function VerifyEmailScreen({ navigation }: any) {
         </View>
       )}
 
-      <View style={styles.buttonContainer}>
-        <View style={styles.helpTextContainer}>
+      <View style={dynamicStyles.buttonContainer}>
+        <View style={dynamicStyles.helpTextContainer}>
           <MaterialCommunityIcons name="information-outline" size={14} color="#666" />
-          <Text style={styles.helpText}>
+          <Text style={dynamicStyles.helpText}>
             L'email a expiré ? Cliquez sur "Renvoyer" ci-dessous.
           </Text>
         </View>
 
-        <View style={styles.helpTextContainer}>
+        <View style={dynamicStyles.helpTextContainer}>
           <MaterialCommunityIcons name="information-outline" size={14} color="#666" />
-          <Text style={styles.helpText}>
+          <Text style={dynamicStyles.helpText}>
             Tu veux supprimer le compte ? Clique sur "Supprimer".
           </Text>
         </View>
 
-        <View style={styles.buttonsRow}>
-          <TouchableOpacity 
-            onPress={handleResendEmail}
-            disabled={loading}
+        <View style={dynamicStyles.buttonsRow}>
+        <TouchableOpacity 
+          onPress={handleResendEmail}
+          disabled={loading}
             activeOpacity={0.8}
-            style={styles.buttonWrapper}
+            style={dynamicStyles.buttonWrapper}
           >
             <LinearGradient
               colors={loading ? ['#9E9E9E', '#757575'] : ['#174C3C', '#19514A']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={[styles.button, styles.buttonCompact]}
-            >
+              style={[dynamicStyles.button, dynamicStyles.buttonCompact]}
+        >
               <MaterialCommunityIcons name="email-outline" size={18} color="white" />
-              <Text style={styles.buttonTextCompact}>
+              <Text style={dynamicStyles.buttonTextCompact}>
                 {loading ? 'Envoi...' : 'Renvoyer'}
-              </Text>
+          </Text>
             </LinearGradient>
-          </TouchableOpacity>
+        </TouchableOpacity>
 
           <TouchableOpacity 
             onPress={handleIveVerified}
             disabled={!confirmEnabled || loading}
             activeOpacity={0.8}
-            style={styles.buttonWrapper}
+            style={dynamicStyles.buttonWrapper}
           >
             <LinearGradient
               colors={!confirmEnabled || loading ? ['#9E9E9E', '#757575'] : ['#BB9B4E', '#D4AF37']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={[styles.button, styles.buttonCompact]}
+              style={[dynamicStyles.button, dynamicStyles.buttonCompact]}
             >
               <MaterialCommunityIcons name="check-circle" size={18} color="white" />
-              <Text style={styles.buttonTextCompact} numberOfLines={1}>
+              <Text style={dynamicStyles.buttonTextCompact} numberOfLines={1}>
                 {confirmEnabled ? "Vérifié" : `${countdown}s`}
-              </Text>
+        </Text>
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+        <TouchableOpacity 
             onPress={handleDeleteUnverifiedAccount}
             activeOpacity={0.8}
-            style={styles.buttonWrapper}
+            style={dynamicStyles.buttonWrapper}
           >
             <LinearGradient
               colors={['#B00020', '#C62828']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={[styles.button, styles.buttonCompact]}
-            >
+              style={[dynamicStyles.button, dynamicStyles.buttonCompact]}
+        >
               <MaterialCommunityIcons name="trash-can" size={18} color="white" />
-              <Text style={styles.buttonTextCompact} numberOfLines={1}>Supprimer</Text>
+              <Text style={dynamicStyles.buttonTextCompact} numberOfLines={1}>Supprimer</Text>
             </LinearGradient>
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
+      </View>
 
-        <TouchableOpacity 
-          style={styles.backButton} 
+      <TouchableOpacity 
+        style={dynamicStyles.backButton} 
           onPress={async () => {
             try {
               await signOut(auth);
@@ -487,20 +491,20 @@ export default function VerifyEmailScreen({ navigation }: any) {
             }
           }}
           activeOpacity={0.7}
-        >
-          <View style={styles.backButtonContent}>
+      >
+          <View style={dynamicStyles.backButtonContent}>
             <MaterialCommunityIcons name="arrow-left" size={18} color="#174C3C" />
-            <Text style={styles.backButtonText}>Retour à la connexion</Text>
+        <Text style={dynamicStyles.backButtonText}>Retour à la connexion</Text>
           </View>
-        </TouchableOpacity>
+      </TouchableOpacity>
       </View>
 
-      </ScrollView>
+    </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAF9',
@@ -510,14 +514,14 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    padding: 16,
+    padding: responsiveStyle.spacing.base,
     paddingTop: 60,
-    paddingBottom: 10,
+    paddingBottom: responsiveStyle.spacing.base,
     justifyContent: 'flex-start',
     alignItems: 'center',
   },
   iconContainer: {
-    marginBottom: 16,
+    marginBottom: responsiveStyle.spacing.base,
     alignItems: 'center',
   },
   iconBackground: {
@@ -534,18 +538,18 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   title: {
-    fontSize: 26,
+    fontSize: responsiveStyle.fontSize['2xl'],
     fontWeight: '800',
     color: '#174C3C',
-    marginBottom: 16,
+    marginBottom: responsiveStyle.spacing.base,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
   description: {
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: responsiveStyle.spacing.base,
     lineHeight: 22,
   },
   emailContainer: {
@@ -553,10 +557,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing.base,
     borderRadius: 10,
-    marginBottom: 20,
+    marginBottom: responsiveStyle.spacing.lg,
     width: '100%',
     maxWidth: 400,
     borderWidth: 2,
@@ -568,20 +572,20 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   email: {
-    fontSize: 15,
+    fontSize: responsiveStyle.fontSize.base,
     fontWeight: '700',
     color: '#174C3C',
     textAlign: 'center',
     width: '100%',
   },
   instructions: {
-    fontSize: 13,
+    fontSize: responsiveStyle.fontSize.sm,
     color: '#174C3C',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: responsiveStyle.spacing['2xl'],
     lineHeight: 20,
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    padding: responsiveStyle.spacing.base,
     borderRadius: 10,
     width: '100%',
     maxWidth: 400,
@@ -598,13 +602,13 @@ const styles = StyleSheet.create({
   buttonContainer: {
     width: '100%',
     maxWidth: 400,
-    gap: 16,
+    gap: responsiveStyle.spacing.base,
     marginBottom: 0,
   },
   buttonsRow: {
     flexDirection: 'row',
     width: '100%',
-    gap: 12,
+    gap: responsiveStyle.spacing.base,
     justifyContent: 'space-between',
   },
   buttonWrapper: {
@@ -614,10 +618,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing.lg,
     borderRadius: 10,
-    gap: 8,
+    gap: responsiveStyle.spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
@@ -625,8 +629,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   buttonCompact: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing.base,
     gap: 6,
   },
   resendButton: {
@@ -640,46 +644,46 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
   buttonTextCompact: {
     color: 'white',
-    fontSize: 12,
+    fontSize: responsiveStyle.fontSize.xs,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
   backButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing.base,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
     backgroundColor: '#FFFFFF',
-    marginTop: 8,
+    marginTop: responsiveStyle.spacing.sm,
     width: '100%',
     borderRadius: 10,
   },
   backButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: responsiveStyle.spacing.sm,
   },
   backButtonText: {
     color: '#174C3C',
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base,
     fontWeight: '600',
   },
   helpTextContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: responsiveStyle.spacing.sm,
     marginBottom: 0,
-    paddingHorizontal: 10,
+    paddingHorizontal: responsiveStyle.spacing.base,
   },
   helpText: {
-    fontSize: 12,
+    fontSize: responsiveStyle.fontSize.xs,
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -689,10 +693,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 20,
+    gap: responsiveStyle.spacing.sm,
+    paddingVertical: responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing.base,
+    marginBottom: responsiveStyle.spacing.lg,
     backgroundColor: '#E8F5E8',
     borderRadius: 10,
     width: '100%',
@@ -706,7 +710,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   linkToggleText: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.sm,
     color: '#174C3C',
     fontWeight: '600',
     flex: 1,
@@ -715,8 +719,8 @@ const styles = StyleSheet.create({
   linkInputContainer: {
     width: '100%',
     maxWidth: 400,
-    marginBottom: 20,
-    padding: 16,
+    marginBottom: responsiveStyle.spacing.lg,
+    padding: responsiveStyle.spacing.base,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 2,
@@ -731,10 +735,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 8,
+    marginBottom: responsiveStyle.spacing.sm,
   },
   linkInputLabel: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.sm,
     color: '#174C3C',
     fontWeight: '600',
     flex: 1,
@@ -743,12 +747,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E0E0E0',
     borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
+    padding: responsiveStyle.spacing.base,
+    fontSize: responsiveStyle.fontSize.sm,
     color: '#333',
     minHeight: 70,
     textAlignVertical: 'top',
-    marginBottom: 10,
+    marginBottom: responsiveStyle.spacing.base,
     backgroundColor: '#F8F9FA',
     fontFamily: 'monospace',
   },

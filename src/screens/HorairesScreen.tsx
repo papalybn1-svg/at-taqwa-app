@@ -1,18 +1,20 @@
   import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
-import { initializePrayerNotifications, cancelAllPrayerNotifications } from '../services/prayerNotificationsService';
+import { CitySearchResult, searchCities } from '../services/citySearchService';
+import { cancelAllPrayerNotifications, initializePrayerNotifications } from '../services/prayerNotificationsService';
 import {
-    fetchPrayerTimes,
-    formatPrayerTime,
-    getCurrentDate,
-    getHijriDate,
-    getNextPrayerInfo
+  fetchPrayerTimes,
+  formatPrayerTime,
+  getCurrentDate,
+  getHijriDate,
+  getNextPrayerInfo,
+  loadLastPrayerTimes
 } from '../services/prayerTimesService';
-import { searchCities, CitySearchResult } from '../services/citySearchService';
 import colors from '../theme/colors';
 
 // Récupération des dimensions de l'écran
@@ -149,22 +151,64 @@ export default function HorairesScreen() {
   const [nextPrayerInfo, setNextPrayerInfo] = useState<any>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
-  // Ajout navigation pour bouton retour
-  const navigation = require('@react-navigation/native').useNavigation();
+  // ✅ Utiliser le hook useNavigation() au lieu de require() pour de meilleures performances
+  const navigation = useNavigation();
 
-  // Gestion du swipe pour revenir en arrière (depuis le bord gauche)
-  const swipeGesture = Gesture.Pan()
-    .minDistance(10)
-    .activeOffsetX(10)
-    .failOffsetY([-20, 20])
-    .onEnd((event) => {
-      // Détecter un swipe horizontal vers la droite depuis le bord gauche
-      if (event.translationX > 80 || (event.translationX > 50 && event.velocityX > 500)) {
-        if (Math.abs(event.translationY) < 100) {
-          navigation.goBack();
+  // ✅ Mémoriser le callback goBack pour éviter les recréations
+  const handleGoBack = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  // ✅ Mémoriser le callback pour les notifications
+  const handleToggleNotifications = useCallback(async () => {
+    try {
+      if (!notificationsEnabled) {
+        if (prayerTimes) {
+          await initializePrayerNotifications(prayerTimes, 15);
+          setNotificationsEnabled(true);
+        } else {
+          Alert.alert('Horaires indisponibles', 'Les horaires ne sont pas encore chargés.');
         }
+      } else {
+        await cancelAllPrayerNotifications();
+        setNotificationsEnabled(false);
       }
-    });
+    } catch (e) {
+      console.error('Notif toggle error:', e);
+      Alert.alert('Erreur', 'Impossible de mettre à jour les notifications.');
+    }
+  }, [notificationsEnabled, prayerTimes]);
+
+  // ✅ Mémoriser le geste pour éviter les recréations à chaque render
+  // IMPORTANT: Le geste ne doit se déclencher QUE depuis le bord gauche (< 20px)
+  // et ignorer complètement les mouvements verticaux pour éviter les conflits avec le ScrollView
+  const swipeGesture = useMemo(() => {
+    return Gesture.Pan()
+      .minDistance(10)
+      .activeOffsetX(10)
+      .failOffsetY([-80, 80]) // ✅ Très restrictif pour ignorer les mouvements verticaux
+      .onStart((event) => {
+        // ✅ Vérifier que le geste commence depuis le bord gauche (< 20px)
+        if (event.x > 20) {
+          return; // Ignorer si le geste ne commence pas depuis le bord gauche
+        }
+      })
+      .onUpdate((event) => {
+        // ✅ Si le mouvement vertical est trop important, annuler le geste
+        if (Math.abs(event.translationY) > 30) {
+          return;
+        }
+      })
+      .onEnd((event) => {
+        // ✅ Détecter un swipe horizontal vers la droite depuis le bord gauche
+        // ✅ Seulement si le mouvement vertical est minimal (< 30px)
+        if (Math.abs(event.translationY) < 30) {
+          if (event.translationX > 100 || (event.translationX > 60 && event.velocityX > 600)) {
+            handleGoBack();
+          }
+        }
+      });
+  }, [handleGoBack]);
 
   // Gestion des changements de dimensions d'écran
   useEffect(() => {
@@ -178,6 +222,7 @@ export default function HorairesScreen() {
   // Charger les données une seule fois au montage
   useEffect(() => {
     let isMounted = true;
+    const timeoutRef: { current: NodeJS.Timeout | null } = { current: null };
     
     const loadData = async () => {
       if (!isMounted) return;
@@ -186,14 +231,69 @@ export default function HorairesScreen() {
         setLoading(true);
         setOfflineMode(false);
         
-        // Par défaut, charger Dakar si pas de localisation GPS
-        const result = await fetchPrayerTimes('Dakar');
+        // 1) CHARGER LE CACHE D'ABORD pour afficher rapidement les données
+        const cacheId = 'Dakar|DEFAULT_COUNTRY';
+        const cached = await loadLastPrayerTimes(cacheId);
+        let hasDataFromCache = false;
+        
+        if (cached && isMounted) {
+          hasDataFromCache = true;
+          // Afficher les données en cache immédiatement
+          setPrayerTimes(cached.timings);
+          setCity(cached.city);
+          setLastUpdate(cached.lastUpdate);
+          
+          // Calculer la prochaine prière
+          const nextPrayer = getNextPrayerInfo(cached.timings);
+          setNextPrayerInfo(nextPrayer);
+          
+          // Formatage de la date
+          if (cached.date) {
+            const gregorian = cached.date.gregorian;
+            const hijri = cached.date.hijri;
+            
+            setDate(`${gregorian.day} ${gregorian.month.fr || gregorian.month.en} ${gregorian.year}`);
+            setHijri(`${hijri.day} ${hijri.month.fr || hijri.month.en} ${hijri.year}`);
+          } else {
+            setDate(getCurrentDate());
+            setHijri(getHijriDate());
+          }
+          
+          setOfflineMode(true); // Indiquer que c'est du cache
+          setLoading(false); // Arrêter le chargement pour afficher les données
+        }
+        
+        // 2) METTRE À JOUR EN ARRIÈRE-PLAN avec timeout
+        // Timeout de sécurité sur le useEffect (20s max)
+        timeoutRef.current = setTimeout(() => {
+          if (isMounted) {
+            console.log('⚠️ Timeout du chargement, utilisation du cache ou fallback');
+            setLoading(false);
+            if (!hasDataFromCache) {
+              // Si pas de cache, utiliser les valeurs par défaut
+              setDate(getCurrentDate());
+              setHijri(getHijriDate());
+              setCity('Dakar (offline)');
+              setOfflineMode(true);
+            }
+          }
+        }, 20000);
+        
+        const result = await fetchPrayerTimes('Dakar', undefined, 15000); // Timeout de 15s
+        
+        // Nettoyer le timeout si la requête réussit
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         
         if (!isMounted) return;
         
+        // Mettre à jour avec les nouvelles données
         setPrayerTimes(result.timings);
         setCity(result.city);
         setLastUpdate(result.lastUpdate);
+        setOfflineMode(result.offline || false);
         
         // Calculer la prochaine prière
         const nextPrayer = getNextPrayerInfo(result.timings);
@@ -211,16 +311,23 @@ export default function HorairesScreen() {
           setHijri(getHijriDate());
         }
         
-        // Ne pas programmer de notifications automatiquement; l’utilisateur activera via le switch
+        // Ne pas programmer de notifications automatiquement; l'utilisateur activera via le switch
         
       } catch (error) {
         if (!isMounted) return;
         console.log('❌ Erreur lors du chargement initial:', error);
+        
+        // Si on n'a pas encore de données affichées (pas de cache chargé), utiliser les valeurs par défaut
+        // Le cache a déjà été vérifié au début, donc si on arrive ici sans données, c'est qu'il n'y avait pas de cache
         setOfflineMode(true);
         setDate(getCurrentDate());
         setHijri(getHijriDate());
         setCity('Dakar (offline)');
       } finally {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         if (isMounted) {
           setLoading(false);
         }
@@ -231,6 +338,9 @@ export default function HorairesScreen() {
     
     return () => {
       isMounted = false;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
   }, []); // Dépendances vides pour ne charger qu'une fois
 
@@ -273,14 +383,55 @@ export default function HorairesScreen() {
     
     if (!city) return;
     
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     try {
       setLoading(true);
       setOfflineMode(false);
       
-      const result = await fetchPrayerTimes(city, country);
+      // 1) CHARGER LE CACHE D'ABORD pour afficher rapidement
+      const cacheId = `${city}|${country}`;
+      const cached = await loadLastPrayerTimes(cacheId);
+      
+      if (cached) {
+        // Afficher les données en cache immédiatement
+        setPrayerTimes(cached.timings);
+        setCity(cached.city);
+        setLastUpdate(cached.lastUpdate);
+        setOfflineMode(true);
+        
+        // Calculer la prochaine prière
+        const nextPrayer = getNextPrayerInfo(cached.timings);
+        setNextPrayerInfo(nextPrayer);
+        
+        // Formatage de la date
+        if (cached.date) {
+          const gregorian = cached.date.gregorian;
+          const hijri = cached.date.hijri;
+          
+          setDate(`${gregorian.day} ${gregorian.month.fr || gregorian.month.en} ${gregorian.year}`);
+          setHijri(`${hijri.day} ${hijri.month.fr || hijri.month.en} ${hijri.year}`);
+        }
+        
+        setLoading(false); // Arrêter le chargement pour afficher le cache
+      }
+      
+      // 2) METTRE À JOUR EN ARRIÈRE-PLAN avec timeout
+      timeoutId = setTimeout(() => {
+        setLoading(false);
+      }, 20000); // Timeout de sécurité de 20s
+      
+      const result = await fetchPrayerTimes(city, country, 15000);
+      
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Mettre à jour avec les nouvelles données
       setPrayerTimes(result.timings);
       setCity(result.city);
       setLastUpdate(result.lastUpdate);
+      setOfflineMode(result.offline || false);
       
       // Calculer la prochaine prière
       const nextPrayer = getNextPrayerInfo(result.timings);
@@ -304,14 +455,20 @@ export default function HorairesScreen() {
       setSearchResults([]);
       
     } catch (error) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       console.log('❌ Erreur lors du changement de ville:', error);
       Alert.alert(
         'Erreur',
-        'Impossible de récupérer les horaires pour cette ville. Veuillez vérifier le nom de la ville et du pays.',
+        'Impossible de récupérer les horaires pour cette ville. Les données en cache seront utilisées si disponibles.',
         [{ text: 'OK' }]
       );
       setOfflineMode(true);
     } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       setLoading(false);
     }
   };
@@ -343,154 +500,156 @@ export default function HorairesScreen() {
     );
   }
 
+  // ✅ Contenu principal de l'écran (réutilisable)
+  const mainContent = (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header moderne cohérent avec les autres pages */}
+      <View style={[styles.header, { maxWidth: responsive.maxContentWidth }]}>
+        <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Heures de prière</Text>
+        <TouchableOpacity
+          onPress={handleToggleNotifications}
+          style={styles.backButton}
+        >
+          <MaterialCommunityIcons
+            name={notificationsEnabled ? 'bell-ring' : 'bell-outline'}
+            size={24}
+            color={notificationsEnabled ? colors.primary : colors.text}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Image d'en-tête */}
+      <View style={[styles.headerContainer, { maxWidth: responsive.maxContentWidth }]}>
+        <Image
+          source={require('../../assets/heurepriere.jpg')}
+          style={styles.headerImage}
+          resizeMode="cover"
+        />
+      </View>
+
+      {/* Carte dorée avec date */}
+      <View style={[styles.dateCard, { maxWidth: responsive.maxContentWidth }]}>
+        <View style={styles.dateIconContainer}>
+          <MaterialCommunityIcons name="calendar" size={24} color="#2C3E50" />
+        </View>
+        <View style={styles.dateTextContainer}>
+          <Text style={styles.dateText}>{date || '23 Janvier 2025'}</Text>
+          <Text style={styles.hijriText}>{hijri || '24 Rajab 1446'}</Text>
+        </View>
+      </View>
+
+      {/* Section ville */}
+      <View style={[styles.citySection, { maxWidth: responsive.maxContentWidth }]}>
+        <View style={styles.cityInfo}>
+          <MaterialCommunityIcons name="map-marker" size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} color={colors.primary} />
+          <Text style={styles.cityText}>{city || 'Dakar'}</Text>
+        </View>
+        <TouchableOpacity style={styles.changeCityButton} onPress={() => setModalVisible(true)}>
+          <Text style={styles.changeCityText}>Changer</Text>
+          <MaterialCommunityIcons name="chevron-right" size={isTablet ? 18 : (isSmallScreen ? 12 : 14)} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Indicateur mode hors ligne */}
+      {offlineMode && (
+        <View style={styles.offlineBanner}>
+          <MaterialCommunityIcons name="wifi-off" size={16} color="#FF6B6B" />
+          <Text style={styles.offlineText}>Mode hors ligne - Dernières données disponibles</Text>
+        </View>
+      )}
+
+      {/* Liste des prières */}
+      <View style={[styles.prayerListContainer, { maxWidth: responsive.maxContentWidth }]}>
+        <ScrollView 
+          style={styles.prayerListContent}
+          showsVerticalScrollIndicator={true}
+          contentContainerStyle={[
+            styles.prayerListContentContainer,
+            { paddingBottom: Math.max(insets.bottom + 40, Platform.OS === 'ios' ? 40 : 60) }
+          ]}
+          bounces={true}
+          scrollEventThrottle={16}
+          nestedScrollEnabled={true}
+          removeClippedSubviews={Platform.OS === 'android'} // ✅ Améliore les performances sur Android
+          decelerationRate="normal" // ✅ Scroll plus fluide
+          scrollEnabled={true} // ✅ Explicitement activé
+          directionalLockEnabled={false} // ✅ Permet le scroll vertical fluide
+          keyboardShouldPersistTaps="handled" // ✅ Évite les problèmes de clavier
+          overScrollMode="never" // ✅ Désactive l'overscroll sur Android pour plus de fluidité
+          persistentScrollbar={false} // ✅ Améliore les performances
+        >
+          {PRAYER_LABELS.map((item, index) => {
+            const isNextPrayer = nextPrayerInfo?.key === item.key;
+            
+            return (
+              <View key={item.key}>
+                <View style={[
+                  styles.prayerRow,
+                  isNextPrayer && styles.nextPrayerRow
+                ]}>
+                  <View style={styles.prayerLeftSection}>
+                    <View style={[
+                      styles.prayerIconContainer,
+                      isNextPrayer && styles.nextPrayerIconContainer
+                    ]}>
+                      <MaterialCommunityIcons 
+                        name={item.icon as any} 
+                        size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} 
+                        color={isNextPrayer ? '#FFFFFF' : item.color} 
+                      />
+                    </View>
+                    <View style={styles.prayerLabelContainer}>
+                      <Text style={[
+                        styles.prayerLabel,
+                        isNextPrayer && styles.nextPrayerLabel
+                      ]}>
+                        {item.label}
+                      </Text>
+                      {isNextPrayer && (
+                        <View style={styles.nextPrayerIndicator}>
+                          <Text style={styles.nextPrayerIndicatorText}>Prochaine</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  <View style={styles.prayerRightSection}>
+                    <Text style={[
+                      styles.prayerTime,
+                      isNextPrayer && styles.nextPrayerTime
+                    ]}>
+                      {prayerTimes ? formatPrayerTime(prayerTimes[item.key]) : '6H01'}
+                    </Text>
+                    {isNextPrayer && nextPrayerInfo && (
+                      <View style={styles.countdownContainer}>
+                        <Text style={styles.countdownText}>
+                          Dans {nextPrayerInfo.minutesUntil} min
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                {index < PRAYER_LABELS.length - 1 && <View style={styles.prayerSeparator} />}
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </View>
+  );
+
   return (
     <GestureHandlerRootView style={styles.container}>
-      <GestureDetector gesture={swipeGesture}>
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-          {/* Header moderne cohérent avec les autres pages */}
-          <View style={[styles.header, { maxWidth: responsive.maxContentWidth }]}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Heures de prière</Text>
-            <TouchableOpacity
-              onPress={async () => {
-                try {
-                  if (!notificationsEnabled) {
-                    if (prayerTimes) {
-                      await initializePrayerNotifications(prayerTimes, 15);
-                      setNotificationsEnabled(true);
-                    } else {
-                      Alert.alert('Horaires indisponibles', 'Les horaires ne sont pas encore chargés.');
-                    }
-                  } else {
-                    await cancelAllPrayerNotifications();
-                    setNotificationsEnabled(false);
-                  }
-                } catch (e) {
-                  console.error('Notif toggle error:', e);
-                  Alert.alert('Erreur', 'Impossible de mettre à jour les notifications.');
-                }
-              }}
-              style={styles.backButton}
-            >
-              <MaterialCommunityIcons
-                name={notificationsEnabled ? 'bell-ring' : 'bell-outline'}
-                size={24}
-                color={notificationsEnabled ? colors.primary : colors.text}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Image d'en-tête */}
-          <View style={[styles.headerContainer, { maxWidth: responsive.maxContentWidth }]}>
-            <Image
-              source={require('../../assets/heurepriere.jpg')}
-              style={styles.headerImage}
-              resizeMode="cover"
-            />
-          </View>
-
-          {/* Carte dorée avec date */}
-          <View style={[styles.dateCard, { maxWidth: responsive.maxContentWidth }]}>
-            <View style={styles.dateIconContainer}>
-              <MaterialCommunityIcons name="calendar" size={24} color="#2C3E50" />
-            </View>
-            <View style={styles.dateTextContainer}>
-              <Text style={styles.dateText}>{date || '23 Janvier 2025'}</Text>
-              <Text style={styles.hijriText}>{hijri || '24 Rajab 1446'}</Text>
-            </View>
-          </View>
-
-          {/* Section ville */}
-          <View style={[styles.citySection, { maxWidth: responsive.maxContentWidth }]}>
-            <View style={styles.cityInfo}>
-              <MaterialCommunityIcons name="map-marker" size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} color={colors.primary} />
-              <Text style={styles.cityText}>{city || 'Dakar'}</Text>
-            </View>
-            <TouchableOpacity style={styles.changeCityButton} onPress={() => setModalVisible(true)}>
-              <Text style={styles.changeCityText}>Changer</Text>
-              <MaterialCommunityIcons name="chevron-right" size={isTablet ? 18 : (isSmallScreen ? 12 : 14)} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* (Notifications compactes via cloche dans l’en-tête) */}
-
-          {/* Indicateur mode hors ligne */}
-          {offlineMode && (
-            <View style={styles.offlineBanner}>
-              <MaterialCommunityIcons name="wifi-off" size={16} color="#FF6B6B" />
-              <Text style={styles.offlineText}>Mode hors ligne - Dernières données disponibles</Text>
-            </View>
-          )}
-
-          {/* Liste des prières */}
-          <View style={[styles.prayerListContainer, { maxWidth: responsive.maxContentWidth }]}>
-            <ScrollView 
-              style={styles.prayerListContent}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.prayerListContentContainer}
-              bounces={true}
-              scrollEventThrottle={16}
-            >
-              {PRAYER_LABELS.map((item, index) => {
-                const isNextPrayer = nextPrayerInfo?.key === item.key;
-                
-                return (
-                  <View key={item.key}>
-                    <View style={[
-                      styles.prayerRow,
-                      isNextPrayer && styles.nextPrayerRow
-                    ]}>
-                      <View style={styles.prayerLeftSection}>
-                        <View style={[
-                          styles.prayerIconContainer,
-                          isNextPrayer && styles.nextPrayerIconContainer
-                        ]}>
-                          <MaterialCommunityIcons 
-                            name={item.icon as any} 
-                            size={isTablet ? 20 : (isSmallScreen ? 14 : 16)} 
-                            color={isNextPrayer ? '#FFFFFF' : item.color} 
-                          />
-                        </View>
-                        <View style={styles.prayerLabelContainer}>
-                          <Text style={[
-                            styles.prayerLabel,
-                            isNextPrayer && styles.nextPrayerLabel
-                          ]}>
-                            {item.label}
-                          </Text>
-                          {isNextPrayer && (
-                            <View style={styles.nextPrayerIndicator}>
-                              <Text style={styles.nextPrayerIndicatorText}>Prochaine</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                      <View style={styles.prayerRightSection}>
-                        <Text style={[
-                          styles.prayerTime,
-                          isNextPrayer && styles.nextPrayerTime
-                        ]}>
-                          {prayerTimes ? formatPrayerTime(prayerTimes[item.key]) : '6H01'}
-                        </Text>
-                        {isNextPrayer && nextPrayerInfo && (
-                          <View style={styles.countdownContainer}>
-                            <Text style={styles.countdownText}>
-                              Dans {nextPrayerInfo.minutesUntil} min
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                    {index < PRAYER_LABELS.length - 1 && <View style={styles.prayerSeparator} />}
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </GestureDetector>
+      {/* ✅ Sur iOS, utiliser GestureDetector pour le swipe. Sur Android, utiliser le geste natif */}
+      {Platform.OS === 'ios' ? (
+        <GestureDetector gesture={swipeGesture}>
+          {mainContent}
+        </GestureDetector>
+      ) : (
+        mainContent
+      )}
 
       {/* Modal choix ville */}
       <Modal visible={modalVisible} transparent animationType="fade">
@@ -828,9 +987,15 @@ const styles = StyleSheet.create({
   },
   prayerListContent: {
     flex: 1,
+    // ✅ Optimisations pour un scroll fluide sur Android
+    ...(Platform.OS === 'android' && {
+      // Sur Android, ces propriétés améliorent la fluidité
+      overScrollMode: 'never', // Évite l'overscroll sur Android
+    }),
   },
   prayerListContentContainer: {
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 60, // ✅ Augmenté pour Android pour afficher toutes les 5 prières
+    paddingTop: 8, // ✅ Ajouté pour un peu d'espace en haut
   },
   prayerRow: {
     flexDirection: 'row',

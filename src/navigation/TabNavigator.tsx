@@ -119,9 +119,14 @@ export default function TabNavigator() {
   const insets = useSafeAreaInsets();
   
   // Calculer le paddingBottom en tenant compte de la barre de navigation système Android
+  // Sur Android, on utilise insets.bottom pour éviter le chevauchement avec la barre système
+  // Sur iOS, on utilise insets.bottom également pour gérer les safe areas
   const bottomPadding = Platform.OS === 'android' 
-    ? Math.max(insets.bottom, 20) // Au moins 20px, ou plus si la barre système est présente
-    : 20;
+    ? Math.max(insets.bottom, 8) // Minimum 8px, ou plus si la barre système est présente
+    : Math.max(insets.bottom, 8);
+
+  // Hauteur de base de la TabBar (contenu + paddingTop, sans paddingBottom)
+  const baseTabBarHeight = 80; // 68px de contenu + 12px de paddingTop
 
   return (
     <Tab.Navigator
@@ -131,7 +136,9 @@ export default function TabNavigator() {
         tabBarInactiveTintColor: "#9CA3AF",
         tabBarStyle: { 
           backgroundColor: colors.white,
-          height: 80 + (Platform.OS === 'android' ? insets.bottom : 0),
+          // Hauteur totale = hauteur de base + paddingBottom
+          // Le paddingBottom est ajouté séparément pour éviter le double calcul
+          height: baseTabBarHeight + bottomPadding,
           paddingBottom: bottomPadding,
           paddingTop: 12,
           borderTopLeftRadius: 24,

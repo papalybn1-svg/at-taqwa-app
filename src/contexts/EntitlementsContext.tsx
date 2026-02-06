@@ -58,13 +58,22 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
   // Charger/rafraîchir immédiatement à chaque changement d'utilisateur
   React.useEffect(() => {
     if (user?.uid) {
-      // Ne pas forcer pour éviter les boucles infinies
-      refreshEntitlements(false).catch((e) => {
-        // Ne pas logger en boucle si erreur réseau
-        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
-          console.error('Erreur refreshEntitlements initial:', e);
+      // ✅ Amélioration Android : Attendre un peu pour que le token Firebase soit prêt
+      // Sur Android, le token peut prendre plus de temps à être disponible
+      const loadEntitlements = async () => {
+        // Attendre un peu pour que le token Firebase soit prêt (surtout sur Android)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // Forcer le refresh initial pour s'assurer d'avoir les entitlements dès le démarrage
+        try {
+          await refreshEntitlements(true); // force=true pour bypasser le cooldown au démarrage
+        } catch (e: any) {
+          // Ne pas logger en boucle si erreur réseau
+          if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+            console.error('Erreur refreshEntitlements initial:', e);
+          }
         }
-      });
+      };
+      loadEntitlements();
     } else {
       setEntitlements({ part2: false, part3: false });
     }

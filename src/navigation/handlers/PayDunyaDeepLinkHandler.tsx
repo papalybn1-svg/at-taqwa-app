@@ -3,7 +3,7 @@ import * as Linking from 'expo-linking';
 import { Alert, AppState } from 'react-native';
 import { NavigationContainerRef, CommonActions } from '@react-navigation/native';
 import { applyActionCode } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { EntitlementsContext } from '../../contexts/EntitlementsContext';
 import { usePaymentService } from '../../lib/paymentService';
 import { AuthContext } from '../../contexts/AuthContext';
@@ -98,8 +98,24 @@ const PayDunyaDeepLinkHandler: React.FC<PayDunyaDeepLinkHandlerProps> = ({ navig
             navigateToResetPassword();
           } else if (mode === 'verifyEmail' && oob) {
             try {
+              console.log('📧 Deep link vérification email détecté, oobCode:', oob);
               await applyActionCode(auth, oob);
-              await auth.currentUser?.reload();
+              
+              // Attendre un peu pour que Firebase mette à jour l'état
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              // Recharger l'utilisateur plusieurs fois si nécessaire pour s'assurer que emailVerified est à jour
+              let retries = 0;
+              let isVerified = false;
+              while (retries < 5 && !isVerified) {
+                await auth.currentUser?.reload();
+                isVerified = !!auth.currentUser?.emailVerified;
+                if (!isVerified) {
+                  await new Promise(resolve => setTimeout(resolve, 300));
+                  retries++;
+                }
+              }
+              
               if (auth.currentUser?.emailVerified && auth.currentUser) {
                 const ref = doc(db, 'users', auth.currentUser.uid);
                 const snap = await getDoc(ref);
@@ -111,14 +127,39 @@ const PayDunyaDeepLinkHandler: React.FC<PayDunyaDeepLinkHandlerProps> = ({ navig
                     createdAt: new Date(),
                     displayName: auth.currentUser.displayName || '',
                   });
+                } else {
+                  // Mettre à jour emailVerified si le document existe déjà
+                  await updateDoc(ref, { emailVerified: true });
                 }
                 const role = (snap.data() as any)?.role || 'user';
-                setUser?.({ ...(auth.currentUser as any), role });
-                Alert.alert('E‑mail vérifié', 'Votre adresse e‑mail est confirmée.', [{ text: 'OK' }]);
+                
+                // ✅ Forcer un rechargement complet de l'utilisateur Firebase pour déclencher onAuthStateChanged
+                // Attendre un peu pour que Firestore soit synchronisé
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                // Recharger une dernière fois pour s'assurer que tout est synchronisé
+                await auth.currentUser.reload();
+                
+                // ✅ Mettre à jour l'utilisateur avec emailVerified: true
+                // Cela déclenchera la redirection automatique dans App.tsx
+                setUser?.({ ...(auth.currentUser as any), role, emailVerified: true });
+                
+                console.log('✅ Email vérifié avec succès via deep link');
+                // Ne pas afficher d'alerte pour permettre la redirection automatique immédiate
+                // Alert.alert('E‑mail vérifié', 'Votre adresse e‑mail est confirmée.', [{ text: 'OK' }]);
               } else {
                 Alert.alert('Vérification en cours', 'Réessayez dans quelques instants.');
               }
-            } catch {}
+            } catch (error: any) {
+              console.error('❌ Erreur vérification email via deep link:', error);
+              let errorMsg = 'Impossible de vérifier l\'email.';
+              if (error.code === 'auth/invalid-action-code') {
+                errorMsg = 'Le lien de vérification est invalide ou a expiré. Veuillez demander un nouveau lien.';
+              } else if (error.code === 'auth/expired-action-code') {
+                errorMsg = 'Le lien de vérification a expiré. Veuillez demander un nouveau lien.';
+              }
+              Alert.alert('Erreur de vérification', errorMsg, [{ text: 'OK' }]);
+            }
           }
         }
       } catch (error) {
@@ -132,6 +173,9 @@ const PayDunyaDeepLinkHandler: React.FC<PayDunyaDeepLinkHandlerProps> = ({ navig
     Linking.getInitialURL().then(url => { 
       if (url) {
         console.log('🔗 URL initiale détectée:', url);
+        const parsed = Linking.parse(url);
+        const mode = parsed.queryParams?.mode as string | undefined;
+        
         // Attendre que la navigation soit prête avant de traiter le deep link
         const tryHandleUrl = (attempt = 0) => {
           if (navigationRef.current) {
@@ -141,9 +185,11 @@ const PayDunyaDeepLinkHandler: React.FC<PayDunyaDeepLinkHandlerProps> = ({ navig
             // Réessayer jusqu'à 10 fois (5 secondes max)
             setTimeout(() => tryHandleUrl(attempt + 1), 500);
           } else {
-            // Si après 5 secondes la navigation n'est pas prête, stocker l'URL
-            console.warn('⚠️ NavigationContainer toujours pas prêt après 5 secondes');
-            pendingResetPasswordUrl.current = url;
+            // Si après 5 secondes la navigation n'est pas prête, stocker l'URL pour traitement ultérieur
+            console.warn('⚠️ NavigationContainer toujours pas prêt après 5 secondes, URL stockée:', url);
+            if (mode === 'resetPassword' || mode === 'verifyEmail') {
+              pendingResetPasswordUrl.current = url;
+            }
           }
         };
         tryHandleUrl();
@@ -159,7 +205,7 @@ const PayDunyaDeepLinkHandler: React.FC<PayDunyaDeepLinkHandlerProps> = ({ navig
         const oob = parsed.queryParams?.oobCode as string | undefined;
         
         if (mode === 'resetPassword' && oob) {
-          console.log('✅ NavigationContainer prêt, traitement de l\'URL en attente');
+          console.log('✅ NavigationContainer prêt, traitement de l\'URL en attente (resetPassword)');
           try {
             navigationRef.current.dispatch(
               CommonActions.navigate({
@@ -171,6 +217,11 @@ const PayDunyaDeepLinkHandler: React.FC<PayDunyaDeepLinkHandlerProps> = ({ navig
           } catch (error) {
             console.error('❌ Erreur navigation URL en attente:', error);
           }
+        } else if (mode === 'verifyEmail' && oob) {
+          // Gérer aussi verifyEmail pour les URLs en attente
+          console.log('✅ NavigationContainer prêt, traitement de l\'URL en attente (verifyEmail)');
+          handleDeepLink(url);
+          pendingResetPasswordUrl.current = null;
         }
       }
     }, 500);
@@ -183,9 +234,10 @@ const PayDunyaDeepLinkHandler: React.FC<PayDunyaDeepLinkHandlerProps> = ({ navig
             try {
               const snap = await getDoc(doc(db, 'users', auth.currentUser.uid));
               const role = (snap.data() as any)?.role || 'user';
-              setUser?.({ ...(auth.currentUser as any), role });
+              // ✅ Inclure emailVerified: true pour déclencher la redirection automatique
+              setUser?.({ ...(auth.currentUser as any), role, emailVerified: true });
             } catch {
-              setUser?.({ ...(auth.currentUser as any), role: 'user' });
+              setUser?.({ ...(auth.currentUser as any), role: 'user', emailVerified: true });
             }
           }
         } catch {}

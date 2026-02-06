@@ -92,7 +92,7 @@ const saveLastPrayerTimes = async (id: string, data: PrayerTimesResult) => {
   }
 };
 
-const loadLastPrayerTimes = async (id: string): Promise<PrayerTimesResult | null> => {
+export const loadLastPrayerTimes = async (id: string): Promise<PrayerTimesResult | null> => {
   try {
     const raw = await AsyncStorage.getItem(buildCacheKey(id));
     if (!raw) return null;
@@ -189,16 +189,31 @@ const buildTimingsByCoordsUrl = (lat: number, lon: number) => {
   return `${ALADHAN_BASE_URL}/timings/${timestamp}?${params.toString()}`;
 };
 
-const callAladhan = async (url: string) => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Erreur HTTP ${response.status}`);
+const callAladhan = async (url: string, timeoutMs: number = 10000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Erreur HTTP ${response.status}`);
+    }
+    
+    const json = await response.json();
+    if (json.code !== 200 || !json.data) {
+      throw new Error(`Réponse Aladhan invalide: ${JSON.stringify(json)}`);
+    }
+    
+    return json.data;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+      throw new Error('Timeout: La requête a pris trop de temps. Vérifiez votre connexion internet.');
+    }
+    throw error;
   }
-  const json = await response.json();
-  if (json.code !== 200 || !json.data) {
-    throw new Error(`Réponse Aladhan invalide: ${JSON.stringify(json)}`);
-  }
-  return json.data;
 };
 
 // ---------- Fonction principale: fetchPrayerTimes ----------
@@ -212,14 +227,15 @@ const callAladhan = async (url: string) => {
  */
 export const fetchPrayerTimes = async (
   cityName?: string,
-  countryName?: string
+  countryName?: string,
+  timeoutMs: number = 15000
 ): Promise<PrayerTimesResult> => {
   const id = cityName
     ? `${cityName.trim()}|${(countryName || '').trim() || 'DEFAULT_COUNTRY'}`
     : 'CURRENT_LOCATION';
 
-  // 1) Tentative online
-  try {
+  // Fonction interne pour l'appel API
+  const fetchWithTimeout = async (): Promise<PrayerTimesResult> => {
     let data: any;
     let finalCity = cityName?.trim();
     let finalCountry = countryName?.trim();
@@ -295,8 +311,20 @@ export const fetchPrayerTimes = async (
     await saveLastPrayerTimes(id, result);
 
     return result;
-  } catch (error) {
-    console.error('❌ Erreur fetchPrayerTimes (online):', error);
+  };
+
+  // Timeout global avec Promise.race
+  const timeoutPromise = new Promise<PrayerTimesResult>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error('Timeout: La requête a pris trop de temps. Vérifiez votre connexion internet.'));
+    }, timeoutMs);
+  });
+
+  try {
+    // Essayer l'appel API avec timeout
+    return await Promise.race([fetchWithTimeout(), timeoutPromise]);
+  } catch (error: any) {
+    console.error('❌ Erreur fetchPrayerTimes (timeout ou erreur):', error);
 
     // 2) Fallback: utiliser le dernier succès pour cette ville / position
     const cached = await loadLastPrayerTimes(id);
@@ -330,5 +358,3 @@ export const fetchPrayerTimes = async (
     };
   }
 };
-
-
