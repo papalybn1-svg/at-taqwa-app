@@ -225,3 +225,5 @@ if ((partie === 'deuxieme_partie' && !fresh.part2) || (partie === 'troisieme_par
 Une fois testé, Android devrait détecter correctement les entitlements premium comme iOS. 🚀
 
 
+
+

@@ -161,12 +161,12 @@ export default function QuizGameScreen() {
               
               <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
-                  <MaterialCommunityIcons name="refresh" size={24} color="white" />
+                  <MaterialCommunityIcons name="refresh" size={responsiveStyle.fontSize.lg} color="white" />
                   <Text style={styles.buttonText}>Recommencer</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity style={styles.homeButton} onPress={goHome}>
-                  <MaterialCommunityIcons name="home" size={24} color="white" />
+                  <MaterialCommunityIcons name="home" size={responsiveStyle.fontSize.lg} color="white" />
                   <Text style={styles.buttonText}>Accueil</Text>
                 </TouchableOpacity>
               </View>
@@ -184,7 +184,7 @@ export default function QuizGameScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={goHome} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
+          <MaterialCommunityIcons name="arrow-left" size={responsiveStyle.fontSize.lg} color="white" />
         </TouchableOpacity>
         
         <View style={styles.progressContainer}>
@@ -213,7 +213,7 @@ export default function QuizGameScreen() {
         nestedScrollEnabled
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        contentContainerStyle={{ padding: 16, paddingBottom: 60, flexGrow: 1 }}
+        contentContainerStyle={{ padding: responsiveStyle.spacing.base, paddingBottom: responsiveStyle.spacing.xl * 2, flexGrow: 1 }}
       >
         <View style={styles.questionCard}>
           <Text style={styles.questionNumber}>
@@ -237,7 +237,7 @@ export default function QuizGameScreen() {
                 style={styles.correctButton} 
                 onPress={handleCorrectAnswer}
               >
-                <MaterialCommunityIcons name="check" size={24} color="white" />
+                <MaterialCommunityIcons name="check" size={responsiveStyle.fontSize.lg} color="white" />
                 <Text style={styles.answerButtonText}>Correct</Text>
               </TouchableOpacity>
               
@@ -245,14 +245,14 @@ export default function QuizGameScreen() {
                 style={styles.incorrectButton} 
                 onPress={handleIncorrectAnswer}
               >
-                <MaterialCommunityIcons name="close" size={24} color="white" />
+                <MaterialCommunityIcons name="close" size={responsiveStyle.fontSize.lg} color="white" />
                 <Text style={styles.answerButtonText}>Incorrect</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
           <TouchableOpacity style={styles.showAnswerButton} onPress={handleShowAnswer}>
-            <MaterialCommunityIcons name="eye" size={24} color="white" />
+            <MaterialCommunityIcons name="eye" size={responsiveStyle.fontSize.lg} color="white" />
             <Text style={styles.showAnswerText}>Voir la réponse</Text>
           </TouchableOpacity>
         )}
@@ -276,19 +276,19 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
   loadingText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: responsiveStyle.fontSize.base + 2, // ✅ Responsive : était 18
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: responsive.horizontalPadding,
+    paddingVertical: responsiveStyle.spacing.base,
     justifyContent: 'space-between',
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 44
+    height: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 44
+    borderRadius: responsiveStyle.component.iconSize,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -296,76 +296,76 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   progressContainer: {
     flex: 1,
     alignItems: 'center',
-    marginHorizontal: 20,
+    marginHorizontal: responsive.horizontalPadding,
   },
   progressText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: responsiveStyle.spacing.sm,
   },
   progressBar: {
     width: '100%',
-    height: 6,
+    height: responsiveStyle.spacing.xs, // ✅ Responsive : était 6
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 3,
+    borderRadius: responsiveStyle.spacing.xs / 2,
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#D4AF37',
-    borderRadius: 3,
+    borderRadius: responsiveStyle.spacing.xs / 2,
   },
   scoreContainer: {
     alignItems: 'center',
   },
   scoreText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     fontWeight: 'bold',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: responsive.horizontalPadding,
   },
   questionCard: {
     backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: responsiveStyle.component.borderRadius,
+    padding: responsiveStyle.spacing.base,
+    marginBottom: responsiveStyle.spacing.base,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: responsiveStyle.spacing.xs },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: responsiveStyle.spacing.sm,
     elevation: 5,
   },
   questionNumber: {
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     color: '#174C3C',
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: responsiveStyle.spacing.base,
   },
   questionText: {
-    fontSize: 18,
+    fontSize: responsiveStyle.fontSize.base + 2, // ✅ Responsive : était 18
     color: '#333',
-    lineHeight: 26,
+    lineHeight: (responsiveStyle.fontSize.base + 2) * 1.4,
   },
   answerCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: responsiveStyle.component.borderRadius,
+    padding: responsiveStyle.spacing.base,
+    marginBottom: responsiveStyle.spacing.base,
   },
   answerTitle: {
-    fontSize: 18,
+    fontSize: responsiveStyle.fontSize.base + 2, // ✅ Responsive : était 18
     fontWeight: 'bold',
     color: '#174C3C',
-    marginBottom: 10,
+    marginBottom: responsiveStyle.spacing.base,
   },
   answerText: {
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     color: '#333',
-    lineHeight: 24,
-    marginBottom: 20,
+    lineHeight: responsiveStyle.fontSize.base * 1.5,
+    marginBottom: responsiveStyle.spacing.base,
   },
   answerButtonContainer: {
     flexDirection: 'row',
@@ -375,9 +375,9 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     backgroundColor: '#27AE60',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: responsiveStyle.spacing.base,
+    paddingVertical: responsiveStyle.spacing.base,
+    borderRadius: responsiveStyle.component.borderRadius * 2,
     flex: 0.45,
     justifyContent: 'center',
   },
@@ -385,52 +385,52 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     backgroundColor: '#E74C3C',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: responsiveStyle.spacing.base,
+    paddingVertical: responsiveStyle.spacing.base,
+    borderRadius: responsiveStyle.component.borderRadius * 2,
     flex: 0.45,
     justifyContent: 'center',
   },
   answerButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     fontWeight: 'bold',
-    marginLeft: 8,
+    marginLeft: responsiveStyle.spacing.sm,
   },
   showAnswerButton: {
     backgroundColor: '#D4AF37',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 25,
-    marginBottom: 20,
+    paddingVertical: responsiveStyle.spacing.base,
+    borderRadius: responsiveStyle.component.borderRadius * 2,
+    marginBottom: responsiveStyle.spacing.base,
   },
   showAnswerText: {
     color: 'white',
-    fontSize: responsive.isLandscape ? 16 : 18,
+    fontSize: responsive.isLandscape ? responsiveStyle.fontSize.base : responsiveStyle.fontSize.base + 2, // ✅ Responsive
     fontWeight: 'bold',
-    marginLeft: responsive.isLandscape ? 6 : 8,
+    marginLeft: responsive.isLandscape ? responsiveStyle.spacing.xs : responsiveStyle.spacing.sm,
     flexShrink: 1, // Permettre au texte de se réduire si nécessaire
   },
   resultContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: responsiveStyle.spacing.xl,
   },
   resultTitle: {
-    fontSize: 32,
+    fontSize: responsiveStyle.fontSize.xxl, // ✅ Responsive : était 32
     fontWeight: 'bold',
     color: 'white',
-    marginTop: 20,
-    marginBottom: 20,
+    marginTop: responsiveStyle.spacing.base,
+    marginBottom: responsiveStyle.spacing.base,
   },
   percentageText: {
-    fontSize: 48,
+    fontSize: responsiveStyle.fontSize.xxl * 1.5, // ✅ Responsive : était 48
     fontWeight: 'bold',
     color: '#D4AF37',
-    marginBottom: 40,
+    marginBottom: responsiveStyle.spacing.xl,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -441,9 +441,9 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     backgroundColor: '#D4AF37',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: responsiveStyle.spacing.base,
+    paddingVertical: responsiveStyle.spacing.base,
+    borderRadius: responsiveStyle.component.borderRadius * 2,
     flex: 0.45,
     justifyContent: 'center',
   },
@@ -451,16 +451,16 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: responsiveStyle.spacing.base,
+    paddingVertical: responsiveStyle.spacing.base,
+    borderRadius: responsiveStyle.component.borderRadius * 2,
     flex: 0.45,
     justifyContent: 'center',
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     fontWeight: 'bold',
-    marginLeft: 8,
+    marginLeft: responsiveStyle.spacing.sm,
   },
 }); 

@@ -229,3 +229,5 @@ Si vous changez d'avis plus tard :
 - ✅ Il suffit de restaurer le code d'envoi d'email
 - ✅ Les utilisateurs existants ne seront pas affectés
 
+
+

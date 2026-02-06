@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { usePaymentService } from '../lib/paymentService';
 import { useAuthContext } from './AuthContext';
+import { read as readUserStorage } from '../utils/userStorage';
 
 interface EntitlementsContextType {
   entitlements: { part2: boolean; part3: boolean };
@@ -16,8 +17,8 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
   const [entitlements, setEntitlements] = useState<{ part2: boolean; part3: boolean }>({ part2: false, part3: false });
   const [isLoading, setIsLoading] = useState(false);
   const lastFetchRef = useRef<number>(0);
-  const COOLDOWN_MS = 10_000; // anti-boucle: 10s mini entre deux fetch normaux
-  const MIN_FORCE_GAP_MS = 2_000; // même en force, pas plus d'1 appel / 2s (permet refresh après paiement)
+  const COOLDOWN_MS = 3_000; // anti-boucle: 3s mini entre deux fetch normaux (optimisé)
+  const MIN_FORCE_GAP_MS = 1_000; // même en force, pas plus d'1 appel / 1s (optimisé)
   const isLoadingRef = useRef<boolean>(false); // éviter les re-renders liés à isLoading dans les deps
   const checkEntitlementsRef = useRef(checkEntitlements);
   
@@ -55,15 +56,27 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
     }
   }, [user?.uid]); // Retirer checkEntitlements des dépendances
 
-  // Charger/rafraîchir immédiatement à chaque changement d'utilisateur
+  // ✅ OPTIMISATION : Charger le cache local immédiatement, puis mettre à jour en arrière-plan
   React.useEffect(() => {
     if (user?.uid) {
-      // ✅ Amélioration Android : Attendre un peu pour que le token Firebase soit prêt
-      // Sur Android, le token peut prendre plus de temps à être disponible
-      const loadEntitlements = async () => {
-        // Attendre un peu pour que le token Firebase soit prêt (surtout sur Android)
-        await new Promise(resolve => setTimeout(resolve, 500));
-        // Forcer le refresh initial pour s'assurer d'avoir les entitlements dès le démarrage
+      // 1) CHARGER LE CACHE IMMÉDIATEMENT (0ms de délai)
+      const loadCache = async () => {
+        try {
+          const cached = await readUserStorage<string[]>(user.uid, 'entitlements');
+          if (cached && Array.isArray(cached)) {
+            const part2 = cached.includes('BOOK_PART_2');
+            const part3 = cached.includes('BOOK_PART_3');
+            setEntitlements({ part2, part3 });
+            console.log('📦 Entitlements chargés depuis le cache:', { part2, part3 });
+          }
+        } catch (e) {
+          console.warn('⚠️ Erreur lecture cache entitlements:', e);
+        }
+      };
+      loadCache();
+      
+      // 2) METTRE À JOUR EN ARRIÈRE-PLAN (sans timeout artificiel)
+      const refreshInBackground = async () => {
         try {
           await refreshEntitlements(true); // force=true pour bypasser le cooldown au démarrage
         } catch (e: any) {
@@ -71,13 +84,14 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
           if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
             console.error('Erreur refreshEntitlements initial:', e);
           }
+          // En cas d'erreur, on garde le cache chargé
         }
       };
-      loadEntitlements();
+      refreshInBackground();
     } else {
       setEntitlements({ part2: false, part3: false });
     }
-  }, [user?.uid]); // Retirer refreshEntitlements des dépendances pour éviter les boucles
+  }, [user?.uid, refreshEntitlements]); // Inclure refreshEntitlements pour éviter les warnings
 
   return (
     <EntitlementsContext.Provider value={{ entitlements, refreshEntitlements, isLoading }}>

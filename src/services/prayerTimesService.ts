@@ -234,6 +234,9 @@ export const fetchPrayerTimes = async (
     ? `${cityName.trim()}|${(countryName || '').trim() || 'DEFAULT_COUNTRY'}`
     : 'CURRENT_LOCATION';
 
+  // ✅ AMÉLIORATION : Vérifier le cache AVANT l'appel API pour affichage rapide
+  let cached: PrayerTimesResult | null = await loadLastPrayerTimes(id);
+  
   // Fonction interne pour l'appel API
   const fetchWithTimeout = async (): Promise<PrayerTimesResult> => {
     let data: any;
@@ -322,16 +325,26 @@ export const fetchPrayerTimes = async (
 
   try {
     // Essayer l'appel API avec timeout
-    return await Promise.race([fetchWithTimeout(), timeoutPromise]);
+    const result = await Promise.race([fetchWithTimeout(), timeoutPromise]);
+    // ✅ Si succès, retourner le résultat frais (le cache sera mis à jour dans fetchWithTimeout)
+    return result;
   } catch (error: any) {
     console.error('❌ Erreur fetchPrayerTimes (timeout ou erreur):', error);
 
-    // 2) Fallback: utiliser le dernier succès pour cette ville / position
-    const cached = await loadLastPrayerTimes(id);
+    // 2) Fallback: utiliser le cache (déjà chargé au début ou rechargé ici)
     if (cached) {
       console.log('📦 Utilisation des derniers horaires en cache pour', id);
       return {
         ...cached,
+        offline: true,
+      };
+    }
+    // Si pas de cache au début, essayer de recharger (au cas où)
+    const fallbackCache = await loadLastPrayerTimes(id);
+    if (fallbackCache) {
+      console.log('📦 Utilisation du cache de fallback pour', id);
+      return {
+        ...fallbackCache,
         offline: true,
       };
     }

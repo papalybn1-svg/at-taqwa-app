@@ -316,46 +316,40 @@ export default function BooksScreen() {
         handlePartPress(partie);
         return;
       }
-      // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
+      
+      // ✅ OPTIMISATION : Utiliser directement les entitlements du contexte (déjà chargés depuis le cache)
       console.log('🔄 Vérification des droits premium...');
+      const isUnlocked = (partie === 'deuxieme_partie' && userEntitlements.part2) || 
+                          (partie === 'troisieme_partie' && userEntitlements.part3);
       
-      // ✅ Amélioration Android : Forcer un refresh pour s'assurer d'avoir les entitlements les plus récents
-      // Attendre un peu pour que le token Firebase soit prêt (surtout sur Android)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log('🔐 Accès premium:', { partie, isUnlocked, entitlements: userEntitlements });
       
-      // Forcer le refresh même si ça viole le cooldown (important pour Android)
-      try { 
-        await refreshEntitlements(true); // force=true pour bypasser le cooldown
-        // Attendre un peu pour que les entitlements soient mis à jour dans le contexte
-        await new Promise(resolve => setTimeout(resolve, 200));
-      } catch (e: any) { 
-        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
-          console.error('Erreur refreshEntitlements:', e);
-        }
-      }
-      
-      let fresh = userEntitlements;
-      
-      // Si les entitlements du contexte sont encore à false, essayer un appel direct
-      if ((partie === 'deuxieme_partie' && !fresh.part2) || (partie === 'troisieme_partie' && !fresh.part3)) {
-        try { 
-          fresh = await fetchEntitlements(); 
-          console.log('📡 Entitlements récupérés directement:', fresh);
-        } catch (e: any) { 
-          if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
-            console.error('Erreur fetchEntitlements:', e);
-          }
-        }
-      }
-      
-      const isUnlocked = (partie === 'deuxieme_partie' && fresh.part2) || (partie === 'troisieme_partie' && fresh.part3);
-      console.log('🔐 Accès premium:', { partie, isUnlocked, fresh });
       if (isUnlocked) {
         console.log('✅ Accès débloqué, ouverture de la partie');
         handlePartPress(partie);
       } else {
-        console.log('🔒 Accès verrouillé, affichage du paywall');
-        showPaywallModal(partie);
+        // ✅ OPTIMISATION : Seulement si vraiment verrouillé, forcer un refresh (sans timeout)
+        console.log('🔒 Accès verrouillé, vérification serveur...');
+        try {
+          await refreshEntitlements(true); // force=true pour bypasser le cooldown
+          // Vérifier à nouveau avec les nouveaux entitlements
+          const fresh = entitlements;
+          const stillLocked = (partie === 'deuxieme_partie' && !fresh.part2) || 
+                              (partie === 'troisieme_partie' && !fresh.part3);
+          if (stillLocked) {
+            console.log('🔒 Accès toujours verrouillé, affichage du paywall');
+            showPaywallModal(partie);
+          } else {
+            console.log('✅ Accès débloqué après refresh, ouverture de la partie');
+            handlePartPress(partie);
+          }
+        } catch (e: any) {
+          // En cas d'erreur réseau, afficher le paywall (mieux que bloquer)
+          if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+            console.error('Erreur refreshEntitlements:', e);
+          }
+          showPaywallModal(partie);
+        }
       }
     } catch (error) {
       console.error('❌ Erreur dans handlePartCardPress:', error);

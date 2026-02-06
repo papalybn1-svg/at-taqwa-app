@@ -197,10 +197,10 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => {
       backgroundColor: 'white',
       borderRadius: responsiveStyle.component.borderRadius * 3.75,
       paddingHorizontal: isTablet ? responsiveStyle.spacing['2xl'] : responsiveStyle.spacing.xl,
-      paddingTop: responsiveStyle.spacing['3xl'] * paddingTopMultiplier,
+      paddingTop: isTablet ? responsiveStyle.spacing['2xl'] : responsiveStyle.spacing.lg,
       paddingBottom: isTablet ? responsiveStyle.spacing['2xl'] : responsiveStyle.spacing.lg,
       alignItems: 'center',
-      justifyContent: 'flex-end',
+      justifyContent: 'center', // ✅ Centré verticalement au lieu de 'flex-end'
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
@@ -220,11 +220,13 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => {
       fontWeight: 'bold',
       color: '#174C3C',
       textAlign: 'center',
-      marginBottom: responsiveStyle.spacing.base,
-      marginTop: responsiveStyle.spacing.base,
+      marginBottom: isTablet ? responsiveStyle.spacing.xl : responsiveStyle.spacing.base, // ✅ Responsive margin
+      marginTop: 0, // ✅ Pas de marginTop car centré verticalement
       lineHeight: isTablet 
         ? responsiveStyle.fontSize['2xl'] * 1.25
-        : responsiveStyle.fontSize.xl * 1.3,
+        : responsive.breakpoint === 'xs'
+          ? responsiveStyle.fontSize.lg * 1.3
+          : responsiveStyle.fontSize.xl * 1.3,
       // Propriétés pour éviter que le texte soit coupé
       paddingHorizontal: responsiveStyle.spacing.sm,
       flexWrap: 'wrap',

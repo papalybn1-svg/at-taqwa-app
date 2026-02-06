@@ -12,7 +12,7 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { useEntitlements } from '../contexts/EntitlementsContext';
 import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import { usePaymentService } from '../lib/paymentService';
-import { getCardStackPosition, getCharacterPosition, getCharacterSize } from '../utils/quizResponsive';
+import { getCardSizes, getCardStackPosition, getCharacterPosition, getCharacterSize } from '../utils/quizResponsive';
 import { isQuizUnlocked } from '../utils/quizUnlock';
 import { read as readUserStorage, remove as removeUserStorage, write as writeUserStorage } from '../utils/userStorage';
 import { db } from './firebaseConfig';
@@ -397,10 +397,10 @@ export default function OriginalQuizScreen() {
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fff' }}>
         <PanGestureHandler onHandlerStateChange={onGestureEvent}>
           <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-            <Text style={{ color: '#174C3C', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+            <Text style={[styles.emptyStateTitle, { color: '#174C3C' }]}>
               Aucune question disponible pour ce chapitre.
             </Text>
-            <Text style={{ color: '#888', fontSize: 14, marginTop: 10, textAlign: 'center' }}>
+            <Text style={[styles.emptyStateText, { color: '#888' }]}>
               Veuillez choisir un autre chapitre.
             </Text>
           </SafeAreaView>
@@ -1121,13 +1121,16 @@ export default function OriginalQuizScreen() {
               <ScrollView 
                 style={styles.questionScrollContainer}
                 contentContainerStyle={styles.questionScrollContent}
-                showsVerticalScrollIndicator={false}
+                showsVerticalScrollIndicator={true} // ✅ Activé pour montrer qu'on peut scroller
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                bounces={true}
               >
           <Text 
             style={styles.questionText}
-            numberOfLines={3}
-            adjustsFontSizeToFit={true}
-            minimumFontScale={0.75}
+            // ✅ CORRECTION : Enlever numberOfLines pour afficher toute la question
+            // numberOfLines={3} // ❌ Retiré pour permettre l'affichage complet
+            adjustsFontSizeToFit={false} // ✅ Désactivé pour garder la taille de police responsive
           >
             {currentQuestion.question}
           </Text>
@@ -1308,7 +1311,7 @@ export default function OriginalQuizScreen() {
             <View style={styles.modalHeader}>
               <Image
                 source={require('../../assets/lock-closed.png')}
-                style={{ width: 30, height: 30, marginRight: 10 }}
+                style={styles.modalLockIcon}
                 resizeMode="contain"
               />
               <Text style={styles.modalTitle}>Quiz verrouillé</Text>
@@ -1330,14 +1333,14 @@ export default function OriginalQuizScreen() {
                   Pour débloquer ce quiz, vous devez obtenir au moins 80% au quiz précédent.
                 </Text>
                 
-                <View style={{ marginVertical: 20, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 5 }}>
+                <View style={styles.modalScoreContainer}>
+                  <Text style={styles.modalScoreLabel}>
                     Votre score actuel :
                   </Text>
-                  <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#174C3C' }}>
+                  <Text style={styles.modalScoreValue}>
                     {lockedQuizInfo.score}%
                   </Text>
-                  <Text style={{ fontSize: 14, color: '#666', marginTop: 5 }}>
+                  <Text style={styles.modalScoreRequired}>
                     Score requis : 80%
                   </Text>
                 </View>
@@ -1387,6 +1390,7 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
   const characterSize = getCharacterSize(responsive);
   const characterPosition = getCharacterPosition(responsive);
   const cardStackPosition = getCardStackPosition(responsive);
+  const cardSizes = getCardSizes(responsive); // ✅ Ajouté pour utiliser les tailles corrigées
   
   return StyleSheet.create({
     container: {
@@ -1395,8 +1399,8 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
     },
   headerButtons: {
     position: 'absolute',
-    top: 50,
-    left: 20,
+    top: responsiveStyle.spacing.xl + responsiveStyle.spacing.base, // ✅ Responsive : était 50
+    left: responsive.horizontalPadding, // ✅ Responsive : était 20
     zIndex: 100,
     flexDirection: 'row',
     justifyContent: 'flex-start',
@@ -1404,23 +1408,23 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
   },
   backButton: { 
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 8,
-    width: 40,
-    height: 40,
+    borderRadius: responsiveStyle.component.borderRadius * 2, // ✅ Responsive : était 20
+    padding: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
+    width: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 40
+    height: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 40
     justifyContent: 'center',
     alignItems: 'center',
   },
   resultsBackButton: { 
     position: 'absolute',
-    top: 50,
-    left: 20,
+    top: responsiveStyle.spacing.xl + responsiveStyle.spacing.base, // ✅ Responsive : était 50
+    left: responsive.horizontalPadding, // ✅ Responsive : était 20
     zIndex: 100,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 8,
-    width: 40,
-    height: 40,
+    borderRadius: responsiveStyle.component.borderRadius * 2, // ✅ Responsive : était 20
+    padding: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
+    width: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 40
+    height: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 40
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1474,8 +1478,8 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
     flexWrap: 'wrap',
   },
   optionsContainer: { 
-    marginBottom: 2, // Réduit de 4 à 2 pour libérer de l'espace
-    marginTop: 8, // Réduit de 12 à 8 pour libérer de l'espace
+    marginBottom: responsiveStyle.spacing.xs / 2, // ✅ Responsive : était 2
+    marginTop: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
     width: '100%',
     // Utiliser flex: 1 pour prendre l'espace disponible dans whiteCard
     // et permettre le scroll quand le contenu dépasse
@@ -1483,8 +1487,8 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
     minHeight: 0, // Important pour permettre le scroll dans un conteneur flex
   },
   optionsContentContainer: {
-    paddingBottom: 16, // Augmenté pour plus d'espace en bas du scroll
-    paddingTop: 4, // Ajouté pour un peu d'espace en haut
+    paddingBottom: responsiveStyle.spacing.base, // ✅ Responsive : était 16
+    paddingTop: responsiveStyle.spacing.xs, // ✅ Responsive : était 4
     // Pas de flexGrow pour permettre le scroll correctement
   },
 
@@ -1496,9 +1500,9 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
   verifyButton: {
     backgroundColor: '#BB9B4E',
     padding: responsiveStyle.spacing.base,
-    borderRadius: 10,
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 10
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: responsiveStyle.spacing.xs, // ✅ Responsive : était 6
     width: '100%', // Assure que le bouton prend toute la largeur disponible
     maxWidth: '95%', // Limite la largeur pour rester dans le cadre
   },
@@ -1511,64 +1515,64 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
     fontWeight: 'bold',
   },
   answerSection: {
-    marginTop: 4, // Réduit de 6 à 4
+    marginTop: responsiveStyle.spacing.xs, // ✅ Responsive : était 4
   },
   correctAnswerBanner: {
     backgroundColor: '#174C3C',
-    padding: 8, // Réduit de 10 à 8
-    borderRadius: 10,
+    padding: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 10
     alignItems: 'center',
-    marginBottom: 6, // Réduit de 8 à 6
-    minHeight: 40, // Réduit de 44 à 40
+    marginBottom: responsiveStyle.spacing.xs, // ✅ Responsive : était 6
+    minHeight: responsiveStyle.component.iconSize * 2.5, // ✅ Responsive : était 40
   },
   correctAnswerText: {
     color: 'white',
-    fontSize: 13, // Réduit de 14 à 13
+    fontSize: responsiveStyle.fontSize.sm, // ✅ Responsive : était 13
     fontWeight: 'bold',
   },
   incorrectAnswerBanner: {
     backgroundColor: '#DC3545',
-    padding: 8,
-    borderRadius: 10,
+    padding: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 10
     alignItems: 'center',
-    marginBottom: 6,
-    minHeight: 40,
+    marginBottom: responsiveStyle.spacing.xs, // ✅ Responsive : était 6
+    minHeight: responsiveStyle.component.iconSize * 2.5, // ✅ Responsive : était 40
   },
   incorrectAnswerText: {
     color: 'white',
-    fontSize: 13,
+    fontSize: responsiveStyle.fontSize.sm, // ✅ Responsive : était 13
     fontWeight: 'bold',
   },
   nextButton: {
     backgroundColor: '#BB9B4E',
-    padding: 10,
-    borderRadius: 10,
+    padding: responsiveStyle.spacing.base, // ✅ Responsive : était 10
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 10
     alignItems: 'center', 
-    minHeight: 44,
+    minHeight: responsiveStyle.component.iconSize * 2.75, // ✅ Responsive : était 44
   },
   nextButtonText: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 14
     color: 'white',
     fontWeight: 'bold',
   },
   resultsTitle: { 
-    fontSize: 26,
+    fontSize: responsiveStyle.fontSize.xl + 2, // ✅ Responsive : était 26
     fontWeight: 'bold', 
     color: '#174C3C',
     textAlign: 'center',
-    marginTop: 20, // Ajouté pour descendre le texte
-    marginBottom: 22,
+    marginTop: responsiveStyle.spacing.base, // ✅ Responsive : était 20
+    marginBottom: responsiveStyle.spacing.base + 2, // ✅ Responsive : était 22
   },
   scoreText: { 
-    fontSize: 19,
+    fontSize: responsiveStyle.fontSize.base + 3, // ✅ Responsive : était 19
     color: '#333',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: responsiveStyle.spacing.xl, // ✅ Responsive : était 32
   },
   restartButton: { 
     backgroundColor: '#BB9B4E',
-    padding: 16,
-    borderRadius: 12,
+    padding: responsiveStyle.spacing.base, // ✅ Responsive : était 16
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 12
     alignItems: 'center',
     zIndex: 20,
     elevation: 10,
@@ -1578,10 +1582,10 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
       height: 2,
     },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: responsiveStyle.spacing.xs,
   },
   restartButtonText: { 
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     color: 'white',
     fontWeight: 'bold',
   },
@@ -1640,9 +1644,16 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
   whiteCard: {
     backgroundColor: 'white',
     borderRadius: 30,
-    paddingHorizontal: responsive.isTablet ? 30 : 20,
-    paddingTop: responsive.isTablet ? 28 : 22, // Réduit légèrement pour libérer de l'espace
-    paddingBottom: responsive.isTablet ? 22 : 18, // Réduit légèrement pour libérer de l'espace
+    paddingHorizontal: responsive.isTablet ? 30 : responsive.horizontalPadding,
+    // ✅ CORRECTION : Réduire paddingTop sur petits écrans pour libérer plus d'espace pour le contenu
+    paddingTop: responsive.breakpoint === 'xs' 
+      ? responsiveStyle.spacing.base  // ✅ Très petits écrans : base (16px) - Réduit
+      : responsive.breakpoint === 'sm'
+      ? responsiveStyle.spacing.base + responsiveStyle.spacing.xs  // ✅ iPhone standard : base + xs (18px)
+      : responsive.isTablet 
+      ? 28 
+      : 22,
+    paddingBottom: responsive.isTablet ? 22 : responsiveStyle.spacing.base, // ✅ Responsive
     alignItems: 'center',
     justifyContent: 'flex-start',
     // Utiliser flex pour permettre au ScrollView de prendre l'espace disponible
@@ -1659,14 +1670,8 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
     borderWidth: 2,
     borderColor: '#F0F0F0',
     width: '92%',
-    // Hauteur responsive basée sur les breakpoints - augmentée pour permettre plus d'espace au ScrollView
-    height: responsive.isTablet 
-      ? responsive.height * 0.58  // Tablettes : 58% de hauteur (augmenté de 55%)
-      : responsive.breakpoint === 'xs'
-        ? responsive.height * 0.60  // Très petits écrans : 60% (augmenté de 58%)
-        : responsive.breakpoint === 'sm'
-          ? responsive.height * 0.59  // iPhone standard : 59% (augmenté de 56%)
-          : responsive.height * 0.57, // Grands téléphones : 57% (augmenté de 54%)
+    // ✅ CORRECTION : Utiliser getCardSizes pour une hauteur cohérente et augmentée sur petits écrans
+    height: cardSizes.whiteCard.height, // ✅ Utilise les ratios corrigés de quizResponsive.ts (61% xs, 56% sm, etc.)
     position: 'absolute',
     bottom: 0,
     zIndex: 15,
@@ -1901,10 +1906,10 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
 
   optionText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: responsiveStyle.fontSize.sm, // ✅ Responsive : était 13
     fontWeight: '500',
     color: '#333',
-    lineHeight: 16,
+    lineHeight: responsiveStyle.fontSize.sm * 1.2, // ✅ Responsive : était 16
     textAlignVertical: 'center',
   },
   optionTextSelected: {
@@ -1920,38 +1925,83 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 15,
-    marginBottom: 10,
+    marginTop: responsiveStyle.spacing.base, // ✅ Responsive : était 15
+    marginBottom: responsiveStyle.spacing.base, // ✅ Responsive : était 10
   },
   congratulationsText: {
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     fontWeight: 'bold',
     color: '#174C3C',
-    marginRight: 8,
+    marginRight: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
   },
   starContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   // Nouveaux styles pour le scroll de la question
+  // ✅ CORRECTION : Augmenter maxHeight sur petits écrans pour afficher plus de contenu
   questionScrollContainer: {
-    maxHeight: '70%',
-    marginBottom: 20,
+    maxHeight: responsive.breakpoint === 'xs' 
+      ? '85%'  // ✅ Très petits écrans : 85% (était 70%)
+      : responsive.breakpoint === 'sm'
+      ? '80%'  // ✅ iPhone standard : 80% (était 70%)
+      : '75%', // Autres écrans : 75%
+    marginBottom: responsiveStyle.spacing.base,
+    flex: 1, // ✅ Ajouté pour prendre l'espace disponible
+    minHeight: 0, // ✅ Important pour permettre le scroll
   },
   questionScrollContent: {
     flexGrow: 1,
     justifyContent: 'flex-start',
+    paddingHorizontal: responsiveStyle.spacing.sm, // ✅ Ajouté pour padding horizontal
   },
   modalButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingVertical: responsiveStyle.spacing.base, // ✅ Responsive : était 12
+    paddingHorizontal: responsiveStyle.spacing.base, // ✅ Responsive : était 20
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 8
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalButtonText: {
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     fontWeight: 'bold',
+  },
+  // Styles pour les états vides
+  emptyStateTitle: {
+    fontSize: responsiveStyle.fontSize.base + 2, // ✅ Responsive : était 18
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 14
+    marginTop: responsiveStyle.spacing.base, // ✅ Responsive : était 10
+    textAlign: 'center',
+  },
+  // Styles pour le modal de verrouillage
+  modalLockIcon: {
+    width: responsiveStyle.fontSize.lg * 1.25, // ✅ Responsive : était 30
+    height: responsiveStyle.fontSize.lg * 1.25, // ✅ Responsive : était 30
+    marginRight: responsiveStyle.spacing.base, // ✅ Responsive : était 10
+  },
+  modalScoreContainer: {
+    marginVertical: responsiveStyle.spacing.base, // ✅ Responsive : était 20
+    alignItems: 'center',
+  },
+  modalScoreLabel: {
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: responsiveStyle.spacing.xs, // ✅ Responsive : était 5
+  },
+  modalScoreValue: {
+    fontSize: responsiveStyle.fontSize.xl + 2, // ✅ Responsive : était 24
+    fontWeight: 'bold',
+    color: '#174C3C',
+  },
+  modalScoreRequired: {
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 14
+    color: '#666',
+    marginTop: responsiveStyle.spacing.xs, // ✅ Responsive : était 5
   },
   });
 };

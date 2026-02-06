@@ -194,3 +194,5 @@ Une fois vérifié :
 **Une fois configuré, Android aura le même comportement qu'iOS !** 🎉
 
 
+
+

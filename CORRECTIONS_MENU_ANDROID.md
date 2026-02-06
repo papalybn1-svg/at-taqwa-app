@@ -184,3 +184,5 @@ Hauteur totale = baseTabBarHeight + bottomPadding
 
 
 
+
+

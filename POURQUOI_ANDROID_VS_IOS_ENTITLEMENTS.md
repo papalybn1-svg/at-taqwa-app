@@ -196,3 +196,5 @@ Les corrections ajoutent des **attentes** et **force le refresh** pour s'assurer
 **Les corrections rendent le code plus robuste pour les deux plateformes !** 🚀
 
 
+
+

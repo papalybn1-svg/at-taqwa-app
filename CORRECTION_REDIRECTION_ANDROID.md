@@ -212,3 +212,5 @@ setUser?.({ ...(auth.currentUser as any), role, emailVerified: true });
 **Corrections appliquées avec succès !** ✅
 
 
+
+

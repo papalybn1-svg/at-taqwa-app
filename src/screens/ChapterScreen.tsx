@@ -284,40 +284,27 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         return;
       }
       
-      // ✅ Amélioration : Forcer un refresh pour s'assurer d'avoir les entitlements les plus récents
-      // Attendre un peu pour que le token Firebase soit prêt (surtout sur Android)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Forcer le refresh même si ça viole le cooldown (important pour Android)
-      try { 
-        await refreshEntitlements(true); // force=true pour bypasser le cooldown
-        // Attendre un peu pour que les entitlements soient mis à jour dans le contexte
-        await new Promise(resolve => setTimeout(resolve, 300));
-      } catch (e: any) {
-        // Ne pas logger en boucle si erreur réseau
-        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
-          console.error('Erreur refreshEntitlements:', e);
-        }
-      }
-      
-      // Récupérer les entitlements depuis le contexte (mis à jour par refreshEntitlements)
+      // ✅ OPTIMISATION : Utiliser directement les entitlements du contexte (déjà chargés depuis le cache)
+      // Récupérer les entitlements depuis le contexte (chargés immédiatement depuis le cache)
       let latest = entitlements;
       
-      // Si les entitlements du contexte sont encore à false, essayer un appel direct
       const isPremiumPart = currentChapter.partieKey === 'deuxieme_partie' || currentChapter.partieKey === 'troisieme_partie';
       const needsPart2 = currentChapter.partieKey === 'deuxieme_partie';
       const needsPart3 = currentChapter.partieKey === 'troisieme_partie';
       
-      // Si on a besoin d'un accès premium et que les entitlements sont à false, faire un appel direct
+      // ✅ OPTIMISATION : Seulement si vraiment nécessaire, forcer un refresh (sans timeout)
+      // Si on a besoin d'un accès premium et que les entitlements sont à false, vérifier le serveur
       if (isPremiumPart && !latest.part2 && !latest.part3) {
         try { 
-          latest = await fetchEntitlements(); 
-          console.log('📡 Entitlements récupérés directement:', latest);
+          await refreshEntitlements(true); // force=true pour bypasser le cooldown
+          latest = entitlements; // Récupérer les entitlements mis à jour
+          console.log('📡 Entitlements mis à jour après refresh:', latest);
         } catch (e: any) {
           // Ne pas logger en boucle si erreur réseau
           if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
-            console.error('Erreur fetchEntitlements:', e);
+            console.error('Erreur refreshEntitlements:', e);
           }
+          // En cas d'erreur, on garde les entitlements du contexte (cache)
         }
       }
       

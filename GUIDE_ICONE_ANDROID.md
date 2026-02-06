@@ -284,3 +284,5 @@ Si vous avez besoin d'aide pour créer l'icône :
 - Utilisez Android Asset Studio pour prévisualiser
 - Testez en cercle, carré arrondi, et carré
 
+
+

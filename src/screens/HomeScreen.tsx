@@ -300,17 +300,11 @@ export default function HomeScreen() {
   const { refreshEntitlements } = useEntitlements();
   useFocusEffect(
     React.useCallback(() => {
-      // Ne pas forcer pour éviter les boucles infinies
+      // ✅ OPTIMISATION : Le contexte charge déjà le cache immédiatement
+      // On fait juste un refresh en arrière-plan si nécessaire (respecte le cooldown)
       refreshEntitlements(false).catch(()=>{});
-      (async () => {
-        try {
-          const latest = await fetchEntitlements();
-          setFreshEntitlements(latest);
-        } catch {
-          // silencieux
-        }
-      })();
-    }, [])
+      // Plus besoin de fetchEntitlements séparé, le contexte gère déjà le cache
+    }, [refreshEntitlements])
   );
 
   // Fonction pour vérifier si un chapitre est premium et non débloqué
@@ -339,45 +333,27 @@ export default function HomeScreen() {
   };
 
   const handleChapterPress = async (chapter: Chapter) => {
-    // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
+    // ✅ OPTIMISATION : Utiliser directement les entitlements du contexte (déjà chargés depuis le cache)
     const isPremium = chapter.partie === 'deuxieme_partie' || chapter.partie === 'troisieme_partie';
     
-    // ✅ Amélioration Android : Si c'est premium, forcer un refresh pour s'assurer d'avoir les entitlements
-    if (isPremium) {
-      // Attendre un peu pour que le token Firebase soit prêt (surtout sur Android)
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Forcer le refresh même si ça viole le cooldown (important pour Android)
+    // Lire les entitlements depuis le contexte (chargés immédiatement depuis le cache)
+    let latest = entitlements;
+    
+    // ✅ OPTIMISATION : Seulement si premium et verrouillé, forcer un refresh (sans timeout)
+    if (isPremium && !latest.part2 && !latest.part3) {
       try { 
         await refreshEntitlements(true); // force=true pour bypasser le cooldown
-        // Attendre un peu pour que les entitlements soient mis à jour dans le contexte
-        await new Promise(resolve => setTimeout(resolve, 200));
+        latest = entitlements; // Récupérer les entitlements mis à jour
       } catch (e: any) {
         // Ne pas logger en boucle si erreur réseau
         if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
           console.error('Erreur refreshEntitlements:', e);
         }
-      }
-    } else {
-      // Pour les parties gratuites, refresh normal (respecte le cooldown)
-      try { await refreshEntitlements(false); } catch {}
-    }
-    
-    // Lire un snapshot frais côté backend pour éviter un état obsolète
-    let latest = entitlements;
-    
-    // Si c'est premium et que les entitlements sont encore à false, essayer un appel direct
-    if (isPremium && !latest.part2 && !latest.part3) {
-      try { 
-        latest = await fetchEntitlements(); 
-        console.log('📡 Entitlements récupérés directement (HomeScreen):', latest);
-      } catch (e: any) {
-        // Ne pas logger en boucle si erreur réseau
-        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
-          console.error('Erreur fetchEntitlements:', e);
-        }
+        // En cas d'erreur, on garde les entitlements du contexte (cache)
       }
     }
+    
+    // Les entitlements sont maintenant à jour (soit depuis le cache, soit après refresh)
 
     const hasAccess = !isPremium
       ? true
@@ -411,39 +387,43 @@ export default function HomeScreen() {
   };
 
   const openFullChapter = async () => {
-    if (!selectedChapter) return;
-    // Utiliser les entitlements déjà chargés (éviter les appels réseau supplémentaires)
-    // Ne pas forcer pour éviter les boucles infinies
-    try { await refreshEntitlements(false); } catch {}
+    console.log('🔵 openFullChapter appelé');
+    if (!selectedChapter) {
+      console.log('❌ selectedChapter est null');
+      return;
+    }
+    console.log('📖 Chapitre sélectionné:', selectedChapter.title, 'Partie:', selectedChapter.partie);
+    
+    // ✅ OPTIMISATION : Utiliser directement les entitlements du contexte (déjà chargés depuis le cache)
     let latest = entitlements;
-    try { latest = await fetchEntitlements(); } catch {}
+    console.log('🔐 Entitlements:', latest);
+    
     const isPremium = selectedChapter.partie === 'deuxieme_partie' || selectedChapter.partie === 'troisieme_partie';
     const hasAccess = !isPremium
       ? true
       : selectedChapter.partie === 'deuxieme_partie'
         ? latest.part2
         : latest.part3;
+    
+    console.log('💎 isPremium:', isPremium, 'hasAccess:', hasAccess);
+    
     if (isPremium && !hasAccess) {
-        const partieNumero = selectedChapter.partie === 'deuxieme_partie' ? '2' : '3';
-        Alert.alert(
-          'Contenu Premium',
-          `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
-          [
-            { text: 'Annuler', style: 'cancel' },
-            { 
-              text: 'Voir les parties', 
-              onPress: () => {
-                closePreviewModal();
-                navigation.navigate('Books' as never);
-              }
-            }
-          ]
-        );
+        // ✅ AMÉLIORATION : Rediriger directement vers BooksScreen avec la partie sélectionnée
+        const partieKey = selectedChapter.partie; // 'deuxieme_partie' ou 'troisieme_partie'
+        console.log('🚀 Navigation vers Books avec partie:', partieKey);
+        closePreviewModal();
+        // Naviguer vers BooksScreen avec la partie présélectionnée
+        setTimeout(() => {
+          (navigation as any).navigate('Books', { selectedPart: partieKey });
+        }, 100); // Petit délai pour s'assurer que la modal est fermée
         return;
       }
+      console.log('📚 Ouverture du chapitre complet');
       closePreviewModal();
       // Indiquer que l'utilisateur vient de l'aperçu du livre sur l'écran d'accueil
-      (navigation as any).navigate('Chapter', { chapter: selectedChapter, fromHomePreview: true });
+      setTimeout(() => {
+        (navigation as any).navigate('Chapter', { chapter: selectedChapter, fromHomePreview: true });
+      }, 100);
   };
 
   const loadNotifications = React.useCallback(async () => {
@@ -842,7 +822,12 @@ export default function HomeScreen() {
               <Text style={styles.previewModalTitleModern}>{selectedChapter.title}</Text>
               <Text style={styles.previewModalSubtitleModern}>{selectedChapter.partieTitre}</Text>
               <Text style={styles.previewModalAuthorModern}>par {selectedChapter.author || 'Auteur inconnu'}</Text>
-              <ScrollView style={styles.previewModalScrollModern} showsVerticalScrollIndicator={false}>
+              <ScrollView 
+                style={styles.previewModalScrollModern} 
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+              >
                 <Text style={styles.previewModalDescriptionModern}>
                   {chapterPreviews[selectedChapter.id] ? 
                     chapterPreviews[selectedChapter.id].substring(0, 350) + '...'
@@ -857,6 +842,8 @@ export default function HomeScreen() {
                   isPremiumChapter(selectedChapter) && styles.previewModalButtonPremium
                 ]} 
                 onPress={openFullChapter}
+                activeOpacity={0.7}
+                disabled={false}
               >
                   <MaterialCommunityIcons 
                     name={isPremiumChapter(selectedChapter) ? "crown" : "book-open-variant"} 
@@ -1239,10 +1226,13 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => Sty
     paddingHorizontal: 24,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
+    zIndex: 10, // ✅ Ajouté pour s'assurer que le bouton est au-dessus
+    minHeight: 48, // ✅ Ajouté pour garantir une zone de touch suffisante
     shadowRadius: 4,
     marginTop: 10,
   },

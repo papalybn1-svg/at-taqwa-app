@@ -279,39 +279,52 @@ export default function HorairesScreen() {
           }
         }, 20000);
         
-        const result = await fetchPrayerTimes('Dakar', undefined, 15000); // Timeout de 15s
-        
-        // Nettoyer le timeout si la requête réussit
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-        
-        if (!isMounted) return;
-        
-        // Mettre à jour avec les nouvelles données
-        setPrayerTimes(result.timings);
-        setCity(result.city);
-        setLastUpdate(result.lastUpdate);
-        setOfflineMode(result.offline || false);
-        
-        // Calculer la prochaine prière
-        const nextPrayer = getNextPrayerInfo(result.timings);
-        setNextPrayerInfo(nextPrayer);
-        
-        // Formatage de la date
-        if (result.date) {
-          const gregorian = result.date.gregorian;
-          const hijri = result.date.hijri;
+        // Appel API pour mettre à jour les données
+        try {
+          const result = await fetchPrayerTimes('Dakar', undefined, 15000); // Timeout de 15s
           
-          setDate(`${gregorian.day} ${gregorian.month.fr || gregorian.month.en} ${gregorian.year}`);
-          setHijri(`${hijri.day} ${hijri.month.fr || hijri.month.en} ${hijri.year}`);
-        } else {
-          setDate(getCurrentDate());
-          setHijri(getHijriDate());
+          // Nettoyer le timeout si la requête réussit
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+          
+          if (!isMounted) return;
+          
+          // Mettre à jour avec les nouvelles données
+          setPrayerTimes(result.timings);
+          setCity(result.city);
+          setLastUpdate(result.lastUpdate);
+          setOfflineMode(result.offline || false);
+          
+          // Calculer la prochaine prière
+          const nextPrayer = getNextPrayerInfo(result.timings);
+          setNextPrayerInfo(nextPrayer);
+          
+          // Formatage de la date
+          if (result.date) {
+            const gregorian = result.date.gregorian;
+            const hijri = result.date.hijri;
+            
+            setDate(`${gregorian.day} ${gregorian.month.fr || gregorian.month.en} ${gregorian.year}`);
+            setHijri(`${hijri.day} ${hijri.month.fr || hijri.month.en} ${hijri.year}`);
+          } else {
+            setDate(getCurrentDate());
+            setHijri(getHijriDate());
+          }
+          
+          // Ne pas programmer de notifications automatiquement; l'utilisateur activera via le switch
+        } catch (apiError) {
+          // Erreur API : le cache sera utilisé (déjà affiché au début)
+          console.log('❌ Erreur API, utilisation du cache:', apiError);
+          if (isMounted && !hasDataFromCache) {
+            // Si pas de cache, utiliser les valeurs par défaut
+            setOfflineMode(true);
+            setDate(getCurrentDate());
+            setHijri(getHijriDate());
+            setCity('Dakar (offline)');
+          }
         }
-        
-        // Ne pas programmer de notifications automatiquement; l'utilisateur activera via le switch
         
       } catch (error) {
         if (!isMounted) return;
