@@ -394,11 +394,23 @@ export default function BooksScreen() {
               onPress={selectedPart ? () => setSelectedPart(null) : () => navigation.goBack()} 
               style={styles.simpleBackButton}
             >
-              <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
+              <MaterialCommunityIcons 
+                name="arrow-left" 
+                size={responsive.breakpoint === 'xxl' && responsive.width >= 1024
+                  ? responsiveStyle.component.iconSize * 1.5
+                  : responsiveStyle.component.iconSize * 1.2} 
+                color="#174C3C" 
+              />
             </TouchableOpacity>
             <View style={{ flex: 1 }} />
             <TouchableOpacity onPress={openDrawer} style={styles.simpleMenuButton}>
-              <MaterialCommunityIcons name="menu" size={24} color="#174C3C" />
+              <MaterialCommunityIcons 
+                name="menu" 
+                size={responsive.breakpoint === 'xxl' && responsive.width >= 1024
+                  ? responsiveStyle.component.iconSize * 1.5
+                  : responsiveStyle.component.iconSize * 1.2} 
+                color="#174C3C" 
+              />
             </TouchableOpacity>
           </View>
 
@@ -420,7 +432,13 @@ export default function BooksScreen() {
                 </View>
                 
                 {/* Liste des chapitres de la partie */}
-                <View style={{ paddingHorizontal: 20 }}>
+                <View style={{ 
+                  paddingHorizontal: responsive.breakpoint === 'xs'
+                    ? Math.max(12, responsiveStyle.spacing.base)
+                    : responsive.breakpoint === 'sm'
+                      ? responsiveStyle.spacing.lg
+                      : responsiveStyle.horizontalPadding || responsiveStyle.spacing.lg 
+                }}>
                   {data[selectedPart as keyof ChaptersData].chapitres.map((ch, idx) => {
                     const chapterProgress = progress[`chapter${selectedPart}_${idx+1}`] || 0;
                     return (
@@ -477,7 +495,15 @@ export default function BooksScreen() {
                           
                           <View style={styles.chapterFooter}>
                             <View style={styles.authorContainer}>
-                              <MaterialCommunityIcons name="account-edit" size={14} color={colors.secondary} />
+                              <MaterialCommunityIcons 
+                                name="account-edit" 
+                                size={responsive.breakpoint === 'xxl' && responsive.width >= 1024
+                                  ? responsiveStyle.component.iconSize * 0.7
+                                  : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+                                    ? responsiveStyle.component.iconSize * 0.6
+                                    : responsiveStyle.component.iconSize * 0.65} 
+                                color={colors.secondary} 
+                              />
                               <Text style={styles.newChapterAuthor}>{ch.author}</Text>
                             </View>
 
@@ -511,7 +537,7 @@ export default function BooksScreen() {
                   const isUnlocked = (partie === 'deuxieme_partie' && source.part2) || 
                                     (partie === 'troisieme_partie' && source.part3);
                   return (
-                    <View key={pidx} style={{ marginBottom: 16 }}>
+                    <View key={pidx} style={{ marginBottom: responsiveStyle.spacing.lg }}>
                       {/* Carte de partie */}
                       <TouchableOpacity 
                         style={[styles.partCard, isPremium && styles.premiumCard]}
@@ -528,8 +554,10 @@ export default function BooksScreen() {
                               <View style={styles.partCardIcon}>
                                 <MaterialCommunityIcons 
                                   name={isPremium ? "crown" : (pidx === 0 ? "book-open-variant" : "book-multiple")} 
-                                  size={24} 
-                                  color={isPremium ? "#D4AF37" : "colors.secondary"} 
+                                  size={responsive.breakpoint === 'xxl' && responsive.width >= 1024
+                                    ? responsiveStyle.component.iconSize * 1.5
+                                    : responsiveStyle.component.iconSize * 1.2} 
+                                  color={isPremium ? "#D4AF37" : colors.secondary} 
                                 />
                               </View>
                               <Text style={[
@@ -553,7 +581,15 @@ export default function BooksScreen() {
                                 </View>
                               )}
                             </View>
-                            <MaterialCommunityIcons name="chevron-right" size={24} color="#174C3C" />
+                            <MaterialCommunityIcons 
+                              name="chevron-right" 
+                              size={responsive.breakpoint === 'xxl' && responsive.width >= 1024
+                                ? responsiveStyle.component.iconSize * 1.5
+                                : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+                                  ? responsiveStyle.component.iconSize * 1.0
+                                  : responsiveStyle.component.iconSize * 1.2} 
+                              color="#174C3C" 
+                            />
                           </View>
                           <Text style={styles.partCardSubtitle}>{data[partie as keyof ChaptersData].titre}</Text>
                           <Text style={styles.partCardChapters}>
@@ -721,9 +757,9 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     letterSpacing: 0.3,
   },
   simpleMenuButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: responsiveStyle.component.buttonHeight,
+    height: responsiveStyle.component.buttonHeight,
+    borderRadius: responsiveStyle.component.buttonHeight / 2,
     backgroundColor: 'rgba(23, 76, 60, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -731,74 +767,92 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   
   // Styles pour les parties
   partHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: responsiveStyle.horizontalPadding || responsiveStyle.spacing.lg,
+    paddingVertical: responsiveStyle.spacing.lg,
     backgroundColor: '#F8FAF9',
     borderBottomWidth: 1,
     borderBottomColor: '#E8F5E8',
   },
 
   partTitle: {
-    fontSize: 24,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize['3xl']  // Plus grand pour très grands écrans
+      : responsiveStyle.fontSize['2xl'],
     fontWeight: 'bold',
     color: '#174C3C',
   },
   partCard: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginBottom: 12,
+    borderRadius: responsiveStyle.component.borderRadius * 2.5,
+    marginHorizontal: responsiveStyle.horizontalPadding || responsiveStyle.spacing.lg,
+    marginBottom: responsiveStyle.spacing.base,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowRadius: responsiveStyle.spacing.base,
     elevation: 8,
     borderWidth: 1,
     borderColor: 'rgba(23, 76, 60, 0.1)',
   },
   partCardContent: {
-    padding: 24,
+    padding: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing['2xl']  // Plus grand pour très grands écrans
+      : responsiveStyle.spacing.lg,
   },
   partCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: responsiveStyle.spacing.base,
   },
   partCardTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   partCardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.iconSize * 2.5  // Plus grand pour très grands écrans
+      : responsiveStyle.component.iconSize * 2,
+    height: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.iconSize * 2.5
+      : responsiveStyle.component.iconSize * 2,
+    borderRadius: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.iconSize * 1.25
+      : responsiveStyle.component.iconSize,
     backgroundColor: 'rgba(187, 155, 78, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: responsiveStyle.spacing.base,
   },
   partCardTitle: {
-    fontSize: 20,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.xl  // Plus grand pour très grands écrans
+      : responsiveStyle.fontSize.lg,
     fontWeight: 'bold',
     color: '#174C3C',
     letterSpacing: 0.5,
   },
   partCardSubtitle: {
-    fontSize: 18,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg  // Plus grand pour très grands écrans
+      : responsiveStyle.fontSize.base,
     color: '#174C3C',
-    marginBottom: 12,
+    marginBottom: responsiveStyle.spacing.base,
     fontWeight: '600',
-    lineHeight: 24,
+    lineHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg * 1.4
+      : responsiveStyle.fontSize.base * 1.3,
   },
   partCardChapters: {
-    fontSize: 15,
-    color: 'colors.secondary',
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.base  // Plus grand pour très grands écrans
+      : responsiveStyle.fontSize.sm,
+    color: colors.secondary,
     fontWeight: '600',
     backgroundColor: 'rgba(187, 155, 78, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: responsiveStyle.spacing.base,
+    paddingVertical: responsiveStyle.spacing.xs,
+    borderRadius: responsiveStyle.component.borderRadius * 1.5,
     alignSelf: 'flex-start',
   },
   
@@ -861,19 +915,21 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
 
   // Section headers
   sectionHeader: {
-    marginHorizontal: 20,
-    marginBottom: 16,
+    marginHorizontal: responsiveStyle.horizontalPadding || responsiveStyle.spacing.lg,
+    marginBottom: responsiveStyle.spacing.lg,
   },
   sectionTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   newSectionTitle: {
-    fontSize: 20,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.xl
+      : responsiveStyle.fontSize.lg,
     fontWeight: 'bold',
     color: '#174C3C',
     letterSpacing: 0.2,
-    marginRight: 16,
+    marginRight: responsiveStyle.spacing.lg,
   },
   sectionLine: {
     flex: 1,
@@ -886,27 +942,57 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   newChapterCard: {
     flexDirection: 'row',
     backgroundColor: 'white',
-    borderRadius: 20,
-    marginBottom: 16,
+    borderRadius: responsiveStyle.component.borderRadius * 2.5,
+    marginBottom: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing['2xl']
+      : responsive.breakpoint === 'xs'
+        ? Math.max(8, responsiveStyle.spacing.base * 0.8)
+        : responsive.breakpoint === 'sm'
+          ? responsiveStyle.spacing.base
+          : responsiveStyle.spacing.lg,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    padding: 18,
+    shadowRadius: responsiveStyle.spacing.base,
+    padding: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing['2xl']
+      : responsive.breakpoint === 'xs'
+        ? Math.max(10, responsiveStyle.spacing.base * 0.9)
+        : responsive.breakpoint === 'sm'
+          ? responsiveStyle.spacing.base
+          : responsiveStyle.spacing.lg,
     position: 'relative',
   },
   imageContainer: {
     position: 'relative',
-    marginRight: 16,
-    width: 100,
-    height: 100,
-    borderRadius: 16,
+    marginRight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.xl
+      : responsive.breakpoint === 'xs'
+        ? Math.max(8, responsiveStyle.spacing.base * 0.8)
+        : responsive.breakpoint === 'sm'
+          ? responsiveStyle.spacing.base
+          : responsiveStyle.spacing.lg,
+    width: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.iconSize * 6
+      : responsive.breakpoint === 'xs'
+        ? Math.max(60, responsiveStyle.component.iconSize * 3.5)
+        : responsive.breakpoint === 'sm'
+          ? Math.max(70, responsiveStyle.component.iconSize * 4)
+          : responsiveStyle.component.iconSize * 5,
+    height: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.iconSize * 6
+      : responsive.breakpoint === 'xs'
+        ? Math.max(60, responsiveStyle.component.iconSize * 3.5)
+        : responsive.breakpoint === 'sm'
+          ? Math.max(70, responsiveStyle.component.iconSize * 4)
+          : responsiveStyle.component.iconSize * 5,
+    borderRadius: responsiveStyle.component.borderRadius * 2,
     overflow: 'hidden',
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: responsiveStyle.spacing.xs,
     backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
@@ -918,11 +1004,31 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
   progressOverlay: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? -8
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? -4
+        : -6,
+    right: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? -8
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? -4
+        : -6,
+    width: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.iconSize * 1.4
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? responsiveStyle.component.iconSize * 1.0
+        : responsiveStyle.component.iconSize * 1.2,
+    height: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.iconSize * 1.4
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? responsiveStyle.component.iconSize * 1.0
+        : responsiveStyle.component.iconSize * 1.2,
+    borderRadius: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.iconSize * 0.7
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? responsiveStyle.component.iconSize * 0.5
+        : responsiveStyle.component.iconSize * 0.6,
     backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',
@@ -930,7 +1036,7 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: responsiveStyle.spacing.xs,
   },
   newChapterContent: {
     flex: 1,
@@ -940,69 +1046,135 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: responsive.breakpoint === 'xs'
+      ? Math.max(6, responsiveStyle.spacing.xs)
+      : responsiveStyle.spacing.sm,
   },
   chapterTitleContainer: {
     flex: 1,
-    marginRight: 12,
+    marginRight: responsive.breakpoint === 'xs'
+      ? Math.max(6, responsiveStyle.spacing.xs)
+      : responsive.breakpoint === 'sm'
+        ? responsiveStyle.spacing.sm
+        : responsiveStyle.spacing.base,
   },
   newChapterTitle: {
-    fontSize: 15,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg
+      : responsive.breakpoint === 'xs'
+        ? Math.max(11, responsiveStyle.fontSize.xs)
+        : responsive.breakpoint === 'sm'
+          ? Math.max(12, responsiveStyle.fontSize.sm * 0.9)
+          : responsiveStyle.fontSize.sm,
     fontWeight: 'bold',
     color: '#174C3C',
-    lineHeight: 20,
+    lineHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg * 1.3
+      : responsive.breakpoint === 'xs'
+        ? Math.max(14, responsiveStyle.fontSize.xs * 1.3)
+        : responsive.breakpoint === 'sm'
+          ? Math.max(15, responsiveStyle.fontSize.sm * 1.2)
+          : responsiveStyle.fontSize.sm * 1.3,
   },
   progressBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    minWidth: 35,
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.sm
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? responsiveStyle.spacing.xs / 2
+        : responsiveStyle.spacing.xs,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.xs
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? responsiveStyle.spacing.xs / 3
+        : responsiveStyle.spacing.xs / 2,
+    borderRadius: responsiveStyle.component.borderRadius,
+    minWidth: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 45
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 30
+        : 35,
     alignItems: 'center',
   },
   progressText: {
-    fontSize: 10,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.sm
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(8, responsiveStyle.fontSize.xs * 0.85)
+        : responsiveStyle.fontSize.xs,
     fontWeight: 'bold',
   },
   progressTextSmall: {
-    fontSize: 10,
+    fontSize: responsiveStyle.fontSize.xs,
     fontWeight: '600',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: responsiveStyle.spacing.xs,
   },
   newChapterDesc: {
-    fontSize: 14,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.base
+      : responsive.breakpoint === 'xs'
+        ? Math.max(10, responsiveStyle.fontSize.xs * 0.9)
+        : responsive.breakpoint === 'sm'
+          ? Math.max(11, responsiveStyle.fontSize.sm * 0.85)
+          : responsiveStyle.fontSize.sm,
     color: colors.secondary,
-    lineHeight: 20,
-    marginBottom: 8,
+    lineHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.base * 1.4
+      : responsive.breakpoint === 'xs'
+        ? Math.max(14, responsiveStyle.fontSize.xs * 1.4)
+        : responsive.breakpoint === 'sm'
+          ? Math.max(15, responsiveStyle.fontSize.sm * 1.3)
+          : responsiveStyle.fontSize.sm * 1.4,
+    marginBottom: responsiveStyle.spacing.sm,
   },
   chapterPartieText: {
-    fontSize: 12,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.sm
+      : responsive.breakpoint === 'xs'
+        ? Math.max(10, responsiveStyle.fontSize.xs)
+        : responsive.breakpoint === 'sm'
+          ? Math.max(11, responsiveStyle.fontSize.xs * 1.1)
+          : responsiveStyle.fontSize.xs,
     color: '#174C3C',
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: responsiveStyle.spacing.base,
     fontStyle: 'italic',
   },
   chapterFooter: {
     flexDirection: 'column',
-    gap: 8,
+    gap: responsiveStyle.spacing.sm,
   },
   authorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   newChapterAuthor: {
-    fontSize: 13,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.sm
+      : responsive.breakpoint === 'xs'
+        ? Math.max(10, responsiveStyle.fontSize.xs)
+        : responsive.breakpoint === 'sm'
+          ? Math.max(11, responsiveStyle.fontSize.xs * 1.1)
+          : responsiveStyle.fontSize.xs,
     color: colors.secondary,
     fontStyle: 'italic',
-    marginLeft: 6,
+    marginLeft: responsiveStyle.spacing.xs,
   },
   progressBarContainer: {
     width: '100%',
   },
   progressBarBg: {
-    height: 6,
+    height: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 8
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 5
+        : 6,
     backgroundColor: '#E8F5E8',
-    borderRadius: 3,
+    borderRadius: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 4
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 2.5
+        : 3,
     overflow: 'hidden',
   },
   progressBarFill: {
@@ -1024,16 +1196,38 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
   premiumBadge: {
     backgroundColor: '#D4AF37',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.base
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? responsiveStyle.spacing.xs
+        : responsiveStyle.spacing.sm,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.xs
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? responsiveStyle.spacing.xs / 3
+        : responsiveStyle.spacing.xs / 2,
+    borderRadius: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.borderRadius * 2
+      : responsiveStyle.component.borderRadius * 1.5,
+    marginLeft: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.base
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? responsiveStyle.spacing.xs
+        : responsiveStyle.spacing.sm,
   },
   premiumBadgeText: {
     color: '#174C3C',
-    fontSize: 10,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.sm
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(8, responsiveStyle.fontSize.xs * 0.85)
+        : responsiveStyle.fontSize.xs,
     fontWeight: 'bold',
-    letterSpacing: 0.5,
+    letterSpacing: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 0.8
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 0.3
+        : 0.5,
   },
 
   // Drawer redesigné
@@ -1043,74 +1237,88 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   drawerContainer: {
-    width: 320,
+    width: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? Math.min(400, responsive.width * 0.35)
+      : Math.min(320, responsive.width * 0.8),
     backgroundColor: '#174C3C',
-    borderTopRightRadius: 24,
-    borderBottomRightRadius: 24,
-    marginTop: 45,
+    borderTopRightRadius: responsiveStyle.component.borderRadius * 3,
+    borderBottomRightRadius: responsiveStyle.component.borderRadius * 3,
+    marginTop: responsiveStyle.spacing['2xl'],
   },
   drawerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 20,
+    padding: responsiveStyle.spacing.lg,
+    paddingTop: responsiveStyle.spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   drawerTitle: {
     color: 'white',
-    fontSize: 20,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.xl
+      : responsiveStyle.fontSize.lg,
     fontWeight: 'bold',
     flex: 1,
-    marginLeft: 12,
+    marginLeft: responsiveStyle.spacing.base,
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: responsiveStyle.component.buttonHeight * 0.8,
+    height: responsiveStyle.component.buttonHeight * 0.8,
+    borderRadius: responsiveStyle.component.buttonHeight * 0.4,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   drawerContent: {
     flex: 1,
-    padding: 20,
-    paddingTop: 10,
+    padding: responsiveStyle.spacing.lg,
+    paddingTop: responsiveStyle.spacing.sm,
   },
   drawerSection: {
-    marginBottom: 32,
+    marginBottom: responsiveStyle.spacing['2xl'],
   },
   drawerSectionTitle: {
     color: '#D4AF37',
-    fontSize: 18,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg
+      : responsiveStyle.fontSize.base,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: responsiveStyle.spacing.lg,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   drawerChapterItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 6,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg
+      : responsiveStyle.spacing.base,
+    paddingHorizontal: responsiveStyle.spacing.lg,
+    borderRadius: responsiveStyle.component.borderRadius * 1.5,
+    marginBottom: responsiveStyle.spacing.xs,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   drawerChapterIcon: {
-    marginRight: 12,
+    marginRight: responsiveStyle.spacing.base,
   },
   drawerChapterTitleContainer: {
     flex: 1,
   },
   drawerChapterText: {
     color: 'white',
-    fontSize: 13,
-    lineHeight: 17,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.sm
+      : responsiveStyle.fontSize.xs,
+    lineHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.sm * 1.3
+      : responsiveStyle.fontSize.xs * 1.3,
   },
   drawerChapterProgress: {
     color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.sm
+      : responsiveStyle.fontSize.xs,
     fontWeight: 'bold',
   },
 }); 

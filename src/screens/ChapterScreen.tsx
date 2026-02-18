@@ -5,13 +5,13 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { ActivityIndicator, Alert, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import colors from '../theme/colors';
 import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
 import { useAuthContext } from '../contexts/AuthContext';
 import { useEntitlements } from '../contexts/EntitlementsContext';
-import { useResponsive, getResponsiveStyle } from '../hooks/useResponsive';
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import { usePaymentService } from '../lib/paymentService';
+import colors from '../theme/colors';
 import { ChaptersData } from '../types/chapters';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
@@ -145,11 +145,23 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   // Safe area insets : variable selon l'appareil
   // Marge de sécurité : 20px
   const navigationBarHeight = React.useMemo(() => {
-    const favoriteButtonHeight = 40; // paddingVertical: 10 * 2 + contenu
-    const navigationSectionsHeight = 60; // paddingVertical: 12 * 2 + boutons
-    const safetyMargin = 20; // Marge de sécurité
+    const favoriteButtonHeight = responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 50  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 38  // Légèrement réduit pour petits écrans
+        : 40; // paddingVertical: 10 * 2 + contenu
+    const navigationSectionsHeight = responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 70  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 55  // Légèrement réduit pour petits écrans
+        : 60; // paddingVertical: 12 * 2 + boutons
+    const safetyMargin = responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 30  // Plus grande marge pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 15  // Marge réduite pour petits écrans
+        : 20; // Marge de sécurité
     return favoriteButtonHeight + navigationSectionsHeight + insets.bottom + safetyMargin;
-  }, [insets.bottom]);
+  }, [insets.bottom, responsive.breakpoint, responsive.width]);
   
   // Fonctions utilisées dans les useEffect - doivent être définies AVANT les useEffect
   const initializeChapterProgress = useCallback(async () => {
@@ -669,6 +681,30 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   // Rendu du contenu d'une section
   const renderContent = (items: any[]) => (
     items.map((item, idx) => {
+      // 0. Gestion des images
+      if (item.type === "image" && item.contenu) {
+        const imageName = item.contenu.toString();
+        const imageSource = imageMap[imageName] || imageMap['1'];
+        const isLargeImage = imageName === '3' || imageName === '4';
+        return (
+          <View key={idx} style={{ 
+            marginVertical: 18, 
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Image
+              source={imageSource}
+              style={{
+                width: isLargeImage ? '90%' : '100%', // ✅ Réduire les images 3 et 4
+                height: isLargeImage ? 200 : 250, // ✅ Hauteur réduite pour images 3 et 4
+                resizeMode: 'contain',
+                borderRadius: 8,
+              }}
+            />
+          </View>
+        );
+      }
+
       // 1. Gestion des tableaux
       if (item.type === "tableau" && Array.isArray(item.contenu)) {
         return (
@@ -866,12 +902,20 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
           backgroundColor: '#F4F7F6', 
           paddingTop: insets.top,
           ...(Platform.OS === 'web' && { 
-            height: '100vh', // ✅ Pour le web, utiliser viewport height
-            overflow: 'hidden' // ✅ Empêcher le scroll du conteneur parent sur web
+            minHeight: 0, // ✅ Web: nécessaire pour le scroll
+            height: '100vh' as any, // ✅ Web: hauteur fixe
+            overflow: 'hidden' as any, // ✅ Web: empêcher le scroll du parent
           })
         }}>
       {/* Header avec image et titre */}
-      <View style={{ position: 'relative', overflow: 'visible' }}>
+      <View style={{ 
+        position: Platform.OS === 'web' ? 'absolute' as any : 'relative', 
+        top: Platform.OS === 'web' ? insets.top : 0,
+        left: 0,
+        right: 0,
+        zIndex: Platform.OS === 'web' ? 1 : undefined,
+        overflow: 'visible' 
+      }}>
         <Image
           source={imageMap[chapter.image] || imageMap['1']}
           style={{
@@ -945,45 +989,79 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         onPress={handleBackPress}
         style={{
           position: 'absolute',
-          top: 45,
-          left: 16,
+          top: Platform.OS === 'web' 
+            ? insets.top + (responsive.breakpoint === 'xxl' ? 50 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 45)
+            : responsive.breakpoint === 'xxl' ? 50 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 45,
+          left: responsive.breakpoint === 'xxl' ? 24 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 12 : 16,
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderRadius: 22,
-          padding: 10,
+          borderRadius: responsive.breakpoint === 'xxl' ? 28 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 20 : 22,
+          padding: responsive.breakpoint === 'xxl' ? 14 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 8 : 10,
           elevation: 10,
           shadowColor: '#000',
           shadowOpacity: 0.25,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 3 },
+          shadowRadius: responsive.breakpoint === 'xxl' ? 8 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 4 : 6,
+          shadowOffset: { width: 0, height: responsive.breakpoint === 'xxl' ? 4 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 2 : 3 },
           zIndex: 1000,
+          minWidth: responsive.breakpoint === 'xxl' ? 56 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 44,
+          minHeight: responsive.breakpoint === 'xxl' ? 56 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 44,
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
+        activeOpacity={0.7}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
+        <MaterialCommunityIcons 
+          name="arrow-left" 
+          size={responsive.breakpoint === 'xxl' ? 28 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 20 : 24} 
+          color="#174C3C" 
+        />
       </TouchableOpacity>
       {/* Bouton zoom */}
       <TouchableOpacity 
         onPress={nextTextSize}
         style={{
           position: 'absolute',
-          top: 45,
-          right: 16,
+          top: Platform.OS === 'web' 
+            ? insets.top + (responsive.breakpoint === 'xxl' ? 50 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 45)
+            : responsive.breakpoint === 'xxl' ? 50 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 45,
+          right: responsive.breakpoint === 'xxl' ? 24 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 12 : 16,
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderRadius: 22,
-          padding: 10,
+          borderRadius: responsive.breakpoint === 'xxl' ? 28 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 20 : 22,
+          padding: responsive.breakpoint === 'xxl' ? 14 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 8 : 10,
           elevation: 10,
           shadowColor: '#000',
           shadowOpacity: 0.25,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 3 },
+          shadowRadius: responsive.breakpoint === 'xxl' ? 8 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 4 : 6,
+          shadowOffset: { width: 0, height: responsive.breakpoint === 'xxl' ? 4 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 2 : 3 },
           zIndex: 1000,
+          minWidth: responsive.breakpoint === 'xxl' ? 56 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 44,
+          minHeight: responsive.breakpoint === 'xxl' ? 56 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 44,
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
+        activeOpacity={0.7}
       >
-        <MaterialCommunityIcons name="magnify-plus" size={24} color="#174C3C" />
+        <MaterialCommunityIcons 
+          name="magnify-plus" 
+          size={responsive.breakpoint === 'xxl' ? 28 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 20 : 24} 
+          color="#174C3C" 
+        />
       </TouchableOpacity>
 
       {/* Indicateur de section - seulement si il y a un titre */}
       {sectionIndicator && (
-        <View style={{ alignItems: 'center', paddingHorizontal: 24, marginTop: 60, marginBottom: (sectionIndicator === "Introduction" || sectionIndicator.match(/^[IVXLCDM]+\./)) ? 0 : 16 }}>
+        <View style={{ 
+          alignItems: 'center', 
+          paddingHorizontal: 24, 
+          ...(Platform.OS === 'web' && {
+            position: 'absolute' as any, // ✅ Web: position absolute
+            top: insets.top + 200 + 20, // ✅ Web: après le header
+            left: 0,
+            right: 0,
+            zIndex: 2,
+          }),
+          marginTop: Platform.OS === 'web' ? 0 : 60, // ✅ Mobile: marge normale
+          marginBottom: Platform.OS === 'web' ? 0 : ((sectionIndicator === "Introduction" || sectionIndicator.match(/^[IVXLCDM]+\./)) ? 0 : 16) // ✅ Mobile: marge conditionnelle
+        }}>
           <View style={{
             backgroundColor: '#E8F5E8',
             paddingHorizontal: 16,
@@ -997,91 +1075,93 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         </View>
       )}
 
-      {/* Contenu animé */}
-      <View style={{ flex: 1 }}>
-      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <ScrollView
-          ref={scrollViewRef}
-          style={{ 
-            flex: 1, 
-            width: '100%',
-            ...(Platform.OS === 'web' && {
-              // ✅ Styles spécifiques pour le web
-              overflowY: 'auto' as any, // ✅ Permet le scroll vertical sur web
-              WebkitOverflowScrolling: 'touch' as any, // ✅ Scroll fluide sur iOS Safari
-            })
-          }}
-          contentContainerStyle={{ 
-            paddingHorizontal: 16, 
-            paddingTop: currentSectionIndex === 0 ? 20 : 16, 
-            paddingBottom: navigationBarHeight, // Calcul dynamique basé sur la hauteur réelle de la barre de navigation
-            maxWidth: 420, 
-            alignSelf: 'center',
-            flexGrow: 1,
-          }}
-          showsVerticalScrollIndicator={Platform.OS !== 'web'} // ✅ Désactivé sur web pour éviter les conflits
-          nestedScrollEnabled={Platform.OS !== 'web'} // ✅ Désactivé sur web
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          scrollEnabled={true} // ✅ Explicitement activé pour le web
-          bounces={Platform.OS !== 'web'} // ✅ Désactivé sur web pour un scroll natif
-          alwaysBounceVertical={false} // ✅ Désactivé pour le web
-            onScroll={e => {
-              const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-              const totalScrollable = contentSize.height - layoutMeasurement.height;
-              // Seuil plus permissif pour détecter le scroll (au moins 50px de différence)
-              if (totalScrollable > 50) {
-                setIsScrollable(true);
-                setScrollProgress(Math.min(1, Math.max(0, contentOffset.y / totalScrollable)));
-              } else {
-                setIsScrollable(false);
-                setScrollProgress(0);
-              }
-            }}
-            scrollEventThrottle={16}
-            onContentSizeChange={(contentWidth, contentHeight) => {
-              // Recalculer si scrollable quand le contenu change
-              const { height: layoutHeight } = Dimensions.get('window');
-              const totalScrollable = contentHeight - layoutHeight;
-              setIsScrollable(totalScrollable > 50);
-            }}
-        >
+      {/* Contenu scrollable */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={{ 
+          flex: 1,
+          ...(Platform.OS === 'web' && { 
+            position: 'absolute' as any, // ✅ Web: position absolute pour contrôle total
+            top: insets.top + 200 + 60, // ✅ Web: après le header (200px image + 60px marge)
+            left: 0,
+            right: 0,
+            bottom: navigationBarHeight, // ✅ Web: laisser place à la navigation
+            minHeight: 0, // ✅ Web: nécessaire pour le scroll
+            overflowY: 'auto' as any, // ✅ Web: activer le scroll vertical
+            overflowX: 'hidden' as any, // ✅ Web: désactiver le scroll horizontal
+            WebkitOverflowScrolling: 'touch' as any, // ✅ Web: smooth scroll iOS Safari
+            height: `calc(100vh - ${insets.top}px - 200px - 60px - ${navigationBarHeight}px)` as any, // ✅ Web: hauteur calculée explicite
+          })
+        }}
+        contentContainerStyle={{ 
+          paddingHorizontal: 16, 
+          paddingTop: Platform.OS === 'web' ? 20 : (currentSectionIndex === 0 ? 20 : 16), // ✅ Web: padding simple car position absolute
+          paddingBottom: Platform.OS === 'web' ? 80 : navigationBarHeight + 80, // ✅ Espace avant le bouton Favoris
+          maxWidth: 420, 
+          alignSelf: 'center',
+          width: '100%',
+          // ❌ RETIRÉ flexGrow: 1 - bloquait le scroll sur web
+        }}
+        showsVerticalScrollIndicator={Platform.OS !== 'web'} // ✅ Web: désactiver l'indicateur natif
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        scrollEnabled={true} // ✅ Explicitement activé
+        onScroll={e => {
+          const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+          const totalScrollable = contentSize.height - layoutMeasurement.height;
+          if (totalScrollable > 0) {
+            setIsScrollable(true);
+            setScrollProgress(Math.min(1, Math.max(0, contentOffset.y / totalScrollable)));
+          } else {
+            setIsScrollable(false);
+            setScrollProgress(0);
+          }
+        }}
+        scrollEventThrottle={16}
+      >
+        <Animated.View style={{ opacity: fadeAnim }}>
           {renderContent(sections[currentSectionIndex]?.items || [])}
-    </ScrollView>
-          {/* Barre de progression verticale */}
-          {isScrollable && (
-            <View style={{ position: 'absolute', right: 6, top: 0, bottom: 0, width: 8, justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
-              <View style={{ width: 4, height: '80%', backgroundColor: '#E8F5E8', borderRadius: 2, overflow: 'hidden', justifyContent: 'flex-start' }}>
-                <Animated.View style={{
-                  width: 4,
-                  backgroundColor: '#174C3C',
-                  borderRadius: 2,
-                  height: `${Math.round(scrollProgress * 100)}%`,
-                  position: 'absolute',
-                  top: 0,
-                }} />
-              </View>
-              {/* Affichage du pourcentage */}
-              <Text style={{ fontSize: 11, color: '#174C3C', marginTop: 4, fontWeight: 'bold' }}>{Math.round(scrollProgress * 100)}%</Text>
-            </View>
-          )}
-      </Animated.View>
-      </View>
+        </Animated.View>
+      </ScrollView>
+      {/* Barre de progression verticale - EXTRÊMEMENT PETITE */}
+      {isScrollable && (
+        <View style={{ position: 'absolute', right: 2, top: 0, bottom: 0, width: 3, justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
+          <View style={{ width: 2, height: '100%', backgroundColor: '#E8F5E8', borderRadius: 1, overflow: 'hidden', justifyContent: 'flex-start' }}>
+            <Animated.View style={{
+              width: 2,
+              backgroundColor: '#174C3C',
+              borderRadius: 1,
+              height: `${Math.round(scrollProgress * 100)}%`,
+              position: 'absolute',
+              top: 0,
+            }} />
+          </View>
+        </View>
+      )}
 
-      {/* Navigation bas */}
+      {/* Navigation bas - Gestion web/mobile */}
       <View style={{ 
         flexDirection: 'column', 
         backgroundColor: '#fff', 
         borderTopWidth: 1, 
         borderTopColor: '#eee', 
-        position: 'absolute', 
-        bottom: 0, 
-        left: 0, 
-        right: 0,
-        // On colle la barre tout en bas et on compense avec le safe-area en padding.
-        // Légère réduction sur iOS pour faire descendre visuellement la rangée de boutons.
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        // ✅ Web: position absolute pour rester visible
+        ...(Platform.OS === 'web' && {
+          position: 'absolute' as any,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+        }),
         paddingBottom: Platform.OS === 'android' 
           ? Math.max(insets.bottom, 8) 
+          : Platform.OS === 'web'
+          ? 20 // ✅ Web: padding fixe
           : Math.max(insets.bottom - 6, 0),
       }}>
         {/* Bouton Favoris */}
@@ -1091,7 +1171,11 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         >
           <MaterialCommunityIcons 
             name={isFavorite ? "heart" : "heart-outline"} 
-            size={18} 
+            size={responsive.breakpoint === 'xxl' && responsive.width >= 1024
+              ? 22  // Plus grand pour très grands écrans
+              : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+                ? 16  // Réduit pour petits écrans
+                : 18} 
             color="#174C3C"
           />
           <Text style={[dynamicStyles.favoriteButtonText, { color: "#174C3C" }]}>
@@ -1100,7 +1184,22 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         </TouchableOpacity>
         
         {/* Navigation sections */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: responsiveStyle.spacing['2xl'], paddingVertical: responsiveStyle.spacing.base }}>
+        <View style={{ 
+          flexDirection: 'row', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+            ? responsiveStyle.spacing['2xl']
+            : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+              ? Math.max(8, responsiveStyle.spacing.sm)
+              : responsiveStyle.spacing.lg,
+          paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+            ? responsiveStyle.spacing.lg
+            : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+              ? Math.max(8, responsiveStyle.spacing.sm)
+              : responsiveStyle.spacing.base,
+          gap: responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 4 : 8,
+        }}>
         {totalSections === 1 ? (
           // Navigation compacte pour les chapitres d'une seule page
           <>
@@ -1343,26 +1442,75 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F8FAF9',
-    paddingVertical: responsiveStyle.spacing.base,
-    paddingHorizontal: responsiveStyle.spacing.base,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(8, responsiveStyle.spacing.sm)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.base,
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus large pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(12, responsiveStyle.spacing.sm)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.base,
     borderBottomWidth: 1,
     borderBottomColor: '#E8F5E8',
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight  // Hauteur minimale pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(36, responsiveStyle.component.buttonHeight * 0.85)  // Réduit pour petits écrans
+        : undefined,
   },
   favoriteButtonText: {
-    fontSize: responsiveStyle.fontSize.sm,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.base  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(11, responsiveStyle.fontSize.xs)  // Plus petit pour petits écrans
+        : responsiveStyle.fontSize.sm,
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: responsive.breakpoint === 'xxl' ? 8 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 4 : 6,
+    textAlign: 'center',
+    alignSelf: 'center',
   },
   // Styles pour les boutons de navigation
   navButton: {
-    borderRadius: 18,
-    paddingVertical: responsiveStyle.spacing.sm,
-    paddingHorizontal: responsiveStyle.spacing.lg,
+    borderRadius: responsive.breakpoint === 'xxl' ? 20 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 14 : 18,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(8, responsiveStyle.spacing.sm)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.base, // Standard pour autres écrans
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing['2xl']  // Plus large pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(12, responsiveStyle.spacing.base)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.lg,
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight  // Hauteur minimale pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(40, responsiveStyle.component.buttonHeight * 0.9)  // Réduit pour petits écrans
+        : undefined,
+    minWidth: responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? Math.max(80, responsive.width * 0.25) : undefined,
   },
   navButtonCompact: {
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: responsiveStyle.spacing.base,
+    borderRadius: responsive.breakpoint === 'xxl' ? 14 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 10 : 12,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.base  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(6, responsiveStyle.spacing.xs)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.sm,   // Standard
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus large pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(10, responsiveStyle.spacing.sm)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.base,
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight * 0.9  // Hauteur minimale pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(36, responsiveStyle.component.buttonHeight * 0.8)  // Réduit pour petits écrans
+        : undefined,
+    minWidth: responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? Math.max(70, responsive.width * 0.22) : undefined,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   navButtonPrimary: {
     backgroundColor: '#174C3C',
@@ -1380,17 +1528,33 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   navButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: responsiveStyle.fontSize.base,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(12, responsiveStyle.fontSize.sm)  // Réduit pour petits écrans
+        : responsiveStyle.fontSize.base,
+    textAlign: 'center',
+    alignSelf: 'center',
   },
   navButtonTextCompact: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: responsiveStyle.fontSize.sm,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.base  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(11, responsiveStyle.fontSize.xs)  // Réduit pour petits écrans
+        : responsiveStyle.fontSize.sm,
+    textAlign: 'center',
+    alignSelf: 'center',
   },
   paginationText: {
     color: '#174C3C',
     fontWeight: 'bold',
-    fontSize: responsiveStyle.fontSize.base,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(12, responsiveStyle.fontSize.sm)  // Réduit pour petits écrans
+        : responsiveStyle.fontSize.base,
   },
   // Styles pour le modal de quiz verrouillé
   modalOverlay: {
@@ -1458,31 +1622,49 @@ const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.creat
   },
   modalButtonSecondary: {
     backgroundColor: '#f0f0f0',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus grand pour très grands écrans
+      : 12,
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing['2xl']  // Plus large pour très grands écrans
+      : 20,
     borderRadius: 10,
     flex: 1,
     marginRight: 8,
     alignItems: 'center',
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight  // Hauteur minimale pour très grands écrans
+      : undefined,
   },
   modalButtonPrimary: {
     backgroundColor: '#174C3C',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus grand pour très grands écrans
+      : 12,
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing['2xl']  // Plus large pour très grands écrans
+      : 20,
     borderRadius: 10,
     flex: 1,
     marginLeft: 8,
     alignItems: 'center',
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight  // Hauteur minimale pour très grands écrans
+      : undefined,
   },
   modalButtonTextSecondary: {
     color: '#666',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg  // Plus grand pour très grands écrans
+      : 16,
   },
   modalButtonTextPrimary: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg  // Plus grand pour très grands écrans
+      : 16,
   },
 });
 

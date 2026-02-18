@@ -646,9 +646,11 @@ export default function HomeScreen() {
     <View style={[styles.safeArea, { paddingTop: insets.top }]}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-          <View>
-            <Text style={styles.bismillah}>بسم الله الرحمن الرحيم</Text>
-            <Text style={styles.welcomeMessage}>
+          <View style={{ flex: 1, marginRight: responsive.breakpoint === 'xs' ? 8 : responsive.breakpoint === 'sm' ? 10 : 12 }}>
+            <Text style={styles.bismillah} numberOfLines={1} adjustsFontSizeToFit={responsive.breakpoint === 'xs'}>
+              بسم الله الرحمن الرحيم
+            </Text>
+            <Text style={styles.welcomeMessage} numberOfLines={1}>
               Bienvenue {user?.displayName || user?.email?.split('@')[0] || ''}
             </Text>
           </View>
@@ -661,7 +663,11 @@ export default function HomeScreen() {
             {avatarUri ? (
               <ExpoImage source={{ uri: avatarUri }} style={styles.avatarSmall} contentFit="cover" />
             ) : (
-              <MaterialCommunityIcons name="account-circle" size={40} color="#174C3C" />
+              <MaterialCommunityIcons 
+                name="account-circle" 
+                size={responsive.breakpoint === 'xs' ? 32 : responsive.breakpoint === 'sm' ? 36 : 40} 
+                color="#174C3C" 
+              />
             )}
           </TouchableOpacity>
       </View>
@@ -870,40 +876,54 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => Sty
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: responsive.horizontalPadding,
-    paddingTop: 20,      // Restauré selon référence
-    paddingBottom: 10,
-    marginTop: 15,       // Restauré selon référence
-    marginBottom: 20,
+    paddingTop: responsive.breakpoint === 'xs' ? 12 : responsive.breakpoint === 'sm' ? 15 : 20,
+    paddingBottom: responsive.breakpoint === 'xs' ? 6 : responsive.breakpoint === 'sm' ? 8 : 10,
+    marginTop: responsive.breakpoint === 'xs' ? 8 : responsive.breakpoint === 'sm' ? 10 : 15,
+    marginBottom: responsive.breakpoint === 'xs' ? 12 : responsive.breakpoint === 'sm' ? 15 : 20,
     alignSelf: 'center',
     width: '100%',
     maxWidth: responsive.maxContentWidth,
   },
   bismillah: {
-    fontSize: responsiveStyle.fontSize['3xl'],
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024 
+      ? responsiveStyle.fontSize['4xl'] 
+      : responsive.breakpoint === 'xs' 
+        ? responsiveStyle.fontSize.xl 
+        : responsive.breakpoint === 'sm' 
+          ? responsiveStyle.fontSize['2xl'] 
+          : responsive.breakpoint === 'md'
+            ? responsiveStyle.fontSize['3xl']
+            : responsiveStyle.fontSize['3xl'],
     fontWeight: '800',
     color: colors.primary,
     textAlign: 'left',
-    letterSpacing: 0.5,
+    letterSpacing: responsive.breakpoint === 'xs' ? 0.3 : 0.5,
+    flexShrink: 1, // Permet au texte de se réduire si nécessaire
   },
   welcomeMessage: {
-    fontSize: responsiveStyle.fontSize.base,
+    fontSize: responsive.breakpoint === 'xs' 
+      ? Math.max(12, responsiveStyle.fontSize.sm) 
+      : responsive.breakpoint === 'sm' 
+        ? responsiveStyle.fontSize.sm 
+        : responsiveStyle.fontSize.base,
     color: colors.gray,
-    marginTop: responsiveStyle.spacing.xs,
+    marginTop: responsive.breakpoint === 'xs' ? 2 : responsiveStyle.spacing.xs,
   },
   avatarButton: {
-    padding: 3,
-    borderRadius: 25,
+    padding: responsive.breakpoint === 'xs' ? 2 : responsive.breakpoint === 'sm' ? 2.5 : 3,
+    borderRadius: responsive.breakpoint === 'xs' ? 18 : responsive.breakpoint === 'sm' ? 20 : 25,
     backgroundColor: '#FFF',
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
+    flexShrink: 0, // Empêche le bouton de se réduire
   },
   avatarSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: responsive.breakpoint === 'xs' ? 32 : responsive.breakpoint === 'sm' ? 36 : 40,
+    height: responsive.breakpoint === 'xs' ? 32 : responsive.breakpoint === 'sm' ? 36 : 40,
+    borderRadius: responsive.breakpoint === 'xs' ? 16 : responsive.breakpoint === 'sm' ? 18 : 20,
     backgroundColor: '#EEE',
   },
   notificationButton: {

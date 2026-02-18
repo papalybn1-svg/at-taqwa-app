@@ -1156,6 +1156,8 @@ export default function OriginalQuizScreen() {
             keyboardShouldPersistTaps="handled"
             scrollEnabled={true}
             bounces={true}
+            removeClippedSubviews={false}
+            persistentScrollbar={true}
           >
             {currentQuestion.options.map((option, index) => {
               const isSelected = selectedAnswerIndex === index;
@@ -1478,18 +1480,22 @@ const createStyles = (responsive: any, responsiveStyle: any) => {
     flexWrap: 'wrap',
   },
   optionsContainer: { 
-    marginBottom: responsiveStyle.spacing.xs / 2, // ✅ Responsive : était 2
-    marginTop: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
+    marginBottom: responsiveStyle.spacing.xs / 2,
+    marginTop: responsiveStyle.spacing.sm,
     width: '100%',
     // Utiliser flex: 1 pour prendre l'espace disponible dans whiteCard
-    // et permettre le scroll quand le contenu dépasse
     flex: 1,
     minHeight: 0, // Important pour permettre le scroll dans un conteneur flex
+    maxHeight: responsive.breakpoint === 'xs' 
+      ? responsive.height * 0.35  // 35% de la hauteur pour très petits écrans
+      : responsive.breakpoint === 'sm'
+        ? responsive.height * 0.40  // 40% pour petits écrans
+        : responsive.height * 0.45, // 45% pour autres écrans
   },
   optionsContentContainer: {
-    paddingBottom: responsiveStyle.spacing.base, // ✅ Responsive : était 16
-    paddingTop: responsiveStyle.spacing.xs, // ✅ Responsive : était 4
-    // Pas de flexGrow pour permettre le scroll correctement
+    paddingBottom: responsiveStyle.spacing.xl, // Plus de padding en bas pour voir toutes les options
+    paddingTop: responsiveStyle.spacing.xs,
+    flexGrow: 0, // Ne pas utiliser flexGrow pour permettre le scroll correctement
   },
 
   optionContent: {

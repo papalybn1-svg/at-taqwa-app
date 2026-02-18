@@ -160,3 +160,4 @@ L'application est **prête pour la production** avec :
 
 **Version recommandée :** 1.0.6
 
+

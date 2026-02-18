@@ -212,23 +212,35 @@ const createStyles = (responsive: any, responsiveStyle: any, insets: any) => {
       height: cardSizes.whiteCard.height,
     },
     cardTitle: {
-      fontSize: isTablet 
-        ? responsiveStyle.fontSize['2xl']  // Tablettes : 20px
-        : responsive.breakpoint === 'xs'
-          ? responsiveStyle.fontSize.lg  // Très petits écrans : 16px
-          : responsiveStyle.fontSize.xl, // iPhone standard et grands téléphones : 18px
+      fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+        ? responsiveStyle.fontSize['3xl']  // Très grands écrans : 24px
+        : isTablet 
+          ? responsiveStyle.fontSize['2xl']  // Tablettes : 20px
+          : responsive.breakpoint === 'xs'
+            ? Math.max(14, responsiveStyle.fontSize.base)  // Très petits écrans : min 14px
+            : responsive.breakpoint === 'sm'
+              ? responsiveStyle.fontSize.lg  // Petits écrans : 16px
+              : responsiveStyle.fontSize.xl, // iPhone standard et grands téléphones : 18px
       fontWeight: 'bold',
       color: '#174C3C',
       textAlign: 'center',
-      marginBottom: isTablet ? responsiveStyle.spacing.xl : responsiveStyle.spacing.base, // ✅ Responsive margin
-      marginTop: 0, // ✅ Pas de marginTop car centré verticalement
-      lineHeight: isTablet 
-        ? responsiveStyle.fontSize['2xl'] * 1.25
-        : responsive.breakpoint === 'xs'
-          ? responsiveStyle.fontSize.lg * 1.3
-          : responsiveStyle.fontSize.xl * 1.3,
+      marginBottom: responsive.breakpoint === 'xs' 
+        ? responsiveStyle.spacing.sm 
+        : isTablet 
+          ? responsiveStyle.spacing.xl 
+          : responsiveStyle.spacing.base,
+      marginTop: 0,
+      lineHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+        ? responsiveStyle.fontSize['3xl'] * 1.25
+        : isTablet 
+          ? responsiveStyle.fontSize['2xl'] * 1.25
+          : responsive.breakpoint === 'xs'
+            ? Math.max(14, responsiveStyle.fontSize.base) * 1.3
+            : responsive.breakpoint === 'sm'
+              ? responsiveStyle.fontSize.lg * 1.3
+              : responsiveStyle.fontSize.xl * 1.3,
       // Propriétés pour éviter que le texte soit coupé
-      paddingHorizontal: responsiveStyle.spacing.sm,
+      paddingHorizontal: responsive.breakpoint === 'xs' ? responsiveStyle.spacing.xs : responsiveStyle.spacing.sm,
       flexWrap: 'wrap',
     },
     playButton: {

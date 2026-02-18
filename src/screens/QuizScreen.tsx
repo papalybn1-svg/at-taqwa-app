@@ -1,26 +1,72 @@
 // src/screens/QuizScreen.tsx
 
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect } from 'react';
-import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useMemo } from 'react';
+import { Dimensions, Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsive, getResponsiveStyle } from '../hooks/useResponsive';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Fonction pour calculer les dimensions responsive
-const getResponsiveSize = (size: number, isWidth: boolean = true) => {
-  const baseWidth = 375; // iPhone standard
-  const baseHeight = 812; // iPhone standard
-  const scale = isWidth ? screenWidth / baseWidth : screenHeight / baseHeight;
-  return Math.round(size * scale);
-};
-
-// Fonction pour déterminer si c'est un petit écran
-const isSmallScreen = screenHeight < 700;
-const isLargeScreen = screenHeight > 900;
-
 export default function QuizScreen() {
   const navigation = useNavigation();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const insets = useSafeAreaInsets();
+
+  // Styles dynamiques basés sur le responsive
+  const dynamicStyles = useMemo(() => {
+    const { breakpoint, width, height } = responsive;
+    
+    // Calcul de la taille du cercle selon le breakpoint - PLUS GRAND
+    let circleSize = 0;
+    
+    if (breakpoint === 'xxl' && width >= 1024) {
+      circleSize = Math.min(420, width * 0.45);
+    } else if (breakpoint === 'xs') {
+      circleSize = Math.min(260, width * 0.65); // Plus grand pour petits écrans
+    } else if (breakpoint === 'sm') {
+      circleSize = Math.min(320, width * 0.68);
+    } else if (breakpoint === 'md') {
+      circleSize = Math.min(360, width * 0.62);
+    } else {
+      // lg et xl
+      circleSize = Math.min(400, width * 0.55);
+    }
+
+    // L'image doit être environ 25-30% plus grande que le cercle pour qu'elle sorte vraiment
+    const imageSize = circleSize * 1.28; // 28% plus grande que le cercle pour bien sortir
+    const imageHeight = imageSize * 1.2; // Ratio hauteur/largeur pour l'image
+
+    return {
+      content: {
+        paddingTop: breakpoint === 'xs' ? 30 : breakpoint === 'sm' ? 35 : breakpoint === 'md' ? 40 : 50,
+      },
+      title: {
+        fontSize: breakpoint === 'xxl' ? 48 : breakpoint === 'xs' ? 28 : breakpoint === 'sm' ? 32 : breakpoint === 'md' ? 36 : 42,
+        marginBottom: breakpoint === 'xs' ? 8 : breakpoint === 'sm' ? 10 : 12, // Réduit pour rapprocher du cercle
+      },
+      arabicText: {
+        fontSize: breakpoint === 'xxl' ? 28 : breakpoint === 'xs' ? 16 : breakpoint === 'sm' ? 18 : breakpoint === 'md' ? 20 : 24,
+        marginBottom: breakpoint === 'xs' ? 12 : breakpoint === 'sm' ? 16 : breakpoint === 'md' ? 20 : 24, // Réduit pour rapprocher du cercle
+        paddingHorizontal: responsiveStyle.spacing.base,
+      },
+      imageContainer: {
+        marginTop: breakpoint === 'xs' ? -10 : breakpoint === 'sm' ? -15 : breakpoint === 'md' ? -20 : -25, // Réduit pour rapprocher
+      },
+      decorativeCircle: {
+        width: circleSize,
+        height: circleSize,
+        borderRadius: circleSize / 2,
+      },
+      girlImage: {
+        width: imageSize,
+        height: imageHeight,
+        maxWidth: imageSize,
+        maxHeight: imageHeight,
+      },
+    };
+  }, [responsive, responsiveStyle]);
 
   // Redirection automatique vers la page "Commencer" après 1 seconde
   useEffect(() => {
@@ -35,21 +81,21 @@ export default function QuizScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Contenu principal */}
-      <View style={styles.content}>
+      <View style={[styles.content, dynamicStyles.content]}>
         {/* Titre Bismillah */}
-        <Text style={styles.title}>Bismillah</Text>
+        <Text style={[styles.title, dynamicStyles.title]}>Bismillah</Text>
 
         {/* Texte arabe au-dessus de l'image */}
-        <Text style={styles.arabicText}>بسم الله الرحمن الرحيم</Text>
+        <Text style={[styles.arabicText, dynamicStyles.arabicText]}>بسم الله الرحمن الرحيم</Text>
 
         {/* Image de la fille avec cercle décoratif */}
-        <View style={styles.imageContainer}>
+        <View style={[styles.imageContainer, dynamicStyles.imageContainer]}>
           {/* Cercle décoratif derrière l'image */}
-          <View style={styles.decorativeCircle} />
+          <View style={[styles.decorativeCircle, dynamicStyles.decorativeCircle]} />
 
           <Image 
             source={require('../../assets/16.png')} 
-            style={styles.girlImage}
+            style={[styles.girlImage, dynamicStyles.girlImage]}
             resizeMode="contain"
           />
         </View>
@@ -67,50 +113,35 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center', 
     justifyContent: 'flex-start',
-    paddingHorizontal: getResponsiveSize(20),
-    paddingTop: getResponsiveSize(isSmallScreen ? 40 : 60, false),
+    paddingHorizontal: 20,
   },
-
   title: {
-    fontSize: getResponsiveSize(isSmallScreen ? 28 : isLargeScreen ? 42 : 36),
     fontWeight: 'bold', 
     color: 'white',
-    marginBottom: getResponsiveSize(isSmallScreen ? 15 : 20, false),
     textAlign: 'center', 
   },
   arabicText: {
-    fontSize: getResponsiveSize(isSmallScreen ? 18 : isLargeScreen ? 26 : 22),
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center', 
-    marginBottom: getResponsiveSize(isSmallScreen ? 30 : 40, false),
-    fontFamily: 'System',
-    letterSpacing: getResponsiveSize(1),
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    letterSpacing: 1,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: getResponsiveSize(2), height: getResponsiveSize(2) },
-    textShadowRadius: getResponsiveSize(4),
-    paddingHorizontal: getResponsiveSize(10),
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
   },
   imageContainer: {
     alignItems: 'center', 
     justifyContent: 'center',
     position: 'relative',
-    marginTop: getResponsiveSize(isSmallScreen ? -30 : -50, false),
     flex: 1, // Prend tout l'espace disponible pour centrer
   },
   decorativeCircle: {
     position: 'absolute',
-    width: screenWidth * (isSmallScreen ? 0.7 : isLargeScreen ? 0.85 : 0.8),
-    height: screenWidth * (isSmallScreen ? 0.7 : isLargeScreen ? 0.85 : 0.8),
-    borderRadius: screenWidth * (isSmallScreen ? 0.35 : isLargeScreen ? 0.425 : 0.4),
     backgroundColor: '#FFFFFF', // Blanc opaque
     zIndex: 0,
   },
   girlImage: {
-    width: screenWidth * (isSmallScreen ? 1.6 : isLargeScreen ? 2.2 : 2.0),
-    height: screenHeight * (isSmallScreen ? 1.0 : isLargeScreen ? 1.4 : 1.3),
-    maxWidth: getResponsiveSize(isSmallScreen ? 700 : isLargeScreen ? 1000 : 900),
-    maxHeight: getResponsiveSize(isSmallScreen ? 800 : isLargeScreen ? 1400 : 1200, false),
     zIndex: 1,
   },
 });

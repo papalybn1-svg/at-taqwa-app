@@ -550,8 +550,18 @@ export default function ParametresScreen() {
               <Text style={dynamicStyles.listText}>Assistance / Contact</Text>
             </View>
             <MaterialCommunityIcons name="open-in-new" size={18} color={colors.placeholder} />
-        </TouchableOpacity>
-      </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={dynamicStyles.listItem}
+            onPress={() => Linking.openURL('https://attaqwa-confidentialite.vercel.app/confidentialite.html')}
+          >
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="shield-lock" size={20} color={colors.primary} />
+              <Text style={dynamicStyles.listText}>Politique de confidentialité</Text>
+            </View>
+            <MaterialCommunityIcons name="open-in-new" size={18} color={colors.placeholder} />
+          </TouchableOpacity>
+        </View>
 
         {/* Section: Sécurité */}
         <View style={dynamicStyles.sectionCard}>
