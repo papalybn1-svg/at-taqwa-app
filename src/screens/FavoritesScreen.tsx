@@ -1,18 +1,20 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React from 'react';
-import { Animated, Dimensions, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, FlatList, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import colors from '../theme/colors';
 import { read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function FavoritesScreen() {
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user } = useAuthContext();
+  const insets = useSafeAreaInsets();
+  const responsive = useResponsive();
   const [favorites, setFavorites] = React.useState<{ id: string; title: string; desc: string; author?: string; image?: string; partie?: string; chapterData?: any }[]>([]); 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -244,7 +246,7 @@ export default function FavoritesScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
           {/* Header épuré */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -291,7 +293,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 20,
     paddingBottom: 10,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
@@ -305,9 +307,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: colors.text,
+    letterSpacing: 0.3,
   },
   headerSpacer: {
     width: 32,

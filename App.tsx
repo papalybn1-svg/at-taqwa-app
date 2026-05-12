@@ -1,81 +1,26 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import * as Linking from 'expo-linking';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as NavigationBar from 'expo-navigation-bar';
 import * as SystemUI from 'expo-system-ui';
 import React, { useEffect, useState } from 'react';
-import { Alert, Dimensions, Image, StatusBar, StyleSheet, Text, View } from 'react-native';
-import 'react-native-gesture-handler';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from './src/hooks/useAuth';
-import { usePaymentService } from './src/lib/paymentService';
-import AdminTabNavigator from './src/navigation/AdminTabNavigator';
+import { Image, Platform, StatusBar, StyleSheet, Text, View } from 'react-native';
+
+import RootErrorBoundary from './src/components/RootErrorBoundary';
+import { AuthProvider, useAuthContext } from './src/contexts/AuthContext';
+import { EntitlementsProvider } from './src/contexts/EntitlementsContext';
+import PayDunyaDeepLinkHandler from './src/navigation/handlers/PayDunyaDeepLinkHandler';
 import TabNavigator from './src/navigation/TabNavigator';
-import ChapterScreen from './src/screens/ChapterScreen';
-import LoginScreen, { AuthContext } from './src/screens/LoginScreen';
+import LoginScreen from './src/screens/LoginScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import VerifyEmailScreen from './src/screens/VerifyEmailScreen';
 
-type RootStackParamList = {
-  Main: undefined;
-  Chapter: {
-    chapter: {
-      title: string;
-      desc: string;
-      image: string;
-    };
-  };
-  Login: undefined;
-  VerifyEmail: undefined;
-  ResetPassword: { oobCode?: string } | undefined;
-  Admin: undefined;
-};
+const Stack = createStackNavigator();
 
-const Stack = createStackNavigator<RootStackParamList>();
-const { height } = Dimensions.get('window');
+function SplashLogo({ statusText }: { statusText?: string }) {
+  const [progress, setProgress] = useState(0);
 
-function SplashLogo() {
-  const [progress, setProgress] = React.useState(0);
-
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(timer);
-          return 100;
-        }
-        return prev + 1.5; // Ralenti de 2 à 1.5 pour une progression plus douce
-      });
-    }, 50); // Ralenti de 40ms à 50ms pour une progression plus lente
-
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <View style={styles.splashLogoBg}>
-      {/* Logo principal centré */}
-      <View style={styles.logoContainer}>
-        <Image 
-          source={require('./assets/logo taqwa en blanc.png')} 
-          style={styles.logoImage}
-        />
-      </View>
-
-
-
-      {/* Barre de progression en bas */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function SplashFamille() {
-  const [progress, setProgress] = React.useState(0);
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
@@ -85,258 +30,268 @@ function SplashFamille() {
         return prev + 1.5;
       });
     }, 50);
+
     return () => clearInterval(timer);
   }, []);
+
+  return (
+    <View style={styles.splashLogoBg}>
+      <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
+      <View style={styles.logoContainer}>
+        <Image source={require('./assets/logo taqwa en blanc.png')} style={styles.logoImage} />
+      </View>
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBarBg}>
+          <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+        </View>
+      </View>
+      {statusText ? <Text style={styles.statusText}>{statusText}</Text> : null}
+    </View>
+  );
+}
+
+function SplashFamille({ statusText }: { statusText?: string }) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(timer);
+          return 100;
+        }
+        return prev + 1.5;
+      });
+    }, 50);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <View style={styles.splashFamilleBg}>
-      {/* Bloc image + texte en haut */}
+      <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
       <View style={styles.topContentBlock}>
-        {/* Logo en haut */}
-        <Image 
-          source={require('./assets/Page_acceuil_dome_mosquee.png')} 
-          style={styles.splashFamilleLogo}
-        />
-        {/* Texte principal */}
+        <Image source={require('./assets/Page_acceuil_dome_mosquee.png')} style={styles.splashFamilleLogo} />
         <View style={styles.splashFamilleTextContainer}>
           <Text style={styles.splashMainTitle}>Assalamu Alaikum,</Text>
           <Text style={styles.splashSubtitleGreen}>Bienvenue sur AT-Taqwa</Text>
           <Text style={styles.splashDescription}>Votre guide pour la réparation de la Prière</Text>
         </View>
       </View>
-      {/* Image de la famille en bas */}
-      <Image 
-        source={require('./assets/femme_et_enfant_2.png')} 
-        style={styles.splashFamilleImageXL}
-      />
-      {/* Barre de progression en bas (même logique que SplashLogo) */}
+      <Image source={require('./assets/femme_et_enfant_2.png')} style={styles.splashFamilleImageXL} />
       <View style={[styles.progressContainer, { bottom: 40 }]}>
         <View style={styles.progressBarBg}>
           <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
         </View>
       </View>
+      {statusText ? <Text style={[styles.statusText, styles.statusTextDark]}>{statusText}</Text> : null}
     </View>
+  );
+}
+
+// Composant wrapper pour TabNavigator avec EntitlementsProvider
+function MainTabsWithEntitlements() {
+  return (
+    <EntitlementsProvider>
+      <TabNavigator />
+    </EntitlementsProvider>
+  );
+}
+
+function RootNavigator() {
+  const { user } = useAuthContext();
+  const navigationRef = React.useRef<NavigationContainerRef<any>>(null);
+
+  return (
+    <NavigationContainer 
+      ref={navigationRef} 
+      onReady={() => {
+        console.log('✅ NavigationContainer prêt');
+      }}
+      theme={{
+        dark: false,
+        colors: {
+          primary: '#19514A',
+          background: '#F3F5F7', // ✅ Couleur de fond pour éviter l'écran gris
+          card: '#FFFFFF',
+          text: '#1D1818',
+          border: '#E5E5E5',
+          notification: '#19514A',
+        },
+      }}
+    >
+      <PayDunyaDeepLinkHandler navigationRef={navigationRef} />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {/* ═══════════════════════════════════════════════════════════════════════════
+            🔒 VÉRIFICATION D'EMAIL DÉSACTIVÉE (v1.0.4) - Code commenté pour réutilisation future
+            ═══════════════════════════════════════════════════════════════════════════
+            
+            AVANT (avec vérification d'email) :
+            {user && user.emailVerified ? (
+              <Stack.Screen name="MainTabs" component={MainTabsWithEntitlements} />
+            ) : user && !user.emailVerified ? (
+              <>
+                <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+                <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+              </>
+            ) : (
+              <>
+                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+              </>
+            )}
+            
+            ═══════════════════════════════════════════════════════════════════════════
+            ✅ NOUVEAU COMPORTEMENT : Accès direct pour tous les utilisateurs connectés
+            ═══════════════════════════════════════════════════════════════════════════ */}
+        {user ? (
+          <Stack.Screen name="MainTabs" component={MainTabsWithEntitlements} />
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            {/* VerifyEmail reste disponible mais n'est plus utilisé automatiquement */}
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
 export default function App() {
-  const [splashStep, setSplashStep] = useState(0);
-  const { user, loading, setUser } = useAuth();
-  const { checkEntitlements } = usePaymentService();
-  
-  useEffect(() => {
-    // Séquence splash par défaut à chaque ouverture
-    setSplashStep(0);
-  }, []);
-
-  // Gestion des deep links PayDunya
-  useEffect(() => {
-    const handleDeepLink = async (url: string) => {
-      console.log('🔗 Deep link reçu:', url);
-      
-      try {
-        const parsed = Linking.parse(url);
-        console.log('🔍 Deep link parsé:', parsed);
-        
-        if (parsed?.hostname === 'paydunya') {
-          switch (parsed.path) {
-            case 'success':
-              console.log('✅ Paiement PayDunya réussi');
-              // Récupérer le token depuis les paramètres de requête
-              const token = parsed.queryParams?.token;
-              console.log('🔑 Token reçu:', token);
-              
-              // Re-vérifier les entitlements
-              try {
-                const entitlements = await checkEntitlements();
-                console.log('🎯 Entitlements après paiement:', entitlements);
-                
-                if (entitlements.part2 || entitlements.part3) {
-                  Alert.alert(
-                    'Paiement réussi !',
-                    'Votre paiement a été confirmé. Vous avez maintenant accès aux parties premium.',
-                    [{ text: 'Parfait !' }]
-                  );
-                } else if (token) {
-                  // Si pas d'entitlements mais token présent, le paiement est peut-être encore en cours
-                  Alert.alert(
-                    'Paiement en cours de traitement',
-                    'Votre paiement a été reçu. L\'accès sera débloqué dans quelques instants.',
-                    [{ text: 'OK' }]
-                  );
-                } else {
-                  // Si pas encore d'entitlements, le paiement est peut-être encore en cours
-                  Alert.alert(
-                    'Paiement en cours de traitement',
-                    'Votre paiement a été reçu et est en cours de traitement. L\'accès sera débloqué dans quelques instants.',
-                    [{ text: 'Compris' }]
-                  );
-                }
-              } catch (error) {
-                console.error('❌ Erreur vérification entitlements:', error);
-                Alert.alert(
-                  'Paiement en cours de traitement',
-                  'Votre paiement a été reçu. L\'accès sera débloqué dans quelques instants.',
-                  [{ text: 'OK' }]
-                );
-              }
-              break;
-              
-            case 'cancel':
-              console.log('❌ Paiement PayDunya annulé');
-              Alert.alert(
-                'Paiement annulé',
-                'Vous avez annulé le paiement. Vous pouvez réessayer à tout moment.',
-                [{ text: 'Compris' }]
-              );
-              break;
-              
-            case 'failed':
-              console.log('💥 Paiement PayDunya échoué');
-              Alert.alert(
-                'Paiement échoué',
-                'Le paiement n\'a pas pu être traité. Veuillez réessayer.',
-                [{ text: 'OK' }]
-              );
-              break;
-              
-            default:
-              console.log('❓ Deep link PayDunya inconnu:', parsed.path);
-          }
-        }
-      } catch (error) {
-        console.error('❌ Erreur traitement deep link:', error);
-      }
-    };
-
-    // Écouter les deep links entrants
-    const subscription = Linking.addEventListener('url', (event) => {
-      handleDeepLink(event.url);
-    });
-
-    // Vérifier s'il y a un deep link au démarrage
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        console.log('🚀 Deep link au démarrage:', url);
-        handleDeepLink(url);
-      }
-    });
-
-    return () => {
-      subscription?.remove();
-    };
-  }, [checkEntitlements]);
-
-  useEffect(() => {
-    if (splashStep === 0) {
-      const timer = setTimeout(() => setSplashStep(1), 3500);
-      return () => clearTimeout(timer);
-    }
-    if (splashStep === 1) {
-      const timer = setTimeout(() => setSplashStep(2), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [splashStep]);
-
-  // iOS/Android: masquer la barre système après splash
-
-  // Masquer la barre de navigation système Android après les splashs
-  useEffect(() => {
-    if (splashStep === 2) {
-      SystemUI.setBackgroundColorAsync('#F3F5F7');
-    }
-  }, [splashStep]);
-
-  if (splashStep === 0) {
-    console.log('📱 Affichage SplashLogo (step 0)');
-    return <SplashLogo />;
-  }
-  if (splashStep === 1) {
-    console.log('📱 Affichage SplashFamille (step 1)');
-    return <SplashFamille />;
-  }
-  if (loading) {
-    console.log('⏳ App en état de chargement - user:', user, 'loading:', loading);
-    return (
-    <View style={{ flex: 1, backgroundColor: '#F3F5F7', justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 18, color: '#174C3C' }}>Chargement...</Text>
-        <Text style={{ fontSize: 14, color: '#666', marginTop: 10 }}>Initialisation de l'authentification</Text>
-    </View>
-  );
-  }
-
-  // Logs de débogage détaillés
-  console.log('🔍 App.tsx État final:');
-  console.log('  - splashStep:', splashStep);
-  console.log('  - loading:', loading);
-  console.log('  - user:', user);
-  console.log('  - user.role:', user?.role);
-  console.log('  - !user:', !user);
-  console.log('  - user.role === admin:', user?.role === 'admin');
-  console.log('🚀 Navigation vers:', !user ? 'LoginScreen' : user.role === 'admin' ? 'AdminTabNavigator' : 'TabNavigator');
-
   return (
-    <SafeAreaProvider>
-    <AuthContext.Provider value={{ user, setUser }}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F5F7' }} edges={["top","bottom"]}>
-          <StatusBar barStyle="light-content" backgroundColor="#174C3C" />
-          <NavigationContainer>
-              <Stack.Navigator 
-              screenOptions={{ 
-                headerShown: false,
-                  cardStyle: { backgroundColor: '#F3F5F7' }
-              }}
-            >
-              {!user ? (
-                <Stack.Screen name="Login" component={LoginScreen} />
-              ) : user.role === 'admin' ? (
-                <Stack.Screen name="Admin" component={AdminTabNavigator} options={{ headerShown: false }} />
-              ) : (
-                <Stack.Screen name="Main" component={TabNavigator} />
-              )}
-              <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
-              <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-              <Stack.Screen name="Chapter" component={ChapterScreen} options={{ gestureEnabled: false }} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </SafeAreaView>
-      </GestureHandlerRootView>
-    </AuthContext.Provider>
-    </SafeAreaProvider>
+    <RootErrorBoundary>
+      <AuthProvider>
+        <EntitlementsProvider>
+          <AppShell />
+        </EntitlementsProvider>
+      </AuthProvider>
+    </RootErrorBoundary>
   );
 }
 
+function AppShell() {
+  const { loading } = useAuthContext();
+  const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
+  const [splashStep, setSplashStep] = useState(0);
+  const [quickSplashDone, setQuickSplashDone] = useState(false);
+  const [appShown, setAppShown] = useState(false); // ✅ État pour verrouiller l'affichage de l'app
+
+  // Masquer la barre de navigation système Android
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setVisibilityAsync('hidden');
+      NavigationBar.setBehaviorAsync('overlay-swipe');
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadFlag = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('hasSeenFullSplash');
+        setIsFirstLaunch(saved === 'true' ? false : true);
+      } catch {
+        setIsFirstLaunch(true);
+      }
+    };
+    loadFlag();
+  }, []);
+
+  useEffect(() => {
+    if (isFirstLaunch) {
+      if (splashStep === 0) {
+        const timer = setTimeout(() => setSplashStep(1), 3000);
+        return () => clearTimeout(timer);
+      }
+      if (splashStep === 1) {
+        const timer = setTimeout(() => setSplashStep(2), 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+    return undefined;
+  }, [isFirstLaunch, splashStep]);
+
+  useEffect(() => {
+    if (isFirstLaunch === false) {
+      setQuickSplashDone(false);
+      const timer = setTimeout(() => setQuickSplashDone(true), 1500);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [isFirstLaunch]);
+
+  useEffect(() => {
+    if (isFirstLaunch && splashStep >= 2 && !loading) {
+      AsyncStorage.setItem('hasSeenFullSplash', 'true').catch(() => {});
+    }
+  }, [isFirstLaunch, splashStep, loading]);
+
+  useEffect(() => {
+    if (
+      (isFirstLaunch && splashStep >= 2 && !loading) ||
+      (isFirstLaunch === false && quickSplashDone && !loading)
+    ) {
+      SystemUI.setBackgroundColorAsync('#F3F5F7').catch(() => {});
+    }
+  }, [isFirstLaunch, splashStep, quickSplashDone, loading]);
+
+  // ✅ Calculer si l'app doit être affichée (une seule fois)
+  const shouldShowApp = isFirstLaunch
+    ? splashStep >= 2 && !loading
+    : quickSplashDone && !loading;
+
+  // ✅ Marquer l'app comme affichée une fois qu'elle doit être montrée
+  useEffect(() => {
+    if (shouldShowApp && !appShown) {
+      setAppShown(true);
+    }
+  }, [shouldShowApp, appShown]);
+
+  // ✅ Si l'app a déjà été affichée, ne plus revenir au splash screen
+  // ✅ Cela évite la boucle si loading change après l'affichage initial
+  if (appShown) {
+    console.log('[App] rendu racine');
+    return <RootNavigator />;
+  }
+
+  // ✅ Pendant le chargement initial, afficher immédiatement le splash screen
+  // ✅ Cela évite l'écran gris pendant le chargement du flag AsyncStorage
+  if (isFirstLaunch === null) {
+    return <SplashLogo statusText="Initialisation…" />;
+  }
+
+  // ✅ Afficher le splash screen seulement si l'app n'a pas encore été montrée
+  if (!shouldShowApp) {
+    if (isFirstLaunch) {
+      if (splashStep === 0) {
+        return <SplashLogo />;
+      }
+      return <SplashFamille statusText={loading ? 'Initialisation…' : undefined} />;
+    }
+    return <SplashLogo statusText="Initialisation…" />;
+  }
+
+  console.log('[App] rendu racine');
+  return <RootNavigator />;
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
   splashLogoBg: {
     flex: 1,
     backgroundColor: '#1B4D3E',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 0,
   },
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoImage: {
-    width: 700,
-    height: 700,
+    width: 320,
+    height: 320,
     resizeMode: 'contain',
   },
-  logoText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    letterSpacing: 3,
-    marginTop: 10,
-  },
-
   progressContainer: {
     position: 'absolute',
     bottom: 50,
@@ -353,6 +308,16 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: 'white',
     borderRadius: 2,
+  },
+  statusText: {
+    marginTop: 16,
+    color: '#FFFFFF',
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  statusTextDark: {
+    color: '#174C3C',
   },
   splashFamilleBg: {
     flex: 1,
@@ -414,4 +379,3 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 });
-

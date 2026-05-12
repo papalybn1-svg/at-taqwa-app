@@ -1,5 +1,5 @@
 // Ordre explicite des quiz (pas tri de string)
-export const QUIZ_ORDER = ['1', '2', '3', '5', '6', '7', '9', '10', '12'] as const;
+export const QUIZ_ORDER = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] as const;
 
 // Fonction pour vérifier si un quiz est débloqué
 export const isQuizUnlocked = (
@@ -56,7 +56,7 @@ export const getQuizUnlockStatus = (
   
   return {
     isUnlocked: false,
-    requiredQuiz,
+    requiredQuiz: requiredQuiz || undefined,
     requiredScore,
     currentScore,
     progress

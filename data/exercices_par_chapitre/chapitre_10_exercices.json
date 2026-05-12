@@ -2,41 +2,81 @@
   {
     "numero": 1,
     "question": "L’imam ayant fait le tayammom peut-il diriger la prière si ceux qui le suivent ont fait leurs ablutions ?",
-    "reponse": "Cela est blâmable. Il est préférable que l’un de ceux qui ont fait les ablutions soit choisi comme imam pour diriger la prière."
+    "reponse": "Cela est blâmable. Il est préférable que l’un de ceux qui ont fait les ablutions soit choisi comme imam pour diriger la prière.",
+    "fausses_reponses": [
+      "Oui, l’imam peut diriger sans problème.",
+      "Il doit commencer la prière seul puis les autres le suivent.",
+      "La prière est invalide si l’imam a fait le tayammom."
+    ]
   },
   {
     "numero": 2,
     "question": "L’imam a des blessures et autres plaies alors que ceux qui le suivent sont sains et saufs ; peut-il diriger leur prière ?",
-    "reponse": "Cela est à éviter. L’imam est un modèle à imiter. Quelqu’un qui est couvert de plaies n’est pas indiqué comme imam."
+    "reponse": "Cela est à éviter. L’imam est un modèle à imiter. Quelqu’un qui est couvert de plaies n’est pas indiqué comme imam.",
+    "fausses_reponses": [
+      "Oui, les blessures n’empêchent pas d’être imam.",
+      "Il peut diriger mais uniquement pour les prières surérogatoires.",
+      "Il doit prier seul et les autres ne suivent pas."
+    ]
   },
   {
     "numero": 3,
     "question": "Peut-on être l’imam des gens qui vous haïssent pour des fins religieuses ?",
-    "reponse": "Jamais ! Vous ne pouvez pas diriger la prière de personnes qui vous haïssent pour des raisons religieuses."
+    "reponse": "Jamais ! Vous ne pouvez pas diriger la prière de personnes qui vous haïssent pour des raisons religieuses.",
+    "fausses_reponses": [
+      "Oui, tant que la prière est accomplie correctement.",
+      "Seulement pour les prières surérogatoires.",
+      "Oui, mais il faut demander pardon avant de commencer."
+    ]
   },
   {
     "numero": 4,
     "question": "Que faites-vous quand l’imam fait une 3ème sujûd ?",
-    "reponse": "Je ne le suis pas."
+    "reponse": "Je ne le suis pas.",
+    "fausses_reponses": [
+      "Je fais la 3ème sujûd aussi.",
+      "J’interromps ma prière et attends la fin.",
+      "Je continue normalement sans sujûd supplémentaire."
+    ]
   },
   {
     "numero": 5,
-    "question": "Un fidèle prie derrière l’imam. Celui-ci s’assoit à tort à la 3ème raka du dzohr. Que fait le fidèle et comment termine-t-il sa prière ?",
-    "reponse": "Il reste debout et attend l’Imam pour continuer la prière."
+    "question": "Un fidèle prie derrière l’imam. Celui-ci s’assoit à tort à la 3ème raka de la prière de Zohr. Que fait le fidèle et comment termine-t-il sa prière ?",
+    "reponse": "Il reste debout et attend que l’imam pour continuer la prière.",
+    "fausses_reponses": [
+      "Il s’assoit avec l’imam malgré l’erreur.",
+      "Il termine sa prière immédiatement.",
+      "Il recommence la prière depuis le début."
+    ]
   },
   {
     "numero": 6,
     "question": "A la 2ème raka de la prière du Maghreb, l’imam oublie de s’asseoir ; il se lève immédiatement après la 2ème sujûd et continue sa prière. Vous priez derrière cet imam. Que faites-vous ?",
-    "reponse": "Je me lève et le suis. Sujûd habla salam."
+    "reponse": "Je me lève et le suis. Sujûd habla salam.",
+    "fausses_reponses": [
+      "Je m’assois malgré l’erreur de l’imam.",
+      "Je continue ma prière normalement sans suivre l’imam.",
+      "Je recommence la prière depuis le début."
+    ]
   },
   {
     "numero": 7,
     "question": "L’imam prononce le salut final après la 2ème raka du Maghreb. Que devez-vous faire ?",
-    "reponse": "Je dis « subhanallah ». Si l’imam me donne raison, il dit « allahu akbar », se lève en disant encore « allahu akbar » et continue sa prière. Après le salut final, il fera sujûd bahda salam."
+    "reponse": "Je dis « subhanallah ». Si l’imam me donne raison, il dit « allahu akbar » en position assise. Puis il se lève en disant encore « allahu akbar » et continue sa prière. Après le salut final, il fera sujûd bahda salam.",
+    "fausses_reponses": [
+      "Je fais le salut final immédiatement.",
+      "J’ignore l’erreur et continue la prière normalement.",
+      "Je recommence la prière depuis le début."
+    ]
   },
   {
     "numero": 8,
     "question": "Que fait l’imam s’il a des doutes malgré le « subhanallah » que je lui ai adressé ?",
-    "reponse": "L’imam s’informe auprès de 2 autres fidèles dignes de foi. Si après cette consultation, plus de 2 fidèles confirment la faute, l’imam serait obligé de les suivre."
+    "reponse": "L’imam s’informe auprès de 2 autres fidèles dignes de foi. Si après cette consultation, plus de 2 fidèles confirment la faute, l’imam serait obligé de les suivre.",
+    "fausses_reponses": [
+      "Il ignore le doute et continue sa prière.",
+      "Il arrête la prière immédiatement.",
+      "Il recommence la prière pour tout le groupe."
+    ]
   }
 ]

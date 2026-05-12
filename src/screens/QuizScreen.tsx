@@ -1,90 +1,101 @@
 // src/screens/QuizScreen.tsx
 
-import { StackActions, useFocusEffect, useNavigation } from '@react-navigation/native';
-import React, { useCallback, useEffect } from 'react';
-import { BackHandler, Dimensions, Image, PanResponder, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../hooks/useAuth';
-import { read as readUserStorage } from '../utils/userStorage';
+import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useMemo } from 'react';
+import { Dimensions, Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsive, getResponsiveStyle } from '../hooks/useResponsive';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function QuizScreen() {
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const insets = useSafeAreaInsets();
 
-  const goToHome = () => {
-    // Utilise popToTop pour revenir à la racine de la pile
-    navigation.dispatch(StackActions.popToTop());
-  };
+  // Styles dynamiques basés sur le responsive
+  const dynamicStyles = useMemo(() => {
+    const { breakpoint, width, height } = responsive;
+    
+    // Calcul de la taille du cercle selon le breakpoint - PLUS GRAND
+    let circleSize = 0;
+    
+    if (breakpoint === 'xxl' && width >= 1024) {
+      circleSize = Math.min(420, width * 0.45);
+    } else if (breakpoint === 'xs') {
+      circleSize = Math.min(260, width * 0.65); // Plus grand pour petits écrans
+    } else if (breakpoint === 'sm') {
+      circleSize = Math.min(320, width * 0.68);
+    } else if (breakpoint === 'md') {
+      circleSize = Math.min(360, width * 0.62);
+    } else {
+      // lg et xl
+      circleSize = Math.min(400, width * 0.55);
+    }
 
-  // Gestionnaire de swipe personnalisé pour iOS
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Détecter un swipe horizontal de gauche à droite
-      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && gestureState.dx > 50;
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      // Optionnel: ajouter un feedback visuel pendant le swipe
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      // Si c'est un swipe de gauche à droite suffisant, aller à l'accueil
-      if (gestureState.dx > 100 && Math.abs(gestureState.dy) < 100) {
-        console.log('Swipe détecté - retour à l\'accueil');
-        goToHome();
-      }
-    },
-  });
+    // L'image doit être environ 25-30% plus grande que le cercle pour qu'elle sorte vraiment
+    const imageSize = circleSize * 1.28; // 28% plus grande que le cercle pour bien sortir
+    const imageHeight = imageSize * 1.2; // Ratio hauteur/largeur pour l'image
 
-  // Gestionnaire pour le bouton retour Android uniquement
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        goToHome();
-        return true;
-  };
+    return {
+      content: {
+        paddingTop: breakpoint === 'xs' ? 30 : breakpoint === 'sm' ? 35 : breakpoint === 'md' ? 40 : 50,
+      },
+      title: {
+        fontSize: breakpoint === 'xxl' ? 48 : breakpoint === 'xs' ? 28 : breakpoint === 'sm' ? 32 : breakpoint === 'md' ? 36 : 42,
+        marginBottom: breakpoint === 'xs' ? 8 : breakpoint === 'sm' ? 10 : 12, // Réduit pour rapprocher du cercle
+      },
+      arabicText: {
+        fontSize: breakpoint === 'xxl' ? 28 : breakpoint === 'xs' ? 16 : breakpoint === 'sm' ? 18 : breakpoint === 'md' ? 20 : 24,
+        marginBottom: breakpoint === 'xs' ? 12 : breakpoint === 'sm' ? 16 : breakpoint === 'md' ? 20 : 24, // Réduit pour rapprocher du cercle
+        paddingHorizontal: responsiveStyle.spacing.base,
+      },
+      imageContainer: {
+        marginTop: breakpoint === 'xs' ? -10 : breakpoint === 'sm' ? -15 : breakpoint === 'md' ? -20 : -25, // Réduit pour rapprocher
+      },
+      decorativeCircle: {
+        width: circleSize,
+        height: circleSize,
+        borderRadius: circleSize / 2,
+      },
+      girlImage: {
+        width: imageSize,
+        height: imageHeight,
+        maxWidth: imageSize,
+        maxHeight: imageHeight,
+      },
+    };
+  }, [responsive, responsiveStyle]);
 
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-      return () => subscription.remove();
-    }, [])
-  );
-
-  // Redirection automatique: si session en cours, aller directement au dernier quiz et question
+  // Redirection automatique vers la page "Commencer" après 1 seconde
   useEffect(() => {
     let cancelled = false;
     const go = async () => {
-      const index = await readUserStorage<Record<string, boolean>>(user?.uid, 'quizSessionsIndex');
-      if (!cancelled && index && Object.keys(index).length > 0) {
-        // Prendre la première session (ou la plus récente si on stocke updatedAt plus tard)
-        const chapterKey = Object.keys(index)[0];
-        (navigation as any).navigate('OriginalQuiz', { exercicesKey: chapterKey });
-        return;
-      }
       if (!cancelled) navigation.navigate('QuizStart' as never);
     };
-    const timer = setTimeout(go, 100);
+    const timer = setTimeout(go, 1000);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [navigation, user?.uid]);
+  }, [navigation]);
 
   return (
-    <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
+    <SafeAreaView style={styles.container}>
       {/* Contenu principal */}
-      <View style={styles.content}>
+      <View style={[styles.content, dynamicStyles.content]}>
         {/* Titre Bismillah */}
-        <Text style={styles.title}>Bismillah</Text>
+        <Text style={[styles.title, dynamicStyles.title]}>Bismillah</Text>
 
         {/* Texte arabe au-dessus de l'image */}
-        <Text style={styles.arabicText}>بسم الله الرحمن الرحيم</Text>
+        <Text style={[styles.arabicText, dynamicStyles.arabicText]}>بسم الله الرحمن الرحيم</Text>
 
         {/* Image de la fille avec cercle décoratif */}
-        <View style={styles.imageContainer}>
+        <View style={[styles.imageContainer, dynamicStyles.imageContainer]}>
           {/* Cercle décoratif derrière l'image */}
-          <View style={styles.decorativeCircle} />
+          <View style={[styles.decorativeCircle, dynamicStyles.decorativeCircle]} />
 
           <Image 
             source={require('../../assets/16.png')} 
-            style={styles.girlImage}
+            style={[styles.girlImage, dynamicStyles.girlImage]}
             resizeMode="contain"
           />
         </View>
@@ -103,49 +114,34 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     justifyContent: 'flex-start',
     paddingHorizontal: 20,
-    paddingTop: 60, // Augmenté de 20 à 60 pour plus de marge en haut
   },
-
   title: {
-    fontSize: 36,
     fontWeight: 'bold', 
     color: 'white',
-    marginBottom: 20,
     textAlign: 'center', 
   },
   arabicText: {
-    fontSize: 28,
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center', 
-    marginBottom: 40,
-    fontFamily: 'System',
-    letterSpacing: 3,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    letterSpacing: 1,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
-    paddingHorizontal: 20,
   },
   imageContainer: {
     alignItems: 'center', 
     justifyContent: 'center',
     position: 'relative',
-    marginTop: -50, // Ajouté marginTop négatif pour faire monter vers le haut
     flex: 1, // Prend tout l'espace disponible pour centrer
   },
   decorativeCircle: {
     position: 'absolute',
-    width: screenWidth * 0.8, // Augmenté de 0.6 à 0.8
-    height: screenWidth * 0.8, // Augmenté de 0.6 à 0.8
-    borderRadius: screenWidth * 0.4, // Augmenté de 0.3 à 0.4
     backgroundColor: '#FFFFFF', // Blanc opaque
     zIndex: 0,
   },
   girlImage: {
-    width: screenWidth * 2.0, // Augmenté de 1.6 à 2.0
-    height: screenHeight * 1.3, // Augmenté de 1.0 à 1.3
-    maxWidth: 900, // Augmenté de 700 à 900
-    maxHeight: 1200, // Augmenté de 900 à 1200
     zIndex: 1,
   },
 });

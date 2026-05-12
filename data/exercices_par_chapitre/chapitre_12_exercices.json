@@ -1,34 +1,104 @@
-[
-  {
-    "numero": 1,
-    "question": "Vous arrivez après la qutba de l’imam, mais à temps pour la prière, avez-vous une réparation à faire ?",
-    "reponse": "Non. Il est préférable d’arriver à temps pour suivre la qutba de l’imam, mais si vous l’avez manquée non intentionnellement, votre prière est valable. Celui qui cherche à n’arriver qu’au moment de la prière, négligeant la qutba, commet une grave erreur."
-  },
-  {
-    "numero": 2,
-    "question": "Vous arrivez à la fin de la 1ère raka, vous accomplissez la 2ème raka avec l’imam. Après le salut final de l’imam, comment achevez-vous votre prière ?",
-    "reponse": "Vous vous levez après le salut de l’imam, vous récitez la Fatiha + une surate ; vous avez ainsi rattrapé la 1ère raka que vous aviez manquée. La prière étant de 2 rakas, vous prononcez la tahiyya puis le salut final. Evidemment, à votre arrivée, vous avez formulé l’intention de prier derrière l’imam et fait le takbiratul ihrâm avant de le rejoindre."
-  },
-  {
-    "numero": 3,
-    "question": "Vous rejoignez l’imam après le rukû de la 2ème raka. Comment terminez-vous votre prière ?",
-    "reponse": "Si je ne rejoins l’imam qu’après le rukû de la 2ème raka, cela veut dire que je ne fais pas partie de cette raka ; donc je ne fais pas partie de la prière puisqu’il s’agit d’une prière de 2 rakas."
-  },
-  {
-    "numero": 4,
-    "question": "L’imam constate qu’il est arrivé en retard ; pour gagner du temps, il supprime les 3 appels et passe immédiatement à sa qutba, puis à la prière. Cette prière est-elle valable ?",
-    "reponse": "Après le salut final de l’imam, je mets fin à cette prière et je commence une prière normale de Zohr de 4 rakas, avec récitation à voix basse."
-  },
-  {
-    "numero": 5,
-    "question": "Après les 3 appels, l’imam constate que beaucoup de retard a été accumulé. Il décide alors de supprimer sa qutba et passe directement à la prière. Cette prière est-elle valable ?",
-    "reponse": "La prière est valable, mais l’imam aurait pu faire procéder à un seul appel."
-  },
-  {
-    "numero": 6,
-    "question": "Comment, au 9ème jour du mois de dzulhijja, à Arafat, durant le Pèlerinage, l’imam fait-il la prière de Zohr si ce jour d’Arafat tombe sur un vendredi ? Fait-il la qutba avant ou après la prière, accomplit-il 4 rakas ou 2 ? Récite-t-il à haute voix ou à voix basse ?",
-    "reponse": "Si le stationnement des pèlerins à Arafat tombe sur un vendredi, cela ne change rien à la prière. Car à Arafat les pèlerins n’accomplissent pas la prière du vendredi, les conditions de résidence n’étant pas remplies. Après l’adhan et l’iqâma, l’imam fait la prière de Zohr en récitant à voix basse. Comme il est en voyage, de même que tous les pèlerins, il raccourcit la prière à 2 rakas. Il regroupe les prières de Zohr et de l’Asr. Aussi, dès le salut final de Zohr il donne ordre de prononcer l’iqâma pour la salat Asr. L’imam se lève et accomplit les 2 rakas de la prière de l’Asr. C’est seulement après le saut final de l’Asr qu’il prononce sa qutba."
-  }
-    ]
-
-  
+{
+  "quiz": [
+    {
+      "numero": 1,
+      "question": "Selon le Coran (s.4, v.101), lorsqu’on est en voyage, qu’est-il permis de faire, par rapport à la prière?",
+      "reponse": "Il est permis d’écourter la prière.",
+      "fausses_reponses": [
+        "Il est permis de regrouper toutes les prières en une seule.",
+        "Il est permis de ne pas prier pendant le voyage.",
+        "Il est permis de remplacer les prières par des invocations."
+      ]
+    },
+    {
+      "numero": 2,
+      "question": "Pourquoi le Prophète (PSL) a-t-il maintenu le raccourcissement de la prière en voyage, même sans menace d’ennemis ?",
+      "reponse": "Parce que c’est une faveur qu’Allah a accordée aux croyants.",
+      "fausses_reponses": [
+        "Parce que c’était une obligation stricte du Coran.",
+        "Parce que les voyages étaient rares à son époque.",
+        "Parce que cela permettait d’attirer plus de fidèles."
+      ]
+    },
+    {
+      "numero": 3,
+      "question": "Quelle est la distance minimale de voyage qui autorise le raccourcissement des prières ?",
+      "reponse": "80 km.",
+      "fausses_reponses": [
+        "40 km.",
+        "100 km.",
+        "120 km."
+      ]
+    },
+    {
+      "numero": 4,
+      "question": "Quelles prières doivent être raccourcies à 2 rakas pendant le voyage ?",
+      "reponse": "Zohr, Asr et Ichâ.",
+      "fausses_reponses": [
+        "Subh, Maghreb et Ichâ.",
+        "Toutes les prières obligatoires sans exception.",
+        "Uniquement la prière du vendredi."
+      ]
+    },
+    {
+      "numero": 5,
+      "question": "La prière du Maghreb est-elle réduite pendant le voyage ?",
+      "reponse": "Non, elle reste fixée à 3 rakas.",
+      "fausses_reponses": [
+        "2 rakas.",
+        "4 rakas.",
+        "Elle n’est pas obligatoire en voyage."
+      ]
+    },
+    {
+      "numero": 6,
+      "question": "Si un voyageur prie derrière un imam résident, que doit-il faire ?",
+      "reponse": "Il doit compléter sa prière comme l’imam résident.",
+      "fausses_reponses": [
+        "Il peut raccourcir sa prière même derrière l’imam résident.",
+        "Il doit quitter la prière et prier seul.",
+        "Il n’a pas le droit de prier derrière un résident."
+      ]
+    },
+    {
+      "numero": 7,
+      "question": "Durant combien de jours un voyageur peut-il raccourcir la prière ?",
+      "reponse": "Durant 4 jours selon le rite malikite ; cependant, durant plusieurs voyages, le prophète a raccourci sa prière quelle que soit la durée du voyage.",
+      "fausses_reponses": [
+        "Moins de 10 jours.",
+        "Moins de 15 jours.",
+        "Moins de 20 jours."
+      ]
+    },
+    {
+      "numero": 8,
+      "question": "Comment doit être remboursée une prière non accomplie avant le départ en voyage ?",
+      "reponse": "Elle doit être accomplie comme la prière du résident.",
+      "fausses_reponses": [
+        "Elle doit être remboursée en 2 rakas car le fidèle est en voyage.",
+        "Elle peut être remplacée par une prière surérogatoire.",
+        "Elle n’a pas besoin d’être rattrapée."
+      ]
+    },
+    {
+      "numero": 9,
+      "question": "Quels prières surérogatoires peut-on accomplir en voyage ?",
+      "reponse": "Les 2 rakas de fajr et la raka de witr.",
+      "fausses_reponses": [
+        "Toutes les prières surérogatoires habituelles.",
+        "Uniquement les prières de dhuha.",
+        "Aucune, il est interdit de faire des nafilas en voyage."
+      ]
+    },
+    {
+      "numero": 10,
+      "question": "Le marin est-il autorisé à raccourcir la prière comme le voyageur ?",
+      "reponse": "Non, il est considéré comme résident.",
+      "fausses_reponses": [
+        "Oui, il peut toujours raccourcir.",
+        "Uniquement si son trajet dépasse 80 km en mer.",
+        "Uniquement lorsqu’il dort à bord du navire."
+      ]
+    }
+  ]
+}

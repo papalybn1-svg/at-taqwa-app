@@ -1,299 +1,373 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { searchCityWithCountry } from './citySearchService';
 
-// Configuration MALIKITE pour le Sénégal
-const MALIKITE_CONFIG = {
+// Configuration "Malikite Sénégal" (méthode de calcul)
+export const MALIKITE_CONFIG = {
   method: 3, // Muslim World League (MWL)
-  school: 0, // Shafi' (équivalent Malikite pour Asr)
+  school: 0, // Asr Shafi' (proche de la pratique courante)
   latitudeAdjustmentMethod: 'ANGLE_BASED',
-  timezone: 'Africa/Dakar'
 };
 
-// Ordre des prières
-const PRAYER_ORDER = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const;
+export const PRAYER_ORDER = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const;
+export type PrayerKey = (typeof PRAYER_ORDER)[number];
 
-// Fonction utilitaire pour convertir HH:MM en minutes
-const toMinutes = (time: string): number => {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-};
+export type PrayerTimings = Record<string, string>;
 
-// Fonction pour obtenir la date du jour au format YYYY-MM-DD
-const getTodayDate = (): string => {
-  const now = new Date();
-  return now.toISOString().split('T')[0];
-};
-
-// Fonction pour générer la clé de cache
-const getCacheKey = (date: string, timezone: string, method: number, school: number, city?: string): string => {
-  const cityKey = city ? `:${city}` : '';
-  return `prayer:${date}:${timezone}:${method}:${school}${cityKey}`;
-};
-
-// Fonction pour sauvegarder en cache
-const saveToCache = async (key: string, data: any): Promise<void> => {
-  try {
-    const cacheData = {
-      ...data,
-      cachedAt: new Date().toISOString()
-    };
-    await AsyncStorage.setItem(key, JSON.stringify(cacheData));
-    console.log('💾 Cache sauvegardé:', key);
-  } catch (error) {
-    console.log('❌ Erreur sauvegarde cache:', error);
-  }
-};
-
-// Fonction pour récupérer du cache
-const getFromCache = async (key: string): Promise<any | null> => {
-  try {
-    const cached = await AsyncStorage.getItem(key);
-    if (cached) {
-      const data = JSON.parse(cached);
-      console.log('📦 Cache récupéré:', key);
-      return data;
-    }
-  } catch (error) {
-    console.log('❌ Erreur récupération cache:', error);
-  }
-  return null;
-};
-
-// Fonction pour construire l'URL de l'API (selon spécifications)
-const buildApiUrl = (params: {
-  city?: string;
-  country?: string;
-  latitude?: number;
-  longitude?: number;
-  method?: number;
-  school?: number;
-  timezone?: string;
-}): string => {
-  const {
-    city,
-    country,
-    latitude,
-    longitude,
-    method = MALIKITE_CONFIG.method,
-    school = MALIKITE_CONFIG.school,
-    timezone = MALIKITE_CONFIG.timezone
-  } = params;
-
-  const baseParams = `method=${method}&school=${school}&latitudeAdjustmentMethod=${MALIKITE_CONFIG.latitudeAdjustmentMethod}&timezonestring=${encodeURIComponent(timezone)}`;
-
-  if (city && country) {
-    return `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&${baseParams}`;
-  } else if (latitude && longitude) {
-    const timestamp = Math.floor(Date.now() / 1000); // Timestamp en secondes
-    return `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${latitude}&longitude=${longitude}&${baseParams}`;
-  }
-
-  throw new Error('Paramètres insuffisants pour construire l\'URL');
-};
-
-// Fonction pour calculer la prochaine prière (selon spécifications)
-const getNextPrayer = (timings: Record<string, string>): string => {
-  if (!timings) return 'Fajr';
-
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  
-  const next = PRAYER_ORDER.find(k => toMinutes(timings[k]) > nowMin);
-  return next ?? 'Fajr';
-};
-
-// Fonction pour formater l'heure
-const formatPrayerTime = (time: string): string => {
-  if (!time) return '--:--';
-  return time;
-};
-
-// Fonction pour obtenir la date actuelle
-const getCurrentDate = (): string => {
-  const now = new Date();
-  return now.toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-// Fonction pour obtenir la date Hijri
-const getHijriDate = (): string => {
-  // Pour l'instant, retourner une date Hijri simulée
-  // Plus tard, on pourra utiliser l'API Aladhan pour la date Hijri
-  return 'Date Hijri';
-};
-
-// Fonction principale pour récupérer les horaires de prière
-export const fetchPrayerTimes = async (cityName?: string): Promise<{
-  timings: Record<string, string>;
-  date: any;
+export interface PrayerTimesResult {
+  timings: PrayerTimings;
+  date: {
+    readable?: string;
+    gregorian?: any;
+    hijri?: any;
+  } | null;
   city: string;
-  nextPrayer: string;
+  country?: string;
+  timezone: string;
+  nextPrayer?: {
+    key: PrayerKey;
+    name: string;
+    time: string;
+    minutesUntil: number;
+  } | null;
   lastUpdate: string;
-}> => {
-  const today = getTodayDate();
-  const cacheKey = getCacheKey(today, MALIKITE_CONFIG.timezone, MALIKITE_CONFIG.method, MALIKITE_CONFIG.school, cityName);
-  
+  offline?: boolean;
+}
+
+const ALADHAN_BASE_URL = 'https://api.aladhan.com/v1';
+
+// ---------- Utilitaires temps / date ----------
+
+const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+
+export const formatPrayerTime = (time: string | undefined): string => {
+  if (!time) return '--:--';
+  // l’API renvoie déjà HH:MM (parfois avec suffixes), on normalise un peu
+  const match = time.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return time;
+  const h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  return `${pad2(h)}:${pad2(m)}`;
+};
+
+export const getCurrentDate = (): string => {
+  const now = new Date();
+  const jours = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  const mois = [
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
+  ];
+  return `${jours[now.getDay()]} ${now.getDate()} ${mois[now.getMonth()]} ${now.getFullYear()}`;
+};
+
+// Utilisé uniquement quand on n’a pas la date Hijri de l’API
+export const getHijriDate = (): string => {
+  return 'Date hijri indisponible hors ligne';
+};
+
+// ---------- Cache AsyncStorage ----------
+
+const buildCacheKey = (id: string) => `prayerTimes:last:${id}`;
+
+// Sauvegarde du dernier résultat pour une ville (ou “current_location”)
+const saveLastPrayerTimes = async (id: string, data: PrayerTimesResult) => {
   try {
-    // Essayer de récupérer du cache d'abord
-    const cached = await getFromCache(cacheKey);
-    if (cached) {
-      console.log('📦 Utilisation du cache pour aujourd\'hui');
-      return {
-        timings: cached.timings,
-        date: cached.date,
-        city: cached.city,
-        nextPrayer: getNextPrayer(cached.timings),
-        lastUpdate: cached.cachedAt
+    const payload = {
+      ...data,
+      cachedAt: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem(buildCacheKey(id), JSON.stringify(payload));
+  } catch (error) {
+    console.error('❌ Erreur sauvegarde horaires prière (cache):', error);
+  }
+};
+
+export const loadLastPrayerTimes = async (id: string): Promise<PrayerTimesResult | null> => {
+  try {
+    const raw = await AsyncStorage.getItem(buildCacheKey(id));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed as PrayerTimesResult;
+  } catch (error) {
+    console.error('❌ Erreur lecture horaires prière (cache):', error);
+    return null;
+  }
+};
+
+// ---------- Calcul de la prochaine prière ----------
+
+export const getNextPrayerInfo = (timings: PrayerTimings): PrayerTimesResult['nextPrayer'] => {
+  if (!timings) return null;
+
+  const now = new Date();
+  const today = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+    0,
+    0
+  );
+
+  let next: PrayerTimesResult['nextPrayer'] | null = null;
+
+  const prayerNames: Record<string, string> = {
+    Fajr: 'Fajr',
+    Dhuhr: 'Dhuhr',
+    Asr: 'Asr',
+    Maghrib: 'Maghrib',
+    Isha: 'Isha',
+  };
+
+  for (const key of PRAYER_ORDER) {
+    const rawTime = timings[key];
+    if (!rawTime) continue;
+
+    const match = rawTime.match(/(\d{1,2}):(\d{2})/);
+    if (!match) continue;
+
+    const h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+
+    const prayerDate = new Date(today);
+    prayerDate.setHours(h, m, 0, 0);
+
+    const diffMs = prayerDate.getTime() - now.getTime();
+    if (diffMs <= 0) continue;
+
+    const diffMinutes = Math.round(diffMs / 60000);
+
+    if (!next || diffMinutes < (next.minutesUntil ?? Number.MAX_SAFE_INTEGER)) {
+      next = {
+        key: key as PrayerKey,
+        name: prayerNames[key] || key,
+        time: formatPrayerTime(rawTime),
+        minutesUntil: diffMinutes,
       };
     }
+  }
 
-    // Si pas de cache, faire l'appel API
-    let url: string;
-    let city = cityName || 'Dakar';
-    let country = 'Senegal';
+  return next;
+};
 
-    if (cityName) {
-      url = buildApiUrl({ city, country });
-    } else {
-      // Essayer d'obtenir la localisation GPS
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({});
-          url = buildApiUrl({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude
-          });
-          console.log('📍 Utilisation GPS:', location.coords);
-        } else {
-          url = buildApiUrl({ city, country });
+// ---------- Appels API Aladhan ----------
+
+const buildTimingsByCityUrl = (city: string, country: string) => {
+  const params = new URLSearchParams({
+    city,
+    country,
+    method: String(MALIKITE_CONFIG.method),
+    school: String(MALIKITE_CONFIG.school),
+    latitudeAdjustmentMethod: MALIKITE_CONFIG.latitudeAdjustmentMethod,
+  });
+  return `${ALADHAN_BASE_URL}/timingsByCity?${params.toString()}`;
+};
+
+const buildTimingsByCoordsUrl = (lat: number, lon: number) => {
+  const now = new Date();
+  const timestamp = Math.floor(now.getTime() / 1000);
+
+  const params = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    method: String(MALIKITE_CONFIG.method),
+    school: String(MALIKITE_CONFIG.school),
+    latitudeAdjustmentMethod: MALIKITE_CONFIG.latitudeAdjustmentMethod,
+  });
+
+  return `${ALADHAN_BASE_URL}/timings/${timestamp}?${params.toString()}`;
+};
+
+const callAladhan = async (url: string, timeoutMs: number = 10000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Erreur HTTP ${response.status}`);
+    }
+    
+    const json = await response.json();
+    if (json.code !== 200 || !json.data) {
+      throw new Error(`Réponse Aladhan invalide: ${JSON.stringify(json)}`);
+    }
+    
+    return json.data;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+      throw new Error('Timeout: La requête a pris trop de temps. Vérifiez votre connexion internet.');
+    }
+    throw error;
+  }
+};
+
+// ---------- Fonction principale: fetchPrayerTimes ----------
+
+/**
+ * Récupère les horaires de prière pour:
+ * - une ville précise (cityName + countryName)
+ * - ou la position actuelle si cityName non fourni
+ *
+ * Utilise Aladhan et garde un cache par ville / position.
+ */
+export const fetchPrayerTimes = async (
+  cityName?: string,
+  countryName?: string,
+  timeoutMs: number = 15000
+): Promise<PrayerTimesResult> => {
+  const id = cityName
+    ? `${cityName.trim()}|${(countryName || '').trim() || 'DEFAULT_COUNTRY'}`
+    : 'CURRENT_LOCATION';
+
+  // ✅ AMÉLIORATION : Vérifier le cache AVANT l'appel API pour affichage rapide
+  let cached: PrayerTimesResult | null = await loadLastPrayerTimes(id);
+  
+  // Fonction interne pour l'appel API
+  const fetchWithTimeout = async (): Promise<PrayerTimesResult> => {
+    let data: any;
+    let finalCity = cityName?.trim();
+    let finalCountry = countryName?.trim();
+    let timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+    if (finalCity) {
+      // Ville spécifiée: on utilise Nominatim pour trouver lat/lon, puis Aladhan par coordonnées
+      const geo = await searchCityWithCountry(finalCity, finalCountry);
+      if (geo && geo.lat != null && geo.lon != null) {
+        const url = buildTimingsByCoordsUrl(geo.lat, geo.lon);
+        data = await callAladhan(url);
+        finalCity = geo.displayName || geo.name || finalCity;
+        // meta.timezone vient souvent avec la réponse
+        if (data.meta?.timezone) {
+          timezone = data.meta.timezone;
         }
-      } catch (error) {
-        console.log('❌ Erreur GPS, utilisation Dakar par défaut:', error);
-        url = buildApiUrl({ city, country });
+        finalCountry = geo.country || finalCountry || undefined;
+      } else if (finalCity && finalCountry) {
+        // fallback timingsByCity
+        const url = buildTimingsByCityUrl(finalCity, finalCountry);
+        data = await callAladhan(url);
+        if (data.meta?.timezone) {
+          timezone = data.meta.timezone;
+        }
+      } else {
+        // city sans country → on tente quand même timingsByCity, pays laissé vide
+        const url = buildTimingsByCityUrl(finalCity, '');
+        data = await callAladhan(url);
+        if (data.meta?.timezone) {
+          timezone = data.meta.timezone;
+        }
+      }
+    } else {
+      // Pas de ville: on essaie la position actuelle
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        const url = buildTimingsByCoordsUrl(location.coords.latitude, location.coords.longitude);
+        data = await callAladhan(url);
+        finalCity = 'Position actuelle';
+        if (data.meta?.timezone) {
+          timezone = data.meta.timezone;
+        }
+      } else {
+        // GPS refusé → fallback Dakar, Sénégal
+        finalCity = 'Dakar';
+        finalCountry = 'Senegal';
+        const url = buildTimingsByCityUrl(finalCity, finalCountry);
+        data = await callAladhan(url);
+        if (data.meta?.timezone) {
+          timezone = data.meta.timezone;
+        } else {
+          timezone = 'Africa/Dakar';
+        }
       }
     }
 
-    console.log('🌐 URL appelée:', url);
-    console.log('⏰ TZ utilisé:', MALIKITE_CONFIG.timezone);
-    console.log('📊 Method:', MALIKITE_CONFIG.method, 'School:', MALIKITE_CONFIG.school);
+    const timings: PrayerTimings = data.timings || {};
+    const date = data.date || null;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log('📊 Extrait timings:', {
-      Fajr: data.data.timings.Fajr,
-      Dhuhr: data.data.timings.Dhuhr,
-      Asr: data.data.timings.Asr,
-      Maghrib: data.data.timings.Maghrib,
-      Isha: data.data.timings.Isha
-    });
-
-    const result = {
-      timings: data.data.timings,
-      date: data.data.date,
-      city: city,
-      nextPrayer: getNextPrayer(data.data.timings),
-      lastUpdate: new Date().toISOString()
+    const result: PrayerTimesResult = {
+      timings,
+      date,
+      city: finalCity || 'Ville inconnue',
+      country: finalCountry,
+      timezone,
+      nextPrayer: getNextPrayerInfo(timings),
+      lastUpdate: new Date().toISOString(),
+      offline: false,
     };
 
-    // Sauvegarder en cache
-    await saveToCache(cacheKey, result);
+    // Sauvegarde pour mode hors ligne
+    await saveLastPrayerTimes(id, result);
 
     return result;
+  };
 
-  } catch (error) {
-    console.error('❌ Erreur fetch horaires:', error);
-    
-    // En cas d'erreur, essayer de récupérer le dernier succès du jour
-    const lastSuccess = await getFromCache(cacheKey);
-    if (lastSuccess) {
-      console.log('🔄 Utilisation du dernier succès du jour');
+  // Timeout global avec Promise.race
+  const timeoutPromise = new Promise<PrayerTimesResult>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error('Timeout: La requête a pris trop de temps. Vérifiez votre connexion internet.'));
+    }, timeoutMs);
+  });
+
+  try {
+    // Essayer l'appel API avec timeout
+    const result = await Promise.race([fetchWithTimeout(), timeoutPromise]);
+    // ✅ Si succès, retourner le résultat frais (le cache sera mis à jour dans fetchWithTimeout)
+    return result;
+  } catch (error: any) {
+    console.error('❌ Erreur fetchPrayerTimes (timeout ou erreur):', error);
+
+    // 2) Fallback: utiliser le cache (déjà chargé au début ou rechargé ici)
+    if (cached) {
+      console.log('📦 Utilisation des derniers horaires en cache pour', id);
       return {
-        timings: lastSuccess.timings,
-        date: lastSuccess.date,
-        city: lastSuccess.city,
-        nextPrayer: getNextPrayer(lastSuccess.timings),
-        lastUpdate: lastSuccess.cachedAt
+        ...cached,
+        offline: true,
+      };
+    }
+    // Si pas de cache au début, essayer de recharger (au cas où)
+    const fallbackCache = await loadLastPrayerTimes(id);
+    if (fallbackCache) {
+      console.log('📦 Utilisation du cache de fallback pour', id);
+      return {
+        ...fallbackCache,
+        offline: true,
       };
     }
 
-    // Fallback avec des horaires par défaut (Dakar)
-    const fallbackTimings = {
+    // 3) Fallback ultime: horaires statiques Dakar (pas idéal, mais mieux que rien)
+    const now = new Date();
+    const fallbackTimings: PrayerTimings = {
       Fajr: '05:45',
-      Dhuhr: '13:15',
+      Dhuhr: '13:30',
       Asr: '16:30',
       Maghrib: '19:15',
-      Isha: '20:30'
+      Isha: '20:30',
     };
 
     return {
       timings: fallbackTimings,
-      date: { gregorian: { day: new Date().getDate(), month: { fr: 'Janvier' }, year: new Date().getFullYear() } },
-      city: 'Dakar (offline)',
-      nextPrayer: getNextPrayer(fallbackTimings),
-      lastUpdate: new Date().toISOString()
+      date: null,
+      city: 'Dakar (fallback)',
+      country: 'Senegal',
+      timezone: 'Africa/Dakar',
+      nextPrayer: getNextPrayerInfo(fallbackTimings),
+      lastUpdate: now.toISOString(),
+      offline: true,
     };
   }
-};
-
-// Fonction pour obtenir les informations de la prochaine prière
-export const getNextPrayerInfo = (timings: Record<string, string>): {
-  key: string;
-  name: string;
-  time: string;
-  minutesUntil: number;
-} | null => {
-  if (!timings) return null;
-
-  const nextPrayerKey = getNextPrayer(timings);
-  const nextPrayerTime = timings[nextPrayerKey];
-  
-  if (!nextPrayerTime) return null;
-
-  const now = new Date();
-  const nextTime = new Date();
-  const [hours, minutes] = nextPrayerTime.split(':').map(Number);
-  nextTime.setHours(hours, minutes, 0, 0);
-
-  // Si la prière est déjà passée aujourd'hui, c'est pour demain
-  if (nextTime <= now) {
-    nextTime.setDate(nextTime.getDate() + 1);
-  }
-
-  const minutesUntil = Math.floor((nextTime.getTime() - now.getTime()) / (1000 * 60));
-
-  const prayerNames: Record<string, string> = {
-    Fajr: 'Subh',
-    Dhuhr: 'Dhuhr',
-    Asr: 'Asr',
-    Maghrib: 'Maghrib',
-    Isha: 'Isha'
-  };
-
-  return {
-    key: nextPrayerKey,
-    name: prayerNames[nextPrayerKey] || nextPrayerKey,
-    time: nextPrayerTime,
-    minutesUntil
-  };
-};
-
-// Export des fonctions utilitaires
-export {
-    MALIKITE_CONFIG,
-    PRAYER_ORDER, formatPrayerTime,
-    getCurrentDate,
-    getHijriDate
 };

@@ -1,0 +1,55 @@
+{
+    "quiz": [
+      {
+        "numero": 1,
+        "question": "À partir de combien de personnes peut-on parler de prière en commun ?",
+        "reponse": "Dès qu’on est deux personnes.",
+        "fausses_reponses": [
+          "À partir de trois personnes.",
+          "Seulement quand il y a un groupe d’au moins dix fidèles.",
+          "Uniquement lors du vendredi à la mosquée."
+        ]
+      },
+      {
+        "numero": 2,
+        "question": "Que doivent faire les fidèles lorsque l’imam récite le Coran à haute voix ?",
+        "reponse": "Ils doivent garder le silence et écouter.",
+        "fausses_reponses": [
+          "Ils doivent réciter la Fatiha en même temps que l’imam.",
+          "Ils doivent répéter à voix basse derrière lui.",
+          "Ils doivent réciter une autre sourate discrètement."
+        ]
+      },
+      {
+        "numero": 3,
+        "question": "Quel est le mérite d’une prière exécutée en commun par rapport à celle faite isolément ?",
+        "reponse": "Elle est 27 fois supérieure en mérite.",
+        "fausses_reponses": [
+          "Elle est 7 fois supérieure en mérite.",
+          "Elle est 70 fois supérieure en mérite.",
+          "Elle est égale en mérite à la prière individuelle."
+        ]
+      },
+      {
+        "numero": 4,
+        "question": "Quel enseignement principal la prière en commun transmet-elle aux fidèles ?",
+        "reponse": "L’égalité, l’unité et la solidarité entre les individus devant Allah.",
+        "fausses_reponses": [
+          "La supériorité des anciens sur les jeunes.",
+          "La distinction entre riches et pauvres.",
+          "Le droit pour chacun de prier comme il veut."
+        ]
+      },
+      {
+        "numero": 5,
+        "question": "Que risque celui qui se relève du rukû ou la sujûd avant l'imam ?",
+        "reponse": "L'annulation de la prière s'il le fait volontairement.",
+        "fausses_reponses": [
+          "Que ses ablutions deviennent nulles.",
+          "Que sa prière soit automatiquement annulée.",
+          "Qu’il doive refaire toutes ses prières de la journée."
+        ]
+      }
+    ]
+  }
+  

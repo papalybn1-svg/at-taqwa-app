@@ -1,17 +1,32 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import * as FileSystem from 'expo-file-system';
+import { Image as ExpoImage } from 'expo-image';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
-import React, { useContext, useState } from 'react';
-import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useAuth } from '../hooks/useAuth';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Linking from 'expo-linking';
+import { deleteUser, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import chaptersData from '../../data/chapitres.json';
+import { useAuthContext } from '../contexts/AuthContext';
+import { useResponsive, getResponsiveStyle } from '../hooks/useResponsive';
 import colors from '../theme/colors';
+import { cleanupUserQuizSessions, getQuizProfile } from '../utils/quizSession';
+import { removeAllWithPrefix, remove as removeUserStorage } from '../utils/userStorage';
 import { auth, db } from './firebaseConfig';
-import { AuthContext } from './LoginScreen';
+// (Préférences étendues retirées à la demande)
 
 export default function ParametresScreen() {
-  const { user: contextUser, setUser } = useContext(AuthContext);
-  const { logout } = useAuth();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const dynamicStyles = createStyles(responsive, responsiveStyle);
+  const { user: contextUser, setUser, logout } = useAuthContext();
+  const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   
   // Utiliser l'utilisateur Firebase Auth directement
   const firebaseUser = auth.currentUser;
@@ -20,10 +35,149 @@ export default function ParametresScreen() {
   const [profileModal, setProfileModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
+  const [isCertificateEligible, setIsCertificateEligible] = useState(false);
+  // (États retirés: darkMode, langue, textScale, notifCount)
+  // Vérifier l'éligibilité au certificat (tous les quiz avec données complètes)
+  const checkCertificateEligibility = async (): Promise<boolean> => {
+    try {
+      const scores = (await readUserStorage<Record<string, number>>(firebaseUser?.uid, 'quizScores')) || {};
+      const profile = firebaseUser?.uid ? await getQuizProfile(firebaseUser.uid) : null;
+      const bestScores = profile?.bestScores || {};
+      // Mapping statique des fichiers d'exercices (évite require dynamique non supporté par Metro)
+      const exercicesFiles: { [key: string]: any[] | { quiz: any[] } } = {
+        '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
+        '2': require('../../data/exercices_par_chapitre/chapitre_2_exercices.json'),
+        '3': require('../../data/exercices_par_chapitre/chapitre_3_exercices.json'),
+        '4': require('../../data/exercices_par_chapitre/chapitre_4_exercices.json'),
+        '5': require('../../data/exercices_par_chapitre/chapitre_5_exercices.json'),
+        '6': require('../../data/exercices_par_chapitre/chapitre_6_exercices.json'),
+        '7': require('../../data/exercices_par_chapitre/chapitre_7_exercices.json'),
+        '8': require('../../data/exercices_par_chapitre/chapitre_8_exercices.json'),
+        '9': require('../../data/exercices_par_chapitre/chapitre_9_execrcices.json'),
+        '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
+        '11': require('../../data/exercices_par_chapitre/chapitre_11_exercices.json'),
+        '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
+      };
+      // Lister tous les chapitres qui ont des quiz
+      const allChapters = Object.entries(chaptersData).flatMap(([_, partie]: any) =>
+        partie.chapitres.map((ch: any) => {
+          const numKey = String(parseInt(ch.image, 10));
+          const data = exercicesFiles[numKey];
+          const hasQuiz = Array.isArray(data)
+            ? data.length > 0
+            : (data && typeof data === 'object' && 'quiz' in data && Array.isArray((data as any).quiz) && (data as any).quiz.length > 0);
+          return hasQuiz ? numKey : null;
+        })
+      ).filter((k: string | null): k is string => !!k);
+      if (allChapters.length === 0) return false;
+      
+      // Calculer la moyenne de tous les quiz
+      let totalScore = 0;
+      let completedCount = 0;
+      
+      for (const key of allChapters) {
+        const score = (scores as any)[key] ?? (bestScores as any)[key];
+        if (score !== undefined) {
+          completedCount++;
+          totalScore += score;
+        } else {
+          // Si un quiz n'est pas complété, pas éligible
+          console.log(`❌ Quiz ${key} non complété - attestation non disponible`);
+          return false;
+        }
+      }
+      
+      // Vérifier que tous les quiz sont complétés et que la moyenne est >= 80%
+      const averageScore = completedCount > 0 ? totalScore / completedCount : 0;
+      const isEligible = completedCount === allChapters.length && averageScore >= 80;
+      console.log(`📊 Vérification attestation (Paramètres): ${completedCount}/${allChapters.length} quiz complétés, moyenne: ${averageScore.toFixed(1)}%, éligible: ${isEligible}`);
+      return isEligible;
+    } catch {
+      return false;
+    }
+  };
+
+  // Charger la photo de profil depuis Firestore ou le contexte
+  useEffect(() => {
+    const loadPhoto = async () => {
+      // D'abord, utiliser la photo du contexte utilisateur si disponible
+      if (contextUser?.photoURL) {
+        setEditPhoto(contextUser.photoURL);
+        return;
+      }
+      
+      // Sinon, charger depuis Firestore
+      if (firebaseUser?.uid) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userData = userDoc.data();
+          if (userData?.photoURL) {
+            setEditPhoto(userData.photoURL);
+            // Mettre à jour le contexte utilisateur aussi
+            if (contextUser) {
+              setUser({ ...contextUser, photoURL: userData.photoURL });
+            }
+          }
+        } catch (error) {
+          console.error('❌ Erreur chargement photo Firestore:', error);
+        }
+      }
+    };
+    loadPhoto();
+  }, [firebaseUser?.uid, contextUser?.photoURL]);
+
+  // Vérifier l'éligibilité au chargement et quand l'écran devient actif
+  useEffect(() => {
+    const checkEligibility = async () => {
+      if (firebaseUser?.uid) {
+        const eligible = await checkCertificateEligibility();
+        setIsCertificateEligible(eligible);
+      }
+    };
+    checkEligibility();
+  }, [firebaseUser?.uid]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadPhotoAndCheckEligibility = async () => {
+        // Recharger la photo depuis Firestore si nécessaire
+        if (firebaseUser?.uid && !contextUser?.photoURL) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+            const userData = userDoc.data();
+            if (userData?.photoURL) {
+              setEditPhoto(userData.photoURL);
+              if (contextUser) {
+                setUser({ ...contextUser, photoURL: userData.photoURL });
+              }
+            }
+          } catch (error) {
+            console.error('❌ Erreur chargement photo Firestore:', error);
+          }
+        } else if (contextUser?.photoURL) {
+          setEditPhoto(contextUser.photoURL);
+        }
+        
+        // Vérifier l'éligibilité
+        if (firebaseUser?.uid) {
+          const eligible = await checkCertificateEligibility();
+          setIsCertificateEligible(eligible);
+        }
+      };
+      loadPhotoAndCheckEligibility();
+    }, [firebaseUser?.uid, contextUser?.photoURL])
+  );
+
+  const handleOpenCertificate = () => {
+    // Naviguer directement vers le CertificateScreen
+    // Le CertificateScreen gérera l'affichage si l'utilisateur n'est pas éligible
+    navigation.navigate('Accueil', { screen: 'Certificate' });
+  };
 
 
 
-  const uploadImage = async (uri: string) => {
+
+  const uploadImage = async (uri: string, mimeType?: string, base64Data?: string | null) => {
     setLoading(true);
     try {
       // Vérifier que l'utilisateur est connecté
@@ -31,39 +185,45 @@ export default function ParametresScreen() {
         throw new Error('Utilisateur non connecté');
       }
 
-      console.log('📤 Début traitement image...');
-      console.log('🔗 URI image:', uri);
-      
-      // Pour l'instant, on utilise l'URI local comme URL
-      // En production, cela sera remplacé par Firebase Storage
-      const imageURL = uri;
-      
-      console.log('🔗 URL finale:', imageURL);
-      
-      // Mettre à jour l'état local
-      setEditPhoto(imageURL);
-      
-      // Utilisateur Firebase réel - mettre à jour Firebase Auth
-      await updateProfile(firebaseUser, { photoURL: imageURL });
-      
-      // Mettre à jour le contexte aussi
-      if (contextUser) {
-        const updatedContextUser = { ...contextUser, photoURL: imageURL };
-        setUser(updatedContextUser);
+      console.log('📤 Préparation image (mode sans Storage)...');
+      // Assurer un base64 fiable, compressé et redimensionné pour éviter les crashs mémoire
+      let b64 = base64Data || null;
+      let finalMime = 'image/jpeg';
+      try {
+        const manipulated = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 512, height: 512 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        b64 = manipulated.base64 || b64;
+        finalMime = 'image/jpeg';
+      } catch (manipErr) {
+        console.warn('⚠️ Échec de la manipulation d’image, fallback lecture brute:', manipErr);
+        if (!b64) {
+          b64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
+          finalMime = mimeType || 'image/jpeg';
+        }
       }
+      if (!b64) throw new Error('Conversion base64 échouée');
+      const dataUrl = `data:${finalMime};base64,${b64}`;
       
-      // Mettre à jour Firestore aussi
+      // Mettre à jour localement et dans le contexte
+      setEditPhoto(dataUrl);
+      if (contextUser) setUser({ ...contextUser, photoURL: dataUrl });
+
+      // Stocker dans Firestore uniquement (pas de Storage, pas d’Auth photoURL)
       await updateDoc(doc(db, 'users', firebaseUser.uid), { 
-        photoURL: imageURL,
-        updatedAt: new Date()
+        photoURL: dataUrl,
+        updatedAt: new Date(),
+        _photoStorage: 'inline'
       });
-      console.log('✅ Firebase Auth et Firestore mis à jour');
-      
-      console.log('✅ Profil mis à jour avec succès');
-      Alert.alert('Succès', 'Photo de profil mise à jour avec succès !');
-    } catch (e) {
+      console.log('✅ Photo de profil stockée en Data URL dans Firestore');
+      Alert.alert('Succès', 'Photo de profil mise à jour !');
+    } catch (e: any) {
       console.error('❌ Erreur upload image:', e);
-      let errorMessage = "Impossible de mettre à jour la photo. Veuillez réessayer.";
+      if (e && e.code) console.error('🔎 Code Storage:', e.code);
+      if (e && e.customData) console.error('🔎 Détails Storage:', e.customData);
+      let errorMessage = "Impossible de traiter la photo. Veuillez réessayer.";
       
       if (e instanceof Error) {
         if (e.message.includes('auth/network-request-failed')) {
@@ -74,7 +234,6 @@ export default function ParametresScreen() {
           errorMessage = "Erreur d'authentification. Veuillez vous reconnecter.";
         }
       }
-      
       Alert.alert('Erreur', errorMessage);
     }
     setLoading(false);
@@ -93,10 +252,12 @@ export default function ParametresScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        await uploadImage(result.assets[0].uri);
+        const asset = result.assets[0] as any;
+        await uploadImage(asset.uri, asset.mimeType || 'image/jpeg', asset.base64 || null);
       }
     } catch (error) {
       console.error('Erreur caméra:', error);
@@ -119,10 +280,12 @@ export default function ParametresScreen() {
       aspect: [1, 1],
         quality: 0.8,
         allowsMultipleSelection: false,
+      base64: true,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-        await uploadImage(result.assets[0].uri);
+        const asset = result.assets[0] as any;
+        await uploadImage(asset.uri, asset.mimeType || 'image/jpeg', asset.base64 || null);
       }
     } catch (error) {
       console.error('Erreur sélection image:', error);
@@ -228,67 +391,221 @@ export default function ParametresScreen() {
     );
   };
 
+  const handleDeleteAccount = async () => {
+    const current = auth.currentUser;
+    if (!current) {
+      Alert.alert('Erreur', 'Aucun utilisateur connecté.');
+      return;
+    }
+    Alert.alert(
+      'Supprimer mon compte',
+      "Cette action est définitive et supprimera vos données de profil (y compris l'avatar) et votre accès à l’application. Voulez‑vous continuer ?",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const uid = current.uid;
+              
+              // 1. Nettoyer toutes les données utilisateur locales (AsyncStorage)
+              try {
+                console.log('🧹 Nettoyage des données locales pour l\'utilisateur:', uid);
+                await Promise.all([
+                  removeUserStorage(uid, 'chapterProgress'),
+                  removeUserStorage(uid, 'favorites'),
+                  removeUserStorage(uid, 'quizScores'),
+                  removeUserStorage(uid, 'zikrProgress'),
+                  removeUserStorage(uid, 'entitlements'),
+                  removeUserStorage(uid, 'payment_token'),
+                ]);
+                await removeAllWithPrefix(uid, 'quizSession:');
+                await cleanupUserQuizSessions(uid);
+                console.log('✅ Données locales nettoyées');
+              } catch (cleanupError) {
+                console.error('⚠️ Erreur lors du nettoyage des données locales (non-bloquant):', cleanupError);
+                // Continuer même si le nettoyage échoue
+              }
+              
+              // 2. Supprimer les données de profil Firestore
+              try {
+                await deleteDoc(doc(db, 'users', uid));
+                console.log('✅ Document Firestore supprimé');
+              } catch (e) {
+                // ignorer si déjà supprimé / permissions limitées
+                console.log('ℹ️ Document Firestore déjà supprimé ou inexistant');
+              }
+              
+              // 3. Supprimer le compte Auth (peut exiger une reconnexion récente)
+              try {
+                await deleteUser(current);
+                console.log('✅ Compte Firebase Auth supprimé');
+              } catch (e: any) {
+                if (e?.code === 'auth/requires-recent-login') {
+                  Alert.alert(
+                    'Reconnexion requise',
+                    'Pour confirmer la suppression, veuillez vous reconnecter puis réessayer.',
+                    [{ text: 'OK' }]
+                  );
+                  await logout();
+                  return;
+                }
+                throw e;
+              }
+              
+              // 4. Mettre à jour le contexte et déconnecter
+              setUser(null);
+              Alert.alert('Compte supprimé', 'Votre compte a été définitivement supprimé.');
+              await logout();
+            } catch (err: any) {
+              console.error('❌ Erreur lors de la suppression du compte:', err);
+              Alert.alert(
+                'Erreur',
+                err?.message || "La suppression du compte a échoué. Veuillez réessayer plus tard."
+              );
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Paramètres</Text>
-        <Text style={styles.headerSubtitle}>Gérez votre profil et vos préférences</Text>
-      </View>
+    <View style={[dynamicStyles.container, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={dynamicStyles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* En-tête retiré à la demande */}
 
-      <View style={styles.profileContainer}>
-        <TouchableOpacity onPress={() => setProfileModal(true)}>
-          {contextUser?.photoURL ? (
-            <Image source={{ uri: contextUser.photoURL }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-            <MaterialCommunityIcons name="account-circle" size={80} color={colors.primary} />
+        {/* Carte profil */}
+        <LinearGradient colors={['#174C3C', '#19514A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={dynamicStyles.profileCard}>
+          <View style={dynamicStyles.profileContent}>
+            <TouchableOpacity onPress={() => setProfileModal(true)} activeOpacity={0.9}>
+              {contextUser?.photoURL ? (
+                <ExpoImage source={{ uri: contextUser.photoURL }} style={dynamicStyles.avatarXL} contentFit="cover" />
+              ) : (
+                <View style={dynamicStyles.avatarXLPlaceholder}>
+                  <MaterialCommunityIcons name="account-circle" size={72} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+            <Text style={dynamicStyles.profileNameXL}>{contextUser?.displayName || 'Utilisateur'}</Text>
+            <Text style={dynamicStyles.profileEmailXL}>{contextUser?.email}</Text>
+            <View style={dynamicStyles.userBadgeXL}>
+              <MaterialCommunityIcons 
+                name={contextUser?.role === 'admin' ? 'shield-account' : 'account'} 
+                size={16} 
+                color="#FFD666"
+              />
+              <Text style={dynamicStyles.userRoleXL}>
+                {contextUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+              </Text>
             </View>
-          )}
-        </TouchableOpacity>
-        <Text style={styles.profileName}>{contextUser?.displayName || 'Utilisateur'}</Text>
-        <Text style={styles.profileEmail}>{contextUser?.email}</Text>
-        <View style={styles.userBadge}>
-          <MaterialCommunityIcons 
-            name={contextUser?.role === 'admin' ? 'shield-account' : 'account'} 
-            size={16} 
-            color={contextUser?.role === 'admin' ? '#d4af37' : colors.primary} 
-          />
-          <Text style={[styles.userRole, { color: contextUser?.role === 'admin' ? '#d4af37' : colors.primary }]}>
-            {contextUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
-          </Text>
-        </View>
-      </View>
+          </View>
+        </LinearGradient>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.row} onPress={() => setProfileModal(true)}>
-          <MaterialCommunityIcons name="account-edit" size={22} color={colors.primary} />
-          <Text style={styles.rowText}>Modifier le profil</Text>
+        {/* Section: Mon compte */}
+        <View style={dynamicStyles.sectionCard}>
+          <Text style={dynamicStyles.sectionTitle}>Mon compte</Text>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={() => setProfileModal(true)}>
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="account-edit" size={20} color={colors.primary} />
+              <Text style={dynamicStyles.listText}>Modifier le profil</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
+          </TouchableOpacity>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={handleOpenCertificate}>
+            <View style={dynamicStyles.listLeft}>
+              <View style={{ position: 'relative' }}>
+                <MaterialCommunityIcons name="certificate" size={20} color={isCertificateEligible ? "#D4AF37" : colors.primary} />
+                {isCertificateEligible && (
+                  <View style={dynamicStyles.certificateBadge}>
+                    <MaterialCommunityIcons name="check-circle" size={14} color="#fff" />
+                  </View>
+                )}
+              </View>
+              <View>
+                <Text style={[dynamicStyles.listText, isCertificateEligible && { color: "#D4AF37", fontWeight: 'bold' }]}>
+                  Mon attestation
+                </Text>
+                {isCertificateEligible && (
+                  <Text style={dynamicStyles.certificateAvailableText}>✅ Disponible !</Text>
+                )}
+              </View>
+            </View>
           <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
         </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity style={styles.row} onPress={handleSendResetEmail} disabled={sendingReset}>
-          <MaterialCommunityIcons name="email-lock" size={22} color={colors.primary} />
-          <Text style={styles.rowText}>Recevoir un email de réinitialisation</Text>
-          <MaterialCommunityIcons name="send" size={20} color={sendingReset ? '#ccc' : colors.placeholder} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.row, styles.logoutRow]} onPress={handleLogout}>
-          <MaterialCommunityIcons name="logout" size={22} color="#f44336" />
-          <Text style={[styles.rowText, { color: '#f44336' }]}>Déconnexion</Text>
-          <MaterialCommunityIcons name="chevron-right" size={20} color="#f44336" />
-        </TouchableOpacity>
-      </View>
+        {/* (Section Application et Prière & rappels retirées) */}
+
+        {/* Section: Aide */}
+        <View style={dynamicStyles.sectionCard}>
+          <Text style={dynamicStyles.sectionTitle}>Aide</Text>
+          <TouchableOpacity
+            style={dynamicStyles.listItem}
+            onPress={() => Linking.openURL('https://attaqwa-confidentialite.vercel.app/contact.html')}
+          >
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="lifebuoy" size={20} color={colors.primary} />
+              <Text style={dynamicStyles.listText}>Assistance / Contact</Text>
+            </View>
+            <MaterialCommunityIcons name="open-in-new" size={18} color={colors.placeholder} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={dynamicStyles.listItem}
+            onPress={() => Linking.openURL('https://attaqwa-confidentialite.vercel.app/confidentialite.html')}
+          >
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="shield-lock" size={20} color={colors.primary} />
+              <Text style={dynamicStyles.listText}>Politique de confidentialité</Text>
+            </View>
+            <MaterialCommunityIcons name="open-in-new" size={18} color={colors.placeholder} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Section: Sécurité */}
+        <View style={dynamicStyles.sectionCard}>
+          <Text style={dynamicStyles.sectionTitle}>Sécurité</Text>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={handleSendResetEmail} disabled={sendingReset}>
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="email-lock" size={20} color={colors.primary} />
+              <Text style={dynamicStyles.listText}>Recevoir un email de réinitialisation</Text>
+            </View>
+            <MaterialCommunityIcons name="send" size={18} color={sendingReset ? '#ccc' : colors.placeholder} />
+          </TouchableOpacity>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={handleLogout}>
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="logout" size={20} color={colors.primary} />
+              <Text style={dynamicStyles.listText}>Déconnexion</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.placeholder} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Danger zone */}
+        <View style={[dynamicStyles.sectionCard, dynamicStyles.dangerCard]}>
+          <Text style={[dynamicStyles.sectionTitle, { color: '#B00020' }]}>Danger</Text>
+          <TouchableOpacity style={dynamicStyles.listItem} onPress={handleDeleteAccount}>
+            <View style={dynamicStyles.listLeft}>
+              <MaterialCommunityIcons name="account-remove" size={20} color="#B00020" />
+              <Text style={[dynamicStyles.listText, { color: '#B00020' }]}>Supprimer mon compte</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#B00020" />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
       {/* Modal modification profil */}
       <Modal visible={profileModal} transparent animationType="fade" onRequestClose={() => setProfileModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Modifier le profil</Text>
+        <View style={dynamicStyles.modalOverlay}>
+          <View style={dynamicStyles.modalContent}>
+            <Text style={dynamicStyles.modalTitle}>Modifier le profil</Text>
             
             {/* Champ nom d'utilisateur */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nom d'utilisateur</Text>
+            <View style={dynamicStyles.inputContainer}>
+              <Text style={dynamicStyles.inputLabel}>Nom d'utilisateur</Text>
             <TextInput 
-              style={styles.input} 
+              style={dynamicStyles.input} 
                 placeholder="Entrez votre nom" 
               value={editName} 
               onChangeText={setEditName} 
@@ -297,52 +614,53 @@ export default function ParametresScreen() {
             </View>
 
             {/* Boutons pour la photo */}
-            <View style={styles.imageButtonsContainer}>
-              <TouchableOpacity style={styles.imageButton} onPress={takePhoto} disabled={loading}>
-              <MaterialCommunityIcons name="camera" size={20} color={colors.primary} />
-                <Text style={styles.imageButtonText}>Caméra</Text>
+            <View style={dynamicStyles.imageButtonsContainer}>
+              <TouchableOpacity style={dynamicStyles.imageButton} onPress={takePhoto} disabled={loading}>
+                <MaterialCommunityIcons name="camera" size={20} color={colors.primary} />
+                <Text style={dynamicStyles.imageButtonText}>Caméra</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.imageButton} onPress={pickImage} disabled={loading}>
+              <TouchableOpacity style={dynamicStyles.imageButton} onPress={pickImage} disabled={loading}>
                 <MaterialCommunityIcons name="image" size={20} color={colors.primary} />
-                <Text style={styles.imageButtonText}>Galerie</Text>
-            </TouchableOpacity>
+                <Text style={dynamicStyles.imageButtonText}>Galerie</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Indicateur de chargement */}
             {loading && (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Téléversement en cours...</Text>
+              <View style={dynamicStyles.loadingContainer}>
+                <Text style={dynamicStyles.loadingText}>Téléversement en cours...</Text>
               </View>
             )}
             
             {/* Aperçu de la photo sélectionnée */}
             {(editPhoto || contextUser?.photoURL) && (
-              <View style={styles.imagePreviewContainer}>
-                <Image 
+              <View style={dynamicStyles.imagePreviewContainer}>
+                <ExpoImage 
                   source={{ uri: editPhoto || contextUser?.photoURL || '' }} 
-                  style={styles.imagePreview} 
+                  style={dynamicStyles.imagePreview} 
+                  contentFit="cover"
                 />
-                <Text style={styles.imagePreviewText}>
+                <Text style={dynamicStyles.imagePreviewText}>
                   {editPhoto ? 'Nouvelle photo' : 'Photo actuelle'}
                 </Text>
               </View>
             )}
 
             {/* Boutons d'action */}
-            <View style={styles.modalButtons}>
+            <View style={dynamicStyles.modalButtons}>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+                style={[dynamicStyles.modalButton, dynamicStyles.cancelButton]} 
                 onPress={() => setProfileModal(false)}
                 disabled={loading}
               >
-                <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Annuler</Text>
+                <Text style={[dynamicStyles.modalButtonText, dynamicStyles.cancelButtonText]}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton]} 
+                style={[dynamicStyles.modalButton, dynamicStyles.saveButton]} 
                 onPress={handleUpdateName}
                 disabled={loading || !editName.trim()}
               >
-                <Text style={[styles.modalButtonText, styles.saveButtonText]}>
+                <Text style={[dynamicStyles.modalButtonText, dynamicStyles.saveButtonText]}>
                   {loading ? 'Envoi...' : 'Envoyer'}
                 </Text>
               </TouchableOpacity>
@@ -351,6 +669,8 @@ export default function ParametresScreen() {
         </View>
       </Modal>
 
+      {/* (Modal Taille du texte retiré) */}
+
 
 
 
@@ -358,39 +678,103 @@ export default function ParametresScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', backgroundColor: '#F3F5F7', paddingTop: 40 },
-  header: { alignItems: 'center', marginBottom: 30 },
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F3F5F7' },
+  scrollContent: { paddingTop: 16, paddingBottom: 24 },
+  header: { alignItems: 'center', marginBottom: 16 },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#174C3C', marginBottom: 8 },
-  headerSubtitle: { fontSize: 16, color: '#174C3C', textAlign: 'center' },
-  profileContainer: { alignItems: 'center', marginBottom: 30 },
-  avatar: { width: 80, height: 80, borderRadius: 40, marginBottom: 10, backgroundColor: '#E7C97B' },
-  avatarPlaceholder: { width: 80, height: 80, borderRadius: 40, marginBottom: 10, backgroundColor: '#E7C97B', justifyContent: 'center', alignItems: 'center' },
-  profileName: { fontSize: 20, fontWeight: 'bold', color: '#174C3C', marginBottom: 2 },
-  profileEmail: { fontSize: 16, color: '#174C3C', marginBottom: 2 },
-  userBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  userRole: { fontSize: 16, color: '#174C3C', marginLeft: 8 },
-  section: { width: '90%', backgroundColor: '#fff', borderRadius: 18, padding: 18, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#eee', justifyContent: 'space-between' },
-  rowText: { fontSize: 16, color: '#174C3C', marginLeft: 14, fontWeight: 'bold', flex: 1 },
-  logoutRow: { borderBottomWidth: 0 },
+  headerSubtitle: { fontSize: 14, color: '#58736B', textAlign: 'center' },
+
+  profileCard: {
+    marginHorizontal: 16,
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginBottom: 16,
+    alignSelf: 'stretch',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#BB9B4E',
+  },
+  profileContent: { 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  avatarXL: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#ffffff33', marginBottom: 16, borderWidth: 1, borderColor: '#BB9B4E' },
+  avatarXLPlaceholder: {
+    width: 80, height: 80, borderRadius: 40, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#BB9B4E'
+  },
+  profileNameXL: { color: '#fff', fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 8 },
+  profileEmailXL: { color: '#E6F1EE', fontSize: 14, textAlign: 'center', marginBottom: 12 },
+  userBadgeXL: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff22', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+  userRoleXL: { color: '#FFD666', fontSize: 12, fontWeight: '700', marginLeft: 6 },
+  profileQuickRow: { flexDirection: 'row', marginTop: 14 },
+  quickAction: { backgroundColor: '#FFF', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginRight: 10, flexDirection: 'row', alignItems: 'center' },
+  quickActionText: { marginLeft: 8, color: '#174C3C', fontWeight: '700', fontSize: 12 },
+
+  sectionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    paddingVertical: 6,
+    marginHorizontal: 16,
+    marginTop: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  dangerCard: {
+    backgroundColor: '#FFF6F6',
+    borderWidth: 1,
+    borderColor: '#F7DADA',
+  },
+  sectionTitle: { fontSize: 13, fontWeight: '700', color: '#58736B', paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4, textTransform: 'uppercase', letterSpacing: 0.6 },
+  listItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#F1F1F1' },
+  listLeft: { flexDirection: 'row', alignItems: 'center' },
+  listText: { fontSize: 15, color: '#174C3C', marginLeft: 12, fontWeight: '700' },
+  listSubText: { fontSize: 12, color: '#58736B', marginLeft: 12, marginTop: 2 },
+  trailingValue: { fontSize: 13, color: '#58736B', marginRight: 6, fontWeight: '600' },
+  certificateBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  certificateAvailableText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.18)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { backgroundColor: colors.white, borderRadius: 20, padding: 24, width: 320, maxHeight: '80%', elevation: 8, shadowColor: colors.black, shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.primary, marginBottom: 20, textAlign: 'center' },
   input: { backgroundColor: colors.background, borderRadius: 12, padding: 14, width: '100%', fontSize: 16, borderWidth: 1, borderColor: colors.border },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20 },
-  modalButton: { borderRadius: 16, paddingVertical: 10, paddingHorizontal: 20, flex: 1, marginHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  modalButton: { borderRadius: 16, paddingVertical: responsiveStyle.spacing.base, paddingHorizontal: responsiveStyle.spacing.lg, flex: 1, marginHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
   cancelButton: { backgroundColor: '#DC3545' },
   saveButton: { backgroundColor: colors.secondary },
-  modalButtonText: { fontWeight: 'bold', fontSize: 13 },
-  modalSubtitle: { color: colors.primary, textAlign: 'center', marginBottom: 20, fontSize: 16, lineHeight: 22 },
+  modalButtonText: { fontWeight: 'bold', fontSize: responsiveStyle.fontSize.sm },
+  modalSubtitle: { color: colors.primary, textAlign: 'center', marginBottom: responsiveStyle.spacing.lg, fontSize: responsiveStyle.fontSize.base, lineHeight: 22 },
+  choiceButton: { backgroundColor: colors.background, paddingVertical: responsiveStyle.spacing.base, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  choiceText: { color: colors.primary, fontWeight: '700', fontSize: responsiveStyle.fontSize.base },
 
-  imagePreviewContainer: { alignItems: 'center', marginTop: 16, marginBottom: 12 },
-  imagePreview: { width: 100, height: 100, borderRadius: 50, marginBottom: 8, backgroundColor: colors.secondary },
-  imagePreviewText: { fontSize: 14, color: colors.primary, fontWeight: '500' },
-  imageButtonsContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 16, marginBottom: 8 },
-  imageButton: { backgroundColor: colors.secondary, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center', flex: 1, marginHorizontal: 6 },
-  imageButtonText: { color: colors.primary, fontWeight: 'bold', fontSize: 12, marginTop: 4 },
+  imagePreviewContainer: { alignItems: 'center', marginTop: responsiveStyle.spacing.base, marginBottom: responsiveStyle.spacing.base },
+  imagePreview: { width: 100, height: 100, borderRadius: 50, marginBottom: responsiveStyle.spacing.sm, backgroundColor: colors.secondary },
+  imagePreviewText: { fontSize: responsiveStyle.fontSize.sm, color: colors.primary, fontWeight: '500' },
+  imageButtonsContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: responsiveStyle.spacing.base, marginBottom: responsiveStyle.spacing.sm },
+  imageButton: { backgroundColor: colors.secondary, borderRadius: 16, paddingVertical: responsiveStyle.spacing.base, paddingHorizontal: responsiveStyle.spacing.base, alignItems: 'center', flex: 1, marginHorizontal: 6 },
+  imageButtonText: { color: colors.primary, fontWeight: 'bold', fontSize: responsiveStyle.fontSize.xs, marginTop: 4 },
   loadingText: { color: colors.primary, fontSize: 14, marginTop: 8, fontStyle: 'italic' },
   inputContainer: { width: '100%', marginBottom: 16 },
   inputLabel: { fontSize: 14, color: colors.primary, marginBottom: 6, fontWeight: '600' },

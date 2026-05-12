@@ -3,200 +3,110 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Animated, BackHandler, Dimensions, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import chapitre02 from '../../data/exercices_par_chapitre/chapitre_02_exercices.json';
-import chapitre03 from '../../data/exercices_par_chapitre/chapitre_03_exercices.json';
-import chapitre05 from '../../data/exercices_par_chapitre/chapitre_05_exercices.json';
-import chapitre06 from '../../data/exercices_par_chapitre/chapitre_06_exercices.json';
-import chapitre07 from '../../data/exercices_par_chapitre/chapitre_07_exercices.json';
-import chapitre09 from '../../data/exercices_par_chapitre/chapitre_09_exercices.json';
-import chapitre10 from '../../data/exercices_par_chapitre/chapitre_10_exercices.json';
-import chapitre12 from '../../data/exercices_par_chapitre/chapitre_12_exercices.json';
-import chapitre01 from '../../data/exercices_par_chapitre/chapitre_1_exercices.json';
+// Les imports des fichiers de quiz sont maintenant gérés dynamiquement via exercicesFiles
+import { useAuthContext } from '../contexts/AuthContext';
+import { useEntitlements } from '../contexts/EntitlementsContext';
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
+import { usePaymentService } from '../lib/paymentService';
+import { getCardSizes, getCardStackPosition, getCharacterPosition, getCharacterSize } from '../utils/quizResponsive';
+import { isQuizUnlocked } from '../utils/quizUnlock';
 import { read as readUserStorage, remove as removeUserStorage, write as writeUserStorage } from '../utils/userStorage';
 import { db } from './firebaseConfig';
-import { AuthContext } from './LoginScreen';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+// Hauteur approximative de la barre de navigation du bas (TabBar)
+// Légèrement réduite pour que les cartes ne montent pas trop
+const TAB_BAR_SPACE = 88;
 
-// 🗺️ Mapping des chapitres
-const chapterMap: Record<string, { question: string, reponse?: string, contenu?: string }[]> = {
-  '01': chapitre01,
-  '02': chapitre02,
-  '03': chapitre03,
-  '05': chapitre05,
-  '06': chapitre06,
-  '07': chapitre07,
-  '09': chapitre09,
-  '10': chapitre10,
-  '12': chapitre12,
-};
+// L'ancien mapping chapterMap a été remplacé par exercicesFiles
 
-// 📌 On force le quiz sur le chapitre 1
-const chapterId = '01';
-const rawQuizData = chapterMap[chapterId] || [];
+// Fonction pour mélanger un tableau
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
-// Génère des fausses réponses pertinentes et contextuelles pour chaque question
-function generateOptionsForQuiz(questions: {question: string, reponse?: string, contenu?: string}[]) {
-  return questions.map((item, idx, arr) => {
-    const correct = item.reponse || item.contenu || 'Réponse';
+// Génère les options de quiz avec les vraies fausses réponses
+function generateOptionsForQuiz(questions: {question: string, reponse?: string, contenu?: string, fausses_reponses?: string[]}[]) {
+  return questions.map((item) => {
+    const correctAnswer = item.reponse || item.contenu || 'Réponse';
+    const falseAnswers = item.fausses_reponses || [];
     
-    // Analyser le contexte de la question pour générer des fausses réponses pertinentes
-    const questionText = item.question.toLowerCase();
-    const correctAnswer = correct.toLowerCase();
+    // S'assurer qu'on a exactement 3 fausses réponses
+    let finalFalseAnswers = [...falseAnswers];
     
-    // Déterminer le thème de la question
-    let theme = 'general';
-    if (questionText.includes('ablution') || questionText.includes('purification') || questionText.includes('tahara')) {
-      theme = 'ablution';
-    } else if (questionText.includes('prière') || questionText.includes('salat') || questionText.includes('namaz')) {
-      theme = 'priere';
-    } else if (questionText.includes('temps') || questionText.includes('heure') || questionText.includes('moment')) {
-      theme = 'temps';
-    } else if (questionText.includes('nombre') || questionText.includes('fois') || questionText.includes('combien')) {
-      theme = 'nombre';
+    // Si on n'a pas assez de fausses réponses, ajouter des réponses génériques
+    while (finalFalseAnswers.length < 3) {
+      finalFalseAnswers.push(`Option ${finalFalseAnswers.length + 1}`);
     }
     
-    // Générer des fausses réponses contextuelles selon le thème
-    const contextualFakes = generateContextualFakes(theme, correctAnswer);
+    // Prendre seulement les 3 premières fausses réponses
+    finalFalseAnswers = finalFalseAnswers.slice(0, 3);
     
-    // Récupérer d'autres réponses du même chapitre (plus pertinentes)
-    const otherAnswers = arr
-      .filter((q, i) => i !== idx && (q.reponse || q.contenu))
-      .map(q => q.reponse || q.contenu)
-      .filter((r): r is string => {
-        if (!r || r === correct) return false;
-        // Éviter les réponses trop similaires
-        const rLower = r.toLowerCase();
-        return r.length > 3 && 
-               !correctAnswer.includes(rLower) && 
-               !rLower.includes(correctAnswer) &&
-               !rLower.includes('prière') || !questionText.includes('ablution'); // Éviter les hors-sujet
-      });
+    // Créer toutes les options (1 bonne + 3 mauvaises)
+    const allOptions = [correctAnswer, ...finalFalseAnswers];
     
-    // Combiner les réponses contextuelles avec celles du chapitre
-    const allFakes = [...contextualFakes, ...otherAnswers];
-    const shuffledFakes = shuffleOptions(allFakes).slice(0, 3);
+    // Mélanger aléatoirement les positions
+    const shuffledOptions = shuffleArray(allOptions);
     
-    // Si pas assez de fausses réponses, utiliser des réponses génériques mais pertinentes
-    if (shuffledFakes.length < 3) {
-      const genericFakes = getGenericFakes(theme);
-      const additionalFakes = shuffleOptions(genericFakes).slice(0, 3 - shuffledFakes.length);
-      shuffledFakes.push(...additionalFakes);
-    }
-    
-    // Mélanger la bonne réponse avec les fausses
-    const allOptions = shuffleOptions([correct, ...shuffledFakes]);
-    const correctAnswerIndex = allOptions.findIndex(opt => opt === correct);
+    // Trouver l'index de la bonne réponse après mélange
+    const correctAnswerIndex = shuffledOptions.findIndex(option => option === correctAnswer);
     
     return {
       question: item.question,
-      options: allOptions,
+      options: shuffledOptions,
       correctAnswerIndex,
+      correctAnswer: correctAnswer
     };
   });
 }
 
-// Génère des fausses réponses contextuelles selon le thème
-function generateContextualFakes(theme: string, correctAnswer: string): string[] {
-  const fakes: { [key: string]: string[] } = {
-    ablution: [
-      "Se laver seulement les mains",
-      "Se laver seulement le visage", 
-      "Ne pas se laver du tout",
-      "Se laver seulement les pieds",
-      "Utiliser de l'eau non pure",
-      "Faire les ablutions dans le désordre",
-      "Ne pas faire les ablutions avant la prière",
-      "Faire les ablutions après la prière"
-    ],
-    priere: [
-      "Prier sans orientation vers la Kaaba",
-      "Prier sans intention",
-      "Prier en parlant",
-      "Prier sans couvrir les parties intimes",
-      "Prier en mangeant",
-      "Prier en dormant",
-      "Prier sans purification",
-      "Prier à n'importe quel moment"
-    ],
-    temps: [
-      "À n'importe quelle heure",
-      "Seulement le matin",
-      "Seulement le soir",
-      "Une fois par semaine",
-      "Une fois par mois",
-      "Jamais",
-      "Quand on veut",
-      "Pendant le sommeil"
-    ],
-    nombre: [
-      "Une seule fois",
-      "Dix fois",
-      "Cent fois",
-      "Mille fois",
-      "Autant qu'on veut",
-      "Jamais",
-      "Une fois par jour",
-      "Une fois par semaine"
-    ],
-    general: [
-      "Aucune de ces réponses",
-      "Je ne sais pas",
-      "Cela dépend",
-      "Non précisé",
-      "Voir le livre",
-      "Demander à l'imam",
-      "Cela n'a pas d'importance"
-    ]
-  };
-  
-  return fakes[theme] || fakes.general;
-}
-
-// Génère des réponses génériques selon le thème
-function getGenericFakes(theme: string): string[] {
-  const generics: { [key: string]: string[] } = {
-    ablution: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
-    priere: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
-    temps: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
-    nombre: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"],
-    general: ["Aucune de ces réponses", "Je ne sais pas", "Cela dépend"]
-  };
-  
-  return generics[theme] || generics.general;
-}
-
-function shuffleOptions(options: string[]) {
-  return options.slice().sort(() => Math.random() - 0.5);
-}
-
-const quizData = generateOptionsForQuiz(rawQuizData);
+// Les données seront générées dans le composant
 
 
 
 export default function OriginalQuizScreen() {
   const route = useRoute();
-  const { user } = useContext(AuthContext);
   const navigation = useNavigation();
+  const { user } = useAuthContext();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const styles = createStyles(responsive, responsiveStyle);
   // On récupère la clé du fichier d'exercices à charger
   const exercicesKey = (route.params && (route.params as any).exercicesKey) || '1';
   // Mapping centralisé des fichiers d'exercices
-  const exercicesFiles: { [key: string]: any[] } = {
+  const exercicesFiles: { [key: string]: any[] | { quiz: any[] } } = {
     '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
-    '2': require('../../data/exercices_par_chapitre/chapitre_02_exercices.json'),
-    '3': require('../../data/exercices_par_chapitre/chapitre_03_exercices.json'),
-    '5': require('../../data/exercices_par_chapitre/chapitre_05_exercices.json'),
-    '6': require('../../data/exercices_par_chapitre/chapitre_06_exercices.json'),
-    '7': require('../../data/exercices_par_chapitre/chapitre_07_exercices.json'),
-    '9': require('../../data/exercices_par_chapitre/chapitre_09_exercices.json'),
+    '2': require('../../data/exercices_par_chapitre/chapitre_2_exercices.json'),
+    '3': require('../../data/exercices_par_chapitre/chapitre_3_exercices.json'),
+    '4': require('../../data/exercices_par_chapitre/chapitre_4_exercices.json'),
+    '5': require('../../data/exercices_par_chapitre/chapitre_5_exercices.json'),
+    '6': require('../../data/exercices_par_chapitre/chapitre_6_exercices.json'),
+    '7': require('../../data/exercices_par_chapitre/chapitre_7_exercices.json'),
+    '8': require('../../data/exercices_par_chapitre/chapitre_8_exercices.json'),
+    '9': require('../../data/exercices_par_chapitre/chapitre_9_execrcices.json'),
     '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
+    '11': require('../../data/exercices_par_chapitre/chapitre_11_exercices.json'),
     '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
   };
-  const rawQuizData = exercicesFiles[exercicesKey] || [];
+  const rawQuizData = (() => {
+    const data = exercicesFiles[exercicesKey] || [];
+    // Gérer les deux formats : tableau direct ou objet avec propriété quiz
+    if (Array.isArray(data)) {
+      return data;
+    } else if (data && typeof data === 'object' && 'quiz' in data && Array.isArray((data as any).quiz)) {
+      return (data as any).quiz;
+    }
+    return [];
+  })();
   
   // Générer les questions une seule fois et les stocker dans un état
   const [quizData, setQuizData] = useState(() => generateOptionsForQuiz(rawQuizData));
@@ -205,7 +115,46 @@ export default function OriginalQuizScreen() {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
   const [isAnswerCorrect, setIsAnswerCorrect] = useState<boolean | null>(null);
   const [showResults, setShowResults] = useState(false);
+  
+  // États pour le modal de verrouillage
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [lockedQuizInfo, setLockedQuizInfo] = useState<{key: string, score?: number} | null>(null);
+  const [quizScores, setQuizScores] = useState<Record<string, number>>({});
+
+  // Service de paiement
+  const { checkEntitlements } = usePaymentService();
+  
+  // Entitlements globaux
+  const { entitlements: userEntitlements, refreshEntitlements } = useEntitlements();
+
+  // Charger les scores des quiz
+  const loadQuizScores = async () => {
+    try {
+      const scores = await readUserStorage<Record<string, number>>(user?.uid, 'quizScores');
+      if (scores) setQuizScores(scores);
+    } catch (error) {
+      console.error('Erreur lors du chargement des scores:', error);
+    }
+  };
+
+
+  // Charger les scores au début
+  useEffect(() => {
+    loadQuizScores();
+  }, [user?.uid]);
+
+  // Forcer un refresh des droits à l'ouverture pour harmoniser avec Books/Home
+  useEffect(() => {
+    // Ne pas forcer pour éviter les boucles infinies
+    refreshEntitlements(false).catch(() => {});
+  }, []); // Pas de dépendances pour éviter les re-exécutions
+
   // Reprise automatique d'une session de quiz en cours
+  // Utiliser un ref pour éviter que la reprise ne se déclenche plusieurs fois
+  const hasResumedSession = React.useRef(false);
+  // Utiliser un ref pour éviter de sauvegarder pendant la reprise initiale
+  const isResuming = React.useRef(false);
+  
   useEffect(() => {
     const resumeSession = async () => {
       // Attendre que les données du quiz soient chargées
@@ -214,9 +163,16 @@ export default function OriginalQuizScreen() {
         return;
       }
 
+      // Ne reprendre la session qu'une seule fois au chargement initial
+      // Si on a déjà repris la session ou si on est déjà en train de jouer, ne pas réinitialiser
+      if (hasResumedSession.current || (currentQuestionIndex > 0 || score > 0)) {
+        console.log('⏭️ Session déjà reprise ou quiz en cours, pas de nouvelle reprise');
+        return;
+      }
+
       const chapterKey = exercicesKey;
       const sessionKey = `quizSession:${chapterKey}`;
-      const saved = await readUserStorage<{ index: number; answers: Array<number|null> }>(user?.uid, sessionKey);
+      const saved = await readUserStorage<{ index: number; score: number; answers: Array<number|null> }>(user?.uid, sessionKey);
       
       console.log(`🔍 Vérification session pour chapitre ${chapterKey}:`, {
         saved: saved ? `index ${saved.index}` : 'aucune',
@@ -224,12 +180,19 @@ export default function OriginalQuizScreen() {
         currentIndex: currentQuestionIndex
       });
 
+      // Marquer qu'on est en train de reprendre pour éviter que la sauvegarde écrase
+      isResuming.current = true;
+      
       // Vérifier si la session est valide
       if (saved && typeof saved.index === 'number') {
         if (saved.index < quizData.length) {
-          console.log(`🔄 Reprise de session pour chapitre ${chapterKey} à la question ${saved.index}`);
+          // Limiter le score à ne pas dépasser le nombre de questions
+          const limitedScore = Math.min(saved.score || 0, quizData.length);
+          console.log(`🔄 Reprise de session pour chapitre ${chapterKey} à la question ${saved.index} avec score ${limitedScore}`);
           setCurrentQuestionIndex(saved.index);
+          setScore(limitedScore);
           setShowQuestionPage(true);
+          hasResumedSession.current = true;
         } else {
           console.log(`⚠️ Session invalide pour chapitre ${chapterKey}: index ${saved.index} >= ${quizData.length}`);
           // Nettoyer la session invalide
@@ -237,23 +200,60 @@ export default function OriginalQuizScreen() {
           console.log(`🗑️ Session invalide supprimée pour chapitre ${chapterKey}`);
           setCurrentQuestionIndex(0);
           setShowQuestionPage(true);
+          hasResumedSession.current = true;
         }
       } else {
         console.log(`🆕 Nouvelle session pour chapitre ${chapterKey} (question 0)`);
         setCurrentQuestionIndex(0);
         setShowQuestionPage(true);
+        hasResumedSession.current = true;
       }
+      
+      // Réinitialiser le flag après un court délai pour permettre à la sauvegarde de fonctionner
+      setTimeout(() => {
+        isResuming.current = false;
+      }, 100);
     };
     resumeSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercicesKey, quizData.length, user?.uid]);
+  
+  // Réinitialiser les flags de reprise quand on change de chapitre
+  useEffect(() => {
+    hasResumedSession.current = false;
+    isResuming.current = false;
+  }, [exercicesKey]);
 
   // Sauvegarder la session au fil de l'eau
   useEffect(() => {
+    // Ne pas sauvegarder si on est en train de reprendre la session initiale
+    if (isResuming.current) {
+      console.log('⏸️ Sauvegarde ignorée: reprise en cours');
+      return;
+    }
+    
+    // Ne pas sauvegarder si la session n'a pas encore été reprise ET qu'on est à l'état initial
+    // (évite d'écraser une session existante avec score=0, index=0)
+    if (!hasResumedSession.current && currentQuestionIndex === 0 && score === 0) {
+      console.log('⏸️ Sauvegarde ignorée: session pas encore reprise, état initial');
+      return;
+    }
+    
     const persist = async () => {
       const chapterKey = exercicesKey;
       const sessionKey = `quizSession:${chapterKey}`;
-      await writeUserStorage(user?.uid, sessionKey, { index: currentQuestionIndex, answers: [] });
+      // Calculer le score en pourcentage en temps réel
+      const scorePercentage = quizData.length > 0 ? Math.round((score / quizData.length) * 100) : 0;
+      
+      console.log(`💾 Sauvegarde session: index=${currentQuestionIndex}, score=${score}, scorePercentage=${scorePercentage}%`);
+      
+      // Sauvegarder avec le score brut (pour reprise) et le pourcentage (pour affichage)
+      await writeUserStorage(user?.uid, sessionKey, { 
+        index: currentQuestionIndex, 
+        score: score, // Score brut (nombre de bonnes réponses)
+        scorePercentage: scorePercentage, // Score en pourcentage pour affichage
+        answers: [] 
+      });
       // Maintenir un index des sessions pour l'écran Quiz initial
       const indexKey = 'quizSessionsIndex';
       const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
@@ -262,7 +262,7 @@ export default function OriginalQuizScreen() {
     };
     persist();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentQuestionIndex, exercicesKey]);
+  }, [currentQuestionIndex, score, exercicesKey, quizData.length]);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showQuestionPage, setShowQuestionPage] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(1));
@@ -277,7 +277,7 @@ export default function OriginalQuizScreen() {
     }
   }, [quizData.length, navigation]);
 
-  // Nettoyer les sessions corrompues au démarrage
+  // Nettoyer les sessions corrompues et les scores > 100% au démarrage
   useEffect(() => {
     const cleanupSessions = async () => {
       try {
@@ -290,7 +290,7 @@ export default function OriginalQuizScreen() {
         for (const [chapterKey, hasSession] of Object.entries(index)) {
           if (hasSession) {
             const sessionKey = `quizSession:${chapterKey}`;
-            const session = await readUserStorage<{ index: number }>(user?.uid, sessionKey);
+            const session = await readUserStorage<{ index: number; score: number }>(user?.uid, sessionKey);
             
             if (!session) {
               console.log(`🗑️ Session manquante supprimée de l'index: ${chapterKey}`);
@@ -300,6 +300,24 @@ export default function OriginalQuizScreen() {
         }
         
         await writeUserStorage(user?.uid, indexKey, index);
+        
+        // Nettoyer les scores qui dépassent 100%
+        const scores = (await readUserStorage<Record<string, number>>(user?.uid, 'quizScores')) || {};
+        let scoresUpdated = false;
+        
+        for (const [chapterKey, score] of Object.entries(scores)) {
+          if (score > 100) {
+            console.log(`🔧 Correction du score pour chapitre ${chapterKey}: ${score}% -> 100%`);
+            scores[chapterKey] = 100;
+            scoresUpdated = true;
+          }
+        }
+        
+        if (scoresUpdated) {
+          await writeUserStorage(user?.uid, 'quizScores', scores);
+          console.log('✅ Scores corrigés et sauvegardés');
+        }
+        
         console.log('✅ Nettoyage des sessions terminé');
       } catch (error) {
         console.error('❌ Erreur lors du nettoyage des sessions:', error);
@@ -327,7 +345,16 @@ export default function OriginalQuizScreen() {
       fadeAnim.setValue(1);
       
       // Charger les nouvelles données du quiz
-      const newRawQuizData = exercicesFiles[newExercicesKey] || [];
+      const newRawQuizData = (() => {
+        const data = exercicesFiles[newExercicesKey] || [];
+        // Gérer les deux formats : tableau direct ou objet avec propriété quiz
+        if (Array.isArray(data)) {
+          return data;
+        } else if (data && typeof data === 'object' && 'quiz' in data && Array.isArray((data as any).quiz)) {
+          return (data as any).quiz;
+        }
+        return [];
+      })();
       const newQuizData = generateOptionsForQuiz(newRawQuizData);
       setQuizData(newQuizData);
       
@@ -370,10 +397,10 @@ export default function OriginalQuizScreen() {
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fff' }}>
         <PanGestureHandler onHandlerStateChange={onGestureEvent}>
           <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-            <Text style={{ color: '#174C3C', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+            <Text style={[styles.emptyStateTitle, { color: '#174C3C' }]}>
               Aucune question disponible pour ce chapitre.
             </Text>
-            <Text style={{ color: '#888', fontSize: 14, marginTop: 10, textAlign: 'center' }}>
+            <Text style={[styles.emptyStateText, { color: '#888' }]}>
               Veuillez choisir un autre chapitre.
             </Text>
           </SafeAreaView>
@@ -390,9 +417,26 @@ export default function OriginalQuizScreen() {
       setShowQuestionPage(true);
       return;
     }
-    // Sinon, naviguer vers la page de sélection des chapitres
-    console.log('Navigation vers la sélection des chapitres');
-    navigation.navigate('QuizChapterSelect' as never);
+    
+    // Vérifier si on doit retourner à un chapitre spécifique
+    const returnToChapter = (route.params as any)?.returnToChapter;
+    if (returnToChapter) {
+      console.log('Retour vers le chapitre avec section spécifique:', returnToChapter);
+      (navigation as any).navigate('Chapter', {
+        chapter: {
+          image: returnToChapter.image,
+          title: returnToChapter.title,
+          desc: returnToChapter.title
+        },
+        initialSection: returnToChapter.section,
+        // Si le chapitre venait de l'aperçu du livre (Accueil), on propage l'info
+        fromHomePreview: returnToChapter.fromHomePreview,
+      });
+    } else {
+      // Sinon, naviguer vers la page de sélection des chapitres
+      console.log('Navigation vers la sélection des chapitres');
+      navigation.navigate('QuizChapterSelect' as never);
+    }
   };
 
   // Gestionnaire de swipe personnalisé pour iOS
@@ -422,8 +466,21 @@ export default function OriginalQuizScreen() {
           setShowQuestionPage(true);
           return true;
         }
+              // Vérifier si on doit retourner à un chapitre spécifique
+      const returnToChapter = (route.params as any)?.returnToChapter;
+      if (returnToChapter) {
+        (navigation as any).navigate('Chapter', {
+          chapter: {
+            image: returnToChapter.image,
+            title: returnToChapter.title,
+            desc: returnToChapter.title
+          },
+          initialSection: returnToChapter.section
+        });
+      } else {
         // Sinon, aller à la sélection des chapitres
         navigation.navigate('QuizChapterSelect' as never);
+      }
         return true;
       };
 
@@ -478,7 +535,13 @@ export default function OriginalQuizScreen() {
     
     // Incrémenter le score seulement si c'est correct ET si on n'a pas déjà vérifié
     if (correct) {
-      setScore(prev => prev + 1);
+      setScore(prev => {
+        const newScore = prev + 1;
+        console.log(`✅ Réponse correcte ! Score: ${prev} → ${newScore}`);
+        return newScore;
+      });
+    } else {
+      console.log(`❌ Réponse incorrecte. Score reste: ${score}`);
     }
   };
 
@@ -495,8 +558,82 @@ export default function OriginalQuizScreen() {
         // Calculer le pourcentage de score
         const finalScorePercentage = Math.round((score / quizData.length) * 100);
         
-        // Sauvegarder le score localement (meilleur score uniquement)
-        saveQuizScore(exercicesKey, finalScorePercentage);
+        // Sauvegarder le score localement (meilleur score uniquement) - fonction async appelée sans await
+        saveQuizScore(exercicesKey, finalScorePercentage).then(() => {
+          // Vérifier si tous les quiz sont maintenant complétés à 100% pour l'attestation
+          if (finalScorePercentage === 100 && user?.uid) {
+            (async () => {
+              try {
+                const { getQuizProfile } = await import('../utils/quizSession');
+                const scores = (await readUserStorage<Record<string, number>>(user.uid, 'quizScores')) || {};
+                const profile = await getQuizProfile(user.uid);
+                const bestScores = profile.bestScores || {};
+                
+                // Vérifier tous les chapitres avec quiz
+                const exercicesFiles: { [key: string]: any[] | { quiz: any[] } } = {
+                  '1': require('../../data/exercices_par_chapitre/chapitre_1_exercices.json'),
+                  '2': require('../../data/exercices_par_chapitre/chapitre_2_exercices.json'),
+                  '3': require('../../data/exercices_par_chapitre/chapitre_3_exercices.json'),
+                  '4': require('../../data/exercices_par_chapitre/chapitre_4_exercices.json'),
+                  '5': require('../../data/exercices_par_chapitre/chapitre_5_exercices.json'),
+                  '6': require('../../data/exercices_par_chapitre/chapitre_6_exercices.json'),
+                  '7': require('../../data/exercices_par_chapitre/chapitre_7_exercices.json'),
+                  '8': require('../../data/exercices_par_chapitre/chapitre_8_exercices.json'),
+                  '9': require('../../data/exercices_par_chapitre/chapitre_9_execrcices.json'),
+                  '10': require('../../data/exercices_par_chapitre/chapitre_10_exercices.json'),
+                  '11': require('../../data/exercices_par_chapitre/chapitre_11_exercices.json'),
+                  '12': require('../../data/exercices_par_chapitre/chapitre_12_exercices.json'),
+                };
+                
+                const allChapters = Object.keys(exercicesFiles).filter(key => {
+                  const data = exercicesFiles[key];
+                  return Array.isArray(data) && data.length > 0 || 
+                         (data && typeof data === 'object' && 'quiz' in data && Array.isArray((data as any).quiz) && (data as any).quiz.length > 0);
+                });
+                
+                // Calculer la moyenne de tous les quiz
+                let totalScore = 0;
+                let completedCount = 0;
+                let allCompleted = true;
+                
+                for (const key of allChapters) {
+                  const chapterScore = scores[key] ?? bestScores[key];
+                  if (chapterScore === undefined) {
+                    allCompleted = false;
+                    break;
+                  }
+                  completedCount++;
+                  totalScore += chapterScore;
+                }
+                
+                const averageScore = completedCount > 0 ? Math.round(totalScore / completedCount) : 0;
+                
+                // Éligible si tous les quiz sont complétés et moyenne >= 80%
+                if (allCompleted && completedCount === allChapters.length && averageScore >= 80) {
+                  // Afficher une alerte de félicitations après un court délai
+                  setTimeout(() => {
+                    Alert.alert(
+                      '🎉 Félicitations !',
+                      `Vous avez complété tous les quiz avec une moyenne de ${averageScore}% !\n\nVotre attestation est maintenant disponible dans les Paramètres.`,
+                      [
+                        { text: 'OK', style: 'default' },
+                        { 
+                          text: 'Voir mon attestation', 
+                          style: 'default',
+                          onPress: () => {
+                            (navigation as any).navigate('Accueil', { screen: 'Certificate' });
+                          }
+                        }
+                      ]
+                    );
+                  }, 1000);
+                }
+              } catch (error) {
+                console.error('❌ Erreur vérification attestation:', error);
+              }
+            })();
+          }
+        });
         
         // Logger le résultat sur Firebase
         logQuizResult(score);
@@ -507,20 +644,30 @@ export default function OriginalQuizScreen() {
 
   // Fonction pour sauvegarder le score localement
   const saveQuizScore = async (chapterKey: string, scorePercentage: number) => {
+    if (!user?.uid) return;
+    
     try {
       console.log(`💾 Sauvegarde du score pour chapitre ${chapterKey}: ${scorePercentage}%`);
       
-      // Sauvegarder le score
-      const scores = (await readUserStorage<Record<string, number>>(user?.uid, 'quizScores')) || {};
-      if (!scores[chapterKey] || scorePercentage > scores[chapterKey]) {
-        scores[chapterKey] = scorePercentage;
-        await writeUserStorage(user?.uid, 'quizScores', scores);
-        console.log(`✅ Score sauvegardé pour le chapitre ${chapterKey}: ${scorePercentage}%`);
+      // Limiter le score à 100% maximum
+      const limitedScorePercentage = Math.min(scorePercentage, 100);
+      
+      // Sauvegarder le score dans quizScores
+      const scores = (await readUserStorage<Record<string, number>>(user.uid, 'quizScores')) || {};
+      if (!scores[chapterKey] || limitedScorePercentage > scores[chapterKey]) {
+        scores[chapterKey] = limitedScorePercentage;
+        await writeUserStorage(user.uid, 'quizScores', scores);
+        console.log(`✅ Score sauvegardé dans quizScores pour le chapitre ${chapterKey}: ${limitedScorePercentage}%`);
       }
+      
+      // IMPORTANT: Mettre à jour le profil de quiz (bestScores) pour l'attestation
+      const { updateQuizProfile } = await import('../utils/quizSession');
+      await updateQuizProfile(user.uid, chapterKey, limitedScorePercentage);
+      console.log(`✅ Profil de quiz mis à jour (bestScores) pour le chapitre ${chapterKey}: ${limitedScorePercentage}%`);
       
       // Nettoyer complètement la session terminée
       const sessionKey = `quizSession:${chapterKey}`;
-      await removeUserStorage(user?.uid, sessionKey);
+      await removeUserStorage(user.uid, sessionKey);
       console.log(`🗑️ Session supprimée: ${sessionKey}`);
       
       // Mettre à jour l'index des sessions
@@ -556,49 +703,185 @@ export default function OriginalQuizScreen() {
     setQuizData(generateOptionsForQuiz(rawQuizData));
   };
 
-  // Fonction pour permettre de reprendre n'importe quel chapitre
-  const resumeAnyChapter = async () => {
-    try {
-      // Supprimer la session actuelle pour permettre la reprise
-      const chapterKey = exercicesKey;
-      const sessionKey = `quizSession:${chapterKey}`;
-      await removeUserStorage(user?.uid, sessionKey);
-      
-      // Mettre à jour l'index des sessions
-      const indexKey = 'quizSessionsIndex';
-      const index = (await readUserStorage<Record<string, boolean>>(user?.uid, indexKey)) || {};
-      if (index[chapterKey]) {
-        delete index[chapterKey];
-        await writeUserStorage(user?.uid, indexKey, index);
-      }
-      
-      console.log(`✅ Session supprimée pour le chapitre ${chapterKey}, reprise possible`);
-      
-      // Recharger le quiz depuis le début
-      setCurrentQuestionIndex(0);
-      setScore(0);
-      setSelectedAnswerIndex(null);
-      setIsAnswerCorrect(null);
-      setShowAnswer(false);
-      setShowResults(false);
-      setShowQuestionPage(true);
-      fadeAnim.setValue(1);
-      
-    } catch (error) {
-      console.error('Erreur lors de la reprise du chapitre:', error);
-    }
+
+
+  // Fonction pour déterminer si on vient d'un chapitre
+  const isComingFromChapter = () => {
+    return !!(route.params as any)?.returnToChapter;
   };
 
-  // Fonction pour naviguer vers le quiz suivant
+  // Fonction pour vérifier s'il y a un quiz suivant dans la même partie
+  const hasNextQuizInSamePart = () => {
+    if (isComingFromChapter()) {
+      // Si on vient d'un chapitre, on navigue vers le chapitre suivant (pas de quiz)
+      return true;
+    }
+
+    // Pour les quiz normaux, vérifier s'il y a un quiz suivant dans la même partie
+    const chaptersData = require('../../data/chapitres.json');
+    
+    // Trouver la partie actuelle
+    let currentPartieKey = null;
+    Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
+      partie.chapitres.forEach((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        if (numKey === exercicesKey) {
+          currentPartieKey = partieKey;
+        }
+      });
+    });
+
+    if (!currentPartieKey) return false;
+
+    // Obtenir tous les chapitres de la partie actuelle qui ont des quiz
+    // Filtrer uniquement les chapitres qui ont réellement des exercices
+    const partieChapters = chaptersData[currentPartieKey].chapitres
+      .map((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        return numKey;
+      })
+      .filter((numKey: string) => {
+        // Vérifier que le chapitre a réellement des exercices
+        const exercices = exercicesFiles[numKey];
+        const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
+                       (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
+                        Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
+        return hasQuiz;
+      });
+
+    // Trouver l'index du quiz actuel dans sa partie
+    const currentIndexInPartie = partieChapters.indexOf(exercicesKey);
+    
+    // Retourner true s'il y a un quiz suivant dans la même partie
+    return currentIndexInPartie !== -1 && currentIndexInPartie < partieChapters.length - 1;
+  };
+
+  // Fonction pour vérifier si le quiz suivant est débloqué
+  const isNextQuizUnlocked = () => {
+    if (isComingFromChapter()) {
+      return true;
+    }
+
+    if (!hasNextQuizInSamePart()) return false;
+
+    const chaptersData = require('../../data/chapitres.json');
+    let currentPartieKey = null;
+    Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
+      partie.chapitres.forEach((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        if (numKey === exercicesKey) {
+          currentPartieKey = partieKey;
+        }
+      });
+    });
+
+    if (!currentPartieKey) return false;
+
+    // Vérifier l'accès à la partie si c'est une partie payante
+    if (currentPartieKey === 'deuxieme_partie' && !userEntitlements.part2) {
+      return false;
+    }
+    if (currentPartieKey === 'troisieme_partie' && !userEntitlements.part3) {
+      return false;
+    }
+
+    const partieChapters = chaptersData[currentPartieKey].chapitres
+      .map((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        return numKey;
+      })
+      .filter((numKey: string) => {
+        const exercices = exercicesFiles[numKey];
+        const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
+                       (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
+                        Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
+        return hasQuiz;
+      });
+
+    const currentIndexInPartie = partieChapters.indexOf(exercicesKey);
+    
+    if (currentIndexInPartie !== -1 && currentIndexInPartie < partieChapters.length - 1) {
+      const nextQuizKey = partieChapters[currentIndexInPartie + 1];
+      return isQuizUnlocked(nextQuizKey, quizScores);
+    }
+    
+    return false;
+  };
+
+  // Fonction pour naviguer vers le quiz suivant ou le chapitre suivant
   const goToNextQuiz = () => {
     console.log('🔄 goToNextQuiz appelé avec exercicesKey:', exercicesKey);
     
+    // Si on vient d'un chapitre, naviguer vers le chapitre suivant
+    if (isComingFromChapter()) {
+      console.log('📖 Navigation vers le chapitre suivant (venant d\'un chapitre)');
+      
+      // Récupérer les données des chapitres pour déterminer la partie actuelle
+      const chaptersData = require('../../data/chapitres.json');
+      
+      // Trouver le chapitre actuel et sa partie
+      let currentChapter = null;
+      let currentPartieKey = null;
+      
+      Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
+        partie.chapitres.forEach((ch: any) => {
+          const num = (ch as any).numero || ch.image || '1';
+          const numKey = String(parseInt(num, 10));
+          if (numKey === exercicesKey) {
+            currentChapter = ch;
+            currentPartieKey = partieKey;
+          }
+        });
+      });
+      
+      if (!currentPartieKey) {
+        console.log('❌ Partie non trouvée pour le quiz:', exercicesKey);
+        navigation.navigate('QuizChapterSelect' as never);
+        return;
+      }
+      
+      // Trouver le chapitre suivant dans la même partie
+      const partieChapters = chaptersData[currentPartieKey].chapitres;
+      const currentIndex = partieChapters.findIndex((ch: any) => {
+        const num = (ch as any).numero || ch.image || '1';
+        const numKey = String(parseInt(num, 10));
+        return numKey === exercicesKey;
+      });
+      
+      if (currentIndex !== -1 && currentIndex < partieChapters.length - 1) {
+        // Il y a un chapitre suivant
+        const nextChapter = partieChapters[currentIndex + 1];
+        console.log('➡️ Navigation vers le chapitre suivant:', nextChapter.title);
+        
+        const returnToChapter = (route.params as any)?.returnToChapter;
+        (navigation as any).navigate('Chapter', {
+          chapter: {
+            image: nextChapter.image,
+            title: nextChapter.title,
+            desc: nextChapter.desc || nextChapter.title
+          },
+          // Si le premier chapitre venait de l'aperçu du livre, on garde ce comportement
+          fromHomePreview: returnToChapter?.fromHomePreview,
+        });
+      } else {
+        // C'était le dernier chapitre de la partie, retourner à la sélection des chapitres
+        console.log('🏠 Retour à la sélection des chapitres (dernier chapitre de la partie)');
+        (navigation as any).navigate('Books', { selectedPart: currentPartieKey });
+      }
+      return;
+    }
+    
+    // Sinon, navigation normale vers le quiz suivant
     // Récupérer les données des chapitres pour déterminer la partie actuelle
     const chaptersData = require('../../data/chapitres.json');
     
     // Trouver le chapitre actuel et sa partie
     let currentChapter = null;
-    let currentPartieKey = null;
+    let currentPartieKey: string | null = null;
     
     Object.entries(chaptersData).forEach(([partieKey, partie]: any) => {
       partie.chapitres.forEach((ch: any) => {
@@ -620,14 +903,21 @@ export default function OriginalQuizScreen() {
     console.log('📍 Quiz actuel:', exercicesKey, 'dans la partie:', currentPartieKey);
     
     // Obtenir tous les chapitres de la partie actuelle qui ont des quiz
-    const availableChapters = ['1', '2', '3', '5', '6', '7', '9', '10', '12'];
+    // Filtrer uniquement les chapitres qui ont réellement des exercices
     const partieChapters = chaptersData[currentPartieKey].chapitres
       .map((ch: any) => {
         const num = (ch as any).numero || ch.image || '1';
         const numKey = String(parseInt(num, 10));
         return numKey;
       })
-      .filter((numKey: string) => availableChapters.includes(numKey));
+      .filter((numKey: string) => {
+        // Vérifier que le chapitre a réellement des exercices
+        const exercices = exercicesFiles[numKey];
+        const hasQuiz = Array.isArray(exercices) && exercices.length > 0 || 
+                       (exercices && typeof exercices === 'object' && 'quiz' in exercices && 
+                        Array.isArray((exercices as any).quiz) && (exercices as any).quiz.length > 0);
+        return hasQuiz;
+      });
     
     console.log('📚 Chapitres de la partie avec quiz:', partieChapters);
     
@@ -637,10 +927,39 @@ export default function OriginalQuizScreen() {
     if (currentIndexInPartie !== -1 && currentIndexInPartie < partieChapters.length - 1) {
       // Il y a un quiz suivant dans la même partie
       const nextQuizKey = partieChapters[currentIndexInPartie + 1];
-      console.log('➡️ Navigation vers le quiz suivant dans la même partie:', nextQuizKey);
+      console.log('➡️ Vérification du quiz suivant dans la même partie:', nextQuizKey);
       
-      // Utiliser replace pour forcer le rechargement de l'écran
-      (navigation as any).replace('OriginalQuiz', { exercicesKey: nextQuizKey });
+      // Recharger les scores à jour avant de vérifier le déblocage
+      readUserStorage<Record<string, number>>(user?.uid, 'quizScores').then((updatedScores) => {
+        const currentQuizScores = updatedScores || {};
+        setQuizScores(currentQuizScores); // Mettre à jour l'état local
+        
+        // Vérifier l'accès à la partie si c'est une partie payante
+        let hasAccessToPart = true;
+        if (currentPartieKey === 'deuxieme_partie' && !userEntitlements.part2) {
+          hasAccessToPart = false;
+        }
+        if (currentPartieKey === 'troisieme_partie' && !userEntitlements.part3) {
+          hasAccessToPart = false;
+        }
+
+        if (!hasAccessToPart) {
+          console.log('🔒 Accès à la partie payante requis');
+          // Afficher le modal de verrouillage avec message de paiement
+          setLockedQuizInfo({ key: nextQuizKey, score: undefined });
+          setShowLockModal(true);
+        } else if (isQuizUnlocked(nextQuizKey, currentQuizScores)) {
+          console.log('✅ Quiz suivant débloqué, navigation vers:', nextQuizKey);
+          // Utiliser replace pour forcer le rechargement de l'écran
+          (navigation as any).replace('OriginalQuiz', { exercicesKey: nextQuizKey });
+        } else {
+          console.log('🔒 Quiz suivant verrouillé, affichage du modal');
+          // Afficher le modal de verrouillage
+          const currentScore = currentQuizScores[exercicesKey];
+          setLockedQuizInfo({ key: nextQuizKey, score: currentScore });
+          setShowLockModal(true);
+        }
+      });
     } else {
       // C'était le dernier quiz de la partie, retourner à la sélection des chapitres
       console.log('🏠 Retour à la sélection des chapitres (dernier quiz de la partie)');
@@ -658,7 +977,7 @@ export default function OriginalQuizScreen() {
       <SafeAreaView key={`results-${exercicesKey}`} style={styles.container} {...panResponder.panHandlers}>
         {/* Bouton de retour */}
         <TouchableOpacity 
-          style={styles.backButton} 
+          style={styles.resultsBackButton} 
           onPress={() => {
             console.log('Bouton retour TOUCHÉ (résultats) !');
             goToQuizSelection();
@@ -666,27 +985,44 @@ export default function OriginalQuizScreen() {
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-          </TouchableOpacity>
+        </TouchableOpacity>
 
-        {/* Section du personnage - identique aux autres pages */}
-        <View style={styles.characterSection}>
-          <Image 
-            source={require('../../assets/16 (copie).png')} 
-            style={styles.characterImage}
-            resizeMode="contain"
-          />
+        {/* Contenu principal - Personnage (comme QuizStartScreen) */}
+        <View style={styles.mainContent}>
+          <View style={styles.imageContainer}>
+            <Image 
+              source={require('../../assets/16 (copie).png')} 
+              style={styles.characterImage}
+              resizeMode="contain"
+            />
+          </View>
         </View>
         
-        {/* Cartes empilées - identiques aux autres pages */}
-        <View style={styles.quizCardContainer}>
+        {/* Carte du quiz - Système à 2 pages (positionné en bas comme QuizStartScreen) */}
+        <View style={styles.cardStack}>
           {/* Carte arrière (la plus profonde) - Vert foncé */}
-          <View style={styles.backCard} />
+          <View 
+            style={[
+              styles.backCard,
+              isComingFromChapter() && styles.backCardFromChapter
+            ]} 
+          />
           
           {/* Carte du milieu - Dorée */}
-          <View style={styles.middleCard} />
+          <View 
+            style={[
+              styles.middleCard,
+              isComingFromChapter() && styles.middleCardFromChapter
+            ]} 
+          />
           
           {/* Carte blanche principale avec résultats */}
-          <View style={styles.whiteCard}>
+          <View 
+            style={[
+              styles.whiteCard,
+              isComingFromChapter() && styles.whiteCardFromChapter
+            ]}
+          >
             <Text style={styles.resultsTitle}>Quiz Terminé !</Text>
             <Text style={styles.scoreText}>
               Votre score : {score} / {quizData.length}
@@ -705,9 +1041,11 @@ export default function OriginalQuizScreen() {
             {/* Espace pour pousser le bouton vers le bas */}
             <View style={styles.spacer} />
             
-            {canProceedToNext ? (
+            {canProceedToNext && hasNextQuizInSamePart() ? (
               <TouchableOpacity style={styles.restartButton} onPress={goToNextQuiz}>
-                <Text style={styles.restartButtonText}>Quiz suivant</Text>
+                <Text style={styles.restartButtonText}>
+                  Continuer
+                </Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.restartButton} onPress={restartQuiz}>
@@ -736,36 +1074,46 @@ export default function OriginalQuizScreen() {
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.restartChapterButton} 
-          onPress={resumeAnyChapter}
-          activeOpacity={0.7}
-        >
-          <MaterialCommunityIcons name="refresh" size={20} color="white" />
-        </TouchableOpacity>
       </View>
 
-      {/* Section du personnage - Plus compacte */}
-      <View style={styles.characterSection}>
-        <Image 
+      {/* Contenu principal - Personnage (comme QuizStartScreen) */}
+      <View style={styles.mainContent}>
+        <View style={styles.imageContainer}>
+          <Image 
             source={require('../../assets/16 (copie).png')} 
-          style={styles.characterImage}
-          resizeMode="contain"
-        />
+            style={styles.characterImage}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
-      {/* Carte du quiz - Système à 2 pages */}
-      <View style={styles.quizCardContainer}>
+      {/* Carte du quiz - Système à 2 pages (positionné en bas comme QuizStartScreen) */}
+      <View style={styles.cardStack}>
         {/* Cartes empilées exactement comme dans QuizStartScreen */}
         {/* Carte arrière (la plus profonde) - Vert foncé */}
-        <View style={styles.backCard} />
+        <View 
+          style={[
+            styles.backCard,
+            isComingFromChapter() && styles.backCardFromChapter
+          ]} 
+        />
         
         {/* Carte du milieu - Dorée */}
-        <View style={styles.middleCard} />
+        <View 
+          style={[
+            styles.middleCard,
+            isComingFromChapter() && styles.middleCardFromChapter
+          ]} 
+        />
         
         {/* Carte blanche principale */}
-        <Animated.View style={[styles.whiteCard, { opacity: fadeAnim }]}>
+        <Animated.View 
+          style={[
+            styles.whiteCard, 
+            isComingFromChapter() && styles.whiteCardFromChapter,
+            { opacity: fadeAnim }
+          ]}
+        >
           {showQuestionPage ? (
             // PAGE 1: QUESTION SEULEMENT
             <>
@@ -773,9 +1121,19 @@ export default function OriginalQuizScreen() {
               <ScrollView 
                 style={styles.questionScrollContainer}
                 contentContainerStyle={styles.questionScrollContent}
-                showsVerticalScrollIndicator={false}
+                showsVerticalScrollIndicator={true} // ✅ Activé pour montrer qu'on peut scroller
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                bounces={true}
               >
-          <Text style={styles.questionText}>{currentQuestion.question}</Text>
+          <Text 
+            style={styles.questionText}
+            // ✅ CORRECTION : Enlever numberOfLines pour afficher toute la question
+            // numberOfLines={3} // ❌ Retiré pour permettre l'affichage complet
+            adjustsFontSizeToFit={false} // ✅ Désactivé pour garder la taille de police responsive
+          >
+            {currentQuestion.question}
+          </Text>
               </ScrollView>
 
               {/* Bouton toujours visible en bas */}
@@ -790,7 +1148,17 @@ export default function OriginalQuizScreen() {
           ) : (
             // PAGE 2: RÉPONSES MULTIPLES
             <>
-          <View style={styles.optionsContainer}>
+          <ScrollView 
+            style={styles.optionsContainer}
+            contentContainerStyle={styles.optionsContentContainer}
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
+            scrollEnabled={true}
+            bounces={true}
+            removeClippedSubviews={false}
+            persistentScrollbar={true}
+          >
             {currentQuestion.options.map((option, index) => {
               const isSelected = selectedAnswerIndex === index;
               const isCorrect = index === currentQuestion.correctAnswerIndex;
@@ -859,8 +1227,11 @@ export default function OriginalQuizScreen() {
                 </View>
               );
             })}
-            <Text style={styles.hintText}>Clique sur le texte pour voir toute la réponse</Text>
-          </View>
+          </ScrollView>
+          {/* Texte d'aide toujours visible, en dehors du conteneur avec overflow hidden */}
+          <Text style={styles.hintText} numberOfLines={2} ellipsizeMode="tail">
+            Clique sur le texte pour voir toute la réponse
+          </Text>
 
               {/* Section des boutons avec espace réservé */}
               <View style={styles.buttonSection}>
@@ -874,9 +1245,15 @@ export default function OriginalQuizScreen() {
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.answerSection}>
-                    <View style={styles.correctAnswerBanner}>
-                      <Text style={styles.correctAnswerText}>
-                        Réponse correcte
+                    <View style={[
+                      styles.correctAnswerBanner,
+                      !isAnswerCorrect && styles.incorrectAnswerBanner
+                    ]}>
+                      <Text style={[
+                        styles.correctAnswerText,
+                        !isAnswerCorrect && styles.incorrectAnswerText
+                      ]}>
+                        {isAnswerCorrect ? 'Réponse correcte' : 'Réponse fausse'}
                       </Text>
                     </View>
                     <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
@@ -920,76 +1297,205 @@ export default function OriginalQuizScreen() {
         </View>
       </View>
     )}
+
+    {/* Modal pour les quiz verrouillés */}
+    {showLockModal && (
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCardContainer}>
+          {/* Carte arrière (la plus profonde) - Vert foncé */}
+          <View style={styles.modalBackCard} />
+          
+          {/* Carte du milieu - Dorée */}
+          <View style={styles.modalMiddleCard} />
+          
+          {/* Carte blanche principale */}
+          <View style={styles.modalWhiteCard}>
+            <View style={styles.modalHeader}>
+              <Image
+                source={require('../../assets/lock-closed.png')}
+                style={styles.modalLockIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.modalTitle}>Quiz verrouillé</Text>
+              <TouchableOpacity 
+                style={styles.closeModalButton}
+                onPress={() => setShowLockModal(false)}
+              >
+                <MaterialCommunityIcons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            {lockedQuizInfo?.score === undefined ? (
+              <Text style={styles.modalText}>
+                Ce quiz fait partie d'une section premium. Débloquez l'accès à cette partie pour continuer.
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.modalText}>
+                  Pour débloquer ce quiz, vous devez obtenir au moins 80% au quiz précédent.
+                </Text>
+                
+                <View style={styles.modalScoreContainer}>
+                  <Text style={styles.modalScoreLabel}>
+                    Votre score actuel :
+                  </Text>
+                  <Text style={styles.modalScoreValue}>
+                    {lockedQuizInfo.score}%
+                  </Text>
+                  <Text style={styles.modalScoreRequired}>
+                    Score requis : 80%
+                  </Text>
+                </View>
+              </>
+            )}
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
+              <TouchableOpacity 
+                style={[styles.modalButton, { backgroundColor: '#ccc', flex: 0.48 }]}
+                onPress={() => setShowLockModal(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: '#333' }]}>Fermer</Text>
+              </TouchableOpacity>
+              
+              {lockedQuizInfo?.score === undefined ? (
+                <TouchableOpacity 
+                  style={[styles.modalButton, { backgroundColor: '#174C3C', flex: 0.48 }]}
+                  onPress={() => {
+                    setShowLockModal(false);
+                    navigation.navigate('Books' as never);
+                  }}
+                >
+                  <Text style={[styles.modalButtonText, { color: '#fff' }]}>Voir les parties</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.modalButton, { backgroundColor: '#174C3C', flex: 0.48 }]}
+                  onPress={() => {
+                    setShowLockModal(false);
+                    restartQuiz();
+                  }}
+                >
+                  <Text style={[styles.modalButtonText, { color: '#fff' }]}>Recommencer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </View>
+    )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1, 
-    backgroundColor: '#174C3C', // Vert principal de l'application
-  },
+const createStyles = (responsive: any, responsiveStyle: any) => {
+  // Utilisation des fonctions utilitaires pour un système responsive unifié
+  const characterSize = getCharacterSize(responsive);
+  const characterPosition = getCharacterPosition(responsive);
+  const cardStackPosition = getCardStackPosition(responsive);
+  const cardSizes = getCardSizes(responsive); // ✅ Ajouté pour utiliser les tailles corrigées
+  
+  return StyleSheet.create({
+    container: {
+      flex: 1, 
+      backgroundColor: '#174C3C', // Vert principal de l'application
+    },
   headerButtons: {
     position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
+    top: responsiveStyle.spacing.xl + responsiveStyle.spacing.base, // ✅ Responsive : était 50
+    left: responsive.horizontalPadding, // ✅ Responsive : était 20
     zIndex: 100,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
   backButton: { 
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 8,
-  },
-  restartChapterButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 8,
-  },
-  characterSection: {
-    position: 'absolute',
-    top: 25, // Réduit de 40 à 25 pour faire monter l'image un peu
-    left: 0,
-    right: 0,
+    borderRadius: responsiveStyle.component.borderRadius * 2, // ✅ Responsive : était 20
+    padding: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
+    width: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 40
+    height: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 40
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 50, // Augmenté de 15 à 50 pour mettre l'image en premier plan
+  },
+  resultsBackButton: { 
+    position: 'absolute',
+    top: responsiveStyle.spacing.xl + responsiveStyle.spacing.base, // ✅ Responsive : était 50
+    left: responsive.horizontalPadding, // ✅ Responsive : était 20
+    zIndex: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: responsiveStyle.component.borderRadius * 2, // ✅ Responsive : était 20
+    padding: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
+    width: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 40
+    height: responsiveStyle.component.iconSize * 2, // ✅ Responsive : était 40
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Structure comme QuizStartScreen pour cohérence
+  mainContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 0,
+    pointerEvents: 'none',
+    zIndex: 200,
+  },
+  imageContainer: {
+    pointerEvents: 'none',
+    zIndex: 300,
   },
   characterImage: {
-    width: screenWidth * 0.8, // Réduit de 1.4 à 0.8
-    height: screenHeight * 0.25, // Réduit de 0.45 à 0.25
-    maxWidth: 400, // Réduit de 650 à 400
-    maxHeight: 350, // Réduit de 600 à 350
-    resizeMode: 'contain', // Ajouté pour maintenir les proportions
-    zIndex: 51, // Augmenté de 16 à 51 pour mettre l'image en premier plan
+    // Taille responsive unifiée via getCharacterSize
+    width: characterSize.width,
+    height: characterSize.height,
+    // Position responsive unifiée via getCharacterPosition
+    marginTop: characterPosition.marginTop,
+    zIndex: 400,
   },
-  quizCardContainer: {
-    flex: 1, // Prend tout l'espace disponible
-    justifyContent: 'center',
-    alignItems: 'center', 
-    paddingHorizontal: 8, // Réduit de 16 à 8 pour plus d'espace
-    paddingBottom: 30,
-    position: 'relative',
-    paddingTop: 0,
+  cardStack: {
+    position: 'absolute',
+    bottom: cardStackPosition.bottom,
+    left: responsive.horizontalPadding,
+    right: responsive.horizontalPadding,
+    alignItems: 'center',
+    zIndex: 100,
   },
 
   questionText: { 
-    fontSize: 17,
+    fontSize: responsive.isTablet 
+      ? responsiveStyle.fontSize.xl  // Tablettes : 18px
+      : responsive.breakpoint === 'xs'
+        ? responsiveStyle.fontSize.base  // Très petits écrans : 14px
+        : responsiveStyle.fontSize.lg, // iPhone standard et grands téléphones : 16px
     color: '#333',
     fontWeight: '600', 
     textAlign: 'center', 
-    marginBottom: 15, // Réduit de 22 à 15
-    lineHeight: 24,
-    marginTop: 20, // Réduit de 30 à 20
+    marginBottom: responsiveStyle.spacing.base,
+    lineHeight: responsive.isTablet 
+      ? responsiveStyle.fontSize.xl * 1.4  // Tablettes : 25.2px
+      : responsiveStyle.fontSize.lg * 1.5, // Autres : 24px
+    marginTop: responsiveStyle.spacing.base,
+    // Propriétés pour éviter que le texte soit coupé
+    paddingHorizontal: responsiveStyle.spacing.sm,
+    flexWrap: 'wrap',
   },
   optionsContainer: { 
-    marginBottom: 8, // Réduit de 12 à 8
-    marginTop: 15, // Réduit de 30 à 15
-    width: '100%', // Assure que le conteneur prend toute la largeur
-    maxHeight: '70%', // Limite la hauteur pour éviter le débordement
-    overflow: 'hidden', // Cache le contenu qui déborde
+    marginBottom: responsiveStyle.spacing.xs / 2,
+    marginTop: responsiveStyle.spacing.sm,
+    width: '100%',
+    // Utiliser flex: 1 pour prendre l'espace disponible dans whiteCard
+    flex: 1,
+    minHeight: 0, // Important pour permettre le scroll dans un conteneur flex
+    maxHeight: responsive.breakpoint === 'xs' 
+      ? responsive.height * 0.35  // 35% de la hauteur pour très petits écrans
+      : responsive.breakpoint === 'sm'
+        ? responsive.height * 0.40  // 40% pour petits écrans
+        : responsive.height * 0.45, // 45% pour autres écrans
+  },
+  optionsContentContainer: {
+    paddingBottom: responsiveStyle.spacing.xl, // Plus de padding en bas pour voir toutes les options
+    paddingTop: responsiveStyle.spacing.xs,
+    flexGrow: 0, // Ne pas utiliser flexGrow pour permettre le scroll correctement
   },
 
   optionContent: {
@@ -999,10 +1505,10 @@ const styles = StyleSheet.create({
 
   verifyButton: {
     backgroundColor: '#BB9B4E',
-    padding: 10,
-    borderRadius: 10,
+    padding: responsiveStyle.spacing.base,
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 10
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: responsiveStyle.spacing.xs, // ✅ Responsive : était 6
     width: '100%', // Assure que le bouton prend toute la largeur disponible
     maxWidth: '95%', // Limite la largeur pour rester dans le cadre
   },
@@ -1010,56 +1516,69 @@ const styles = StyleSheet.create({
     backgroundColor: '#CCCCCC',
   },
   verifyButtonText: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.base,
     color: 'white',
     fontWeight: 'bold',
   },
   answerSection: {
-    marginTop: 4, // Réduit de 6 à 4
+    marginTop: responsiveStyle.spacing.xs, // ✅ Responsive : était 4
   },
   correctAnswerBanner: {
     backgroundColor: '#174C3C',
-    padding: 8, // Réduit de 10 à 8
-    borderRadius: 10,
+    padding: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 10
     alignItems: 'center',
-    marginBottom: 6, // Réduit de 8 à 6
-    minHeight: 40, // Réduit de 44 à 40
+    marginBottom: responsiveStyle.spacing.xs, // ✅ Responsive : était 6
+    minHeight: responsiveStyle.component.iconSize * 2.5, // ✅ Responsive : était 40
   },
   correctAnswerText: {
     color: 'white',
-    fontSize: 13, // Réduit de 14 à 13
+    fontSize: responsiveStyle.fontSize.sm, // ✅ Responsive : était 13
+    fontWeight: 'bold',
+  },
+  incorrectAnswerBanner: {
+    backgroundColor: '#DC3545',
+    padding: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 10
+    alignItems: 'center',
+    marginBottom: responsiveStyle.spacing.xs, // ✅ Responsive : était 6
+    minHeight: responsiveStyle.component.iconSize * 2.5, // ✅ Responsive : était 40
+  },
+  incorrectAnswerText: {
+    color: 'white',
+    fontSize: responsiveStyle.fontSize.sm, // ✅ Responsive : était 13
     fontWeight: 'bold',
   },
   nextButton: {
     backgroundColor: '#BB9B4E',
-    padding: 10,
-    borderRadius: 10,
+    padding: responsiveStyle.spacing.base, // ✅ Responsive : était 10
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 10
     alignItems: 'center', 
-    minHeight: 44,
+    minHeight: responsiveStyle.component.iconSize * 2.75, // ✅ Responsive : était 44
   },
   nextButtonText: {
-    fontSize: 14,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 14
     color: 'white',
     fontWeight: 'bold',
   },
   resultsTitle: { 
-    fontSize: 26,
+    fontSize: responsiveStyle.fontSize.xl + 2, // ✅ Responsive : était 26
     fontWeight: 'bold', 
     color: '#174C3C',
     textAlign: 'center',
-    marginTop: 20, // Ajouté pour descendre le texte
-    marginBottom: 22,
+    marginTop: responsiveStyle.spacing.base, // ✅ Responsive : était 20
+    marginBottom: responsiveStyle.spacing.base + 2, // ✅ Responsive : était 22
   },
   scoreText: { 
-    fontSize: 19,
+    fontSize: responsiveStyle.fontSize.base + 3, // ✅ Responsive : était 19
     color: '#333',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: responsiveStyle.spacing.xl, // ✅ Responsive : était 32
   },
   restartButton: { 
     backgroundColor: '#BB9B4E',
-    padding: 16,
-    borderRadius: 12,
+    padding: responsiveStyle.spacing.base, // ✅ Responsive : était 16
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 12
     alignItems: 'center',
     zIndex: 20,
     elevation: 10,
@@ -1069,20 +1588,27 @@ const styles = StyleSheet.create({
       height: 2,
     },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: responsiveStyle.spacing.xs,
   },
   restartButtonText: { 
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     color: 'white',
     fontWeight: 'bold',
   },
   backCard: {
     backgroundColor: '#0F3A2E',
     borderRadius: 30,
-    height: screenHeight * 0.55,
+    // Hauteur responsive basée sur les breakpoints
+    height: responsive.isTablet 
+      ? responsive.height * 0.50  // Tablettes : 50% de hauteur
+      : responsive.breakpoint === 'xs'
+        ? responsive.height * 0.55  // Très petits écrans : 55%
+        : responsive.breakpoint === 'sm'
+          ? responsive.height * 0.52  // iPhone standard : 52%
+          : responsive.height * 0.50, // Grands téléphones : 50%
     width: '98%',
     position: 'absolute',
-    bottom: 3,
+    bottom: responsive.isTablet ? -20 : -15,
     borderWidth: 2,
     borderColor: '#0A2D23',
     shadowColor: '#000',
@@ -1098,10 +1624,17 @@ const styles = StyleSheet.create({
   middleCard: {
     backgroundColor: '#BB9B4E',
     borderRadius: 30,
-    height: screenHeight * 0.535,
+    // Hauteur responsive basée sur les breakpoints
+    height: responsive.isTablet 
+      ? responsive.height * 0.48  // Tablettes : 48% de hauteur
+      : responsive.breakpoint === 'xs'
+        ? responsive.height * 0.53  // Très petits écrans : 53%
+        : responsive.breakpoint === 'sm'
+          ? responsive.height * 0.50  // iPhone standard : 50%
+          : responsive.height * 0.48, // Grands téléphones : 48%
     width: '95%',
     position: 'absolute',
-    bottom: 10,
+    bottom: responsive.isTablet ? -10 : -8,
     borderWidth: 2,
     borderColor: '#A08642',
     shadowColor: '#000',
@@ -1117,11 +1650,21 @@ const styles = StyleSheet.create({
   whiteCard: {
     backgroundColor: 'white',
     borderRadius: 30,
-    paddingHorizontal: 20,
-    paddingTop: 25,
-    paddingBottom: 20,
+    paddingHorizontal: responsive.isTablet ? 30 : responsive.horizontalPadding,
+    // ✅ CORRECTION : Réduire paddingTop sur petits écrans pour libérer plus d'espace pour le contenu
+    paddingTop: responsive.breakpoint === 'xs' 
+      ? responsiveStyle.spacing.base  // ✅ Très petits écrans : base (16px) - Réduit
+      : responsive.breakpoint === 'sm'
+      ? responsiveStyle.spacing.base + responsiveStyle.spacing.xs  // ✅ iPhone standard : base + xs (18px)
+      : responsive.isTablet 
+      ? 28 
+      : 22,
+    paddingBottom: responsive.isTablet ? 22 : responsiveStyle.spacing.base, // ✅ Responsive
     alignItems: 'center',
     justifyContent: 'flex-start',
+    // Utiliser flex pour permettre au ScrollView de prendre l'espace disponible
+    display: 'flex',
+    flexDirection: 'column',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1133,11 +1676,23 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#F0F0F0',
     width: '92%',
-    height: screenHeight * 0.525,
+    // ✅ CORRECTION : Utiliser getCardSizes pour une hauteur cohérente et augmentée sur petits écrans
+    height: cardSizes.whiteCard.height, // ✅ Utilise les ratios corrigés de quizResponsive.ts (61% xs, 56% sm, etc.)
     position: 'absolute',
-    bottom: 15,
+    bottom: 0,
     zIndex: 15,
-    overflow: 'hidden',
+    // overflow: 'hidden' retiré pour permettre le scroll des options à l'intérieur
+    // Les coins arrondis sont gérés par borderRadius
+  },
+  // Variantes quand on vient d'un chapitre : laisser une marge équivalente à la TabBar
+  backCardFromChapter: {
+    bottom: 3 + TAB_BAR_SPACE,
+  },
+  middleCardFromChapter: {
+    bottom: 10 + TAB_BAR_SPACE,
+  },
+  whiteCardFromChapter: {
+    bottom: 15 + TAB_BAR_SPACE,
   },
 
   spacer: {
@@ -1167,8 +1722,9 @@ const styles = StyleSheet.create({
   },
 
   buttonSection: {
-    marginTop: 8,
+    marginTop: 4, // Réduit de 8 à 4 pour libérer de l'espace pour le ScrollView
     minHeight: 45,
+    flexShrink: 0, // Empêcher la compression de cette section
   },
   // Styles pour le modal
   modalOverlay: {
@@ -1224,11 +1780,18 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   hintText: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: responsive.isLandscape ? 10 : 11,
+    color: '#19514A',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 4, // Réduit de 10 à 4 pour libérer de l'espace pour le ScrollView
+    marginBottom: 2, // Ajouté pour réduire l'espace
+    marginHorizontal: responsive.isLandscape ? 10 : 20, // Marges adaptatives
     fontStyle: 'italic',
+    fontWeight: '500',
+    lineHeight: responsive.isLandscape ? 14 : 16, // Espacement adaptatif
+    flexWrap: 'wrap', // Permettre le retour à la ligne
+    maxWidth: '90%', // Limiter la largeur maximale
+    alignSelf: 'center', // Centrer le texte
   },
   // Styles pour les cartes empilées du modal
   modalCardContainer: {
@@ -1295,14 +1858,14 @@ const styles = StyleSheet.create({
   optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6, // Réduit pour économiser l'espace
-    paddingVertical: 10, // Réduit pour économiser l'espace
-    paddingHorizontal: 12, // Ajouté pour plus d'espace horizontal
+    marginBottom: 8, // Augmenté pour meilleur espacement
+    paddingVertical: 12, // Augmenté pour meilleure lisibilité
+    paddingHorizontal: 12,
     borderRadius: 12,
     backgroundColor: '#F5F5F5',
-    width: '100%', // Assure que la boîte prend toute la largeur disponible
-    minHeight: 55, // Réduit pour économiser l'espace
-    maxHeight: 55, // Hauteur maximale fixe pour éviter le débordement
+    width: '100%',
+    minHeight: 55, // Minimum pour garantir la taille
+    // Retiré maxHeight pour permettre au texte de s'adapter
   },
   checkboxContainer: {
     width: 30,
@@ -1349,10 +1912,10 @@ const styles = StyleSheet.create({
 
   optionText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: responsiveStyle.fontSize.sm, // ✅ Responsive : était 13
     fontWeight: '500',
     color: '#333',
-    lineHeight: 16,
+    lineHeight: responsiveStyle.fontSize.sm * 1.2, // ✅ Responsive : était 16
     textAlignVertical: 'center',
   },
   optionTextSelected: {
@@ -1368,28 +1931,83 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 15,
-    marginBottom: 10,
+    marginTop: responsiveStyle.spacing.base, // ✅ Responsive : était 15
+    marginBottom: responsiveStyle.spacing.base, // ✅ Responsive : était 10
   },
   congratulationsText: {
-    fontSize: 16,
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
     fontWeight: 'bold',
     color: '#174C3C',
-    marginRight: 8,
+    marginRight: responsiveStyle.spacing.sm, // ✅ Responsive : était 8
   },
   starContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   // Nouveaux styles pour le scroll de la question
+  // ✅ CORRECTION : Augmenter maxHeight sur petits écrans pour afficher plus de contenu
   questionScrollContainer: {
-    maxHeight: '70%',
-    marginBottom: 20,
+    maxHeight: responsive.breakpoint === 'xs' 
+      ? '85%'  // ✅ Très petits écrans : 85% (était 70%)
+      : responsive.breakpoint === 'sm'
+      ? '80%'  // ✅ iPhone standard : 80% (était 70%)
+      : '75%', // Autres écrans : 75%
+    marginBottom: responsiveStyle.spacing.base,
+    flex: 1, // ✅ Ajouté pour prendre l'espace disponible
+    minHeight: 0, // ✅ Important pour permettre le scroll
   },
   questionScrollContent: {
     flexGrow: 1,
     justifyContent: 'flex-start',
+    paddingHorizontal: responsiveStyle.spacing.sm, // ✅ Ajouté pour padding horizontal
   },
-
-
-});
+  modalButton: {
+    paddingVertical: responsiveStyle.spacing.base, // ✅ Responsive : était 12
+    paddingHorizontal: responsiveStyle.spacing.base, // ✅ Responsive : était 20
+    borderRadius: responsiveStyle.component.borderRadius, // ✅ Responsive : était 8
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonText: {
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
+    fontWeight: 'bold',
+  },
+  // Styles pour les états vides
+  emptyStateTitle: {
+    fontSize: responsiveStyle.fontSize.base + 2, // ✅ Responsive : était 18
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 14
+    marginTop: responsiveStyle.spacing.base, // ✅ Responsive : était 10
+    textAlign: 'center',
+  },
+  // Styles pour le modal de verrouillage
+  modalLockIcon: {
+    width: responsiveStyle.fontSize.lg * 1.25, // ✅ Responsive : était 30
+    height: responsiveStyle.fontSize.lg * 1.25, // ✅ Responsive : était 30
+    marginRight: responsiveStyle.spacing.base, // ✅ Responsive : était 10
+  },
+  modalScoreContainer: {
+    marginVertical: responsiveStyle.spacing.base, // ✅ Responsive : était 20
+    alignItems: 'center',
+  },
+  modalScoreLabel: {
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 16
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: responsiveStyle.spacing.xs, // ✅ Responsive : était 5
+  },
+  modalScoreValue: {
+    fontSize: responsiveStyle.fontSize.xl + 2, // ✅ Responsive : était 24
+    fontWeight: 'bold',
+    color: '#174C3C',
+  },
+  modalScoreRequired: {
+    fontSize: responsiveStyle.fontSize.base, // ✅ Responsive : était 14
+    color: '#666',
+    marginTop: responsiveStyle.spacing.xs, // ✅ Responsive : était 5
+  },
+  });
+};

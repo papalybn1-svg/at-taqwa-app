@@ -1,12 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 // Stockage local scoping par utilisateur
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Animated, BackHandler, Dimensions, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import chaptersDataRaw from '../../data/chapitres.json';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
+import { useEntitlements } from '../contexts/EntitlementsContext';
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
+import { usePaymentService } from '../lib/paymentService';
+import colors from '../theme/colors';
 import { ChaptersData } from '../types/chapters';
 import { ChapterState, read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
@@ -103,22 +108,241 @@ function getChaptersInPartie(partieKey: string) {
 }
 
 const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) => {
-  // TOUS LES HOOKS EN PREMIER
-  const { user } = useAuth();
+  // TOUS LES HOOKS EN PREMIER (avant tout return conditionnel)
+  const { user } = useAuthContext();
+  const { entitlements, refreshEntitlements } = useEntitlements();
+  const { checkEntitlements: fetchEntitlements } = usePaymentService();
+  const insets = useSafeAreaInsets();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const dynamicStyles = createStyles(responsive, responsiveStyle);
+  const { chapter, fromHomePreview } = route.params;
+  
+  // Tous les useState
   const [textSize, setTextSize] = useState(16);
-  const screenWidth = Dimensions.get('window').width;
-  const scrollViewRef = useRef<ScrollView>(null);
-  const { chapter } = route.params;
   const [chapterContent, setChapterContent] = useState<any>(null);
+  const [accessStatus, setAccessStatus] = useState<'pending'|'granted'|'denied'>('pending');
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // 0 = première section
-  const fadeAnim = useRef(new Animated.Value(1)).current;
   const [isFavorite, setIsFavorite] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [scrollProgress, setScrollProgress] = useState(0); // Ajout pour la progression verticale
   const [isScrollable, setIsScrollable] = useState(false); // Pour savoir si la page est scrollable
+  
+  // États pour la gestion des quiz
+  const [quizScores, setQuizScores] = useState<Record<string, number>>({});
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [lockedChapter, setLockedChapter] = useState<any>(null);
+  const [previousScore, setPreviousScore] = useState<number | undefined>(undefined);
+  
+  // Tous les useRef
+  const screenWidth = Dimensions.get('window').width;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  
+  // Calculer dynamiquement la hauteur de la barre de navigation en bas
+  // Bouton Favoris : ~40px (paddingVertical: 10 * 2 + contenu ~20px)
+  // Navigation sections : ~60px (paddingVertical: 12 * 2 + boutons ~36px)
+  // Safe area insets : variable selon l'appareil
+  // Marge de sécurité : 20px
+  const navigationBarHeight = React.useMemo(() => {
+    const favoriteButtonHeight = responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 50  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 38  // Légèrement réduit pour petits écrans
+        : 40; // paddingVertical: 10 * 2 + contenu
+    const navigationSectionsHeight = responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 70  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 55  // Légèrement réduit pour petits écrans
+        : 60; // paddingVertical: 12 * 2 + boutons
+    const safetyMargin = responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? 30  // Plus grande marge pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? 15  // Marge réduite pour petits écrans
+        : 20; // Marge de sécurité
+    return favoriteButtonHeight + navigationSectionsHeight + insets.bottom + safetyMargin;
+  }, [insets.bottom, responsive.breakpoint, responsive.width]);
+  
+  // Fonctions utilisées dans les useEffect - doivent être définies AVANT les useEffect
+  const initializeChapterProgress = useCallback(async () => {
+    if (!user?.uid || !chapter) return;
+    try {
+      const saved = (await readUserStorage<ChapterState>(user.uid, 'chapterProgress')) || {};
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+      if (!currentChapterData) return;
+      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+      if (!saved[progressKey]) {
+        const updated: ChapterState = {
+          ...saved,
+          [progressKey]: {
+            percent: 0,
+            lastSection: 0,
+            updatedAt: Date.now(),
+          },
+        };
+        await writeUserStorage(user.uid, 'chapterProgress', updated);
+      }
+    } catch (error) {
+      console.error('Erreur initialisation progression:', error);
+    }
+  }, [user?.uid, chapter]);
+  
+  const loadFavorites = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const storedFavorites = await readUserStorage<any[]>(user.uid, 'favorites');
+      if (storedFavorites) setFavorites(storedFavorites);
+    } catch (error) {
+      console.error('Erreur lors du chargement des favoris:', error);
+    }
+  }, [user?.uid]);
+  
+  const updateChapterProgress = useCallback(async () => {
+    if (!user?.uid || !chapter || !chapterContent) return;
+    try {
+      // Charger la progression existante (scopée utilisateur)
+      const saved = (await readUserStorage<ChapterState>(user.uid, 'chapterProgress')) || {};
+      
+      // Trouver l'index du chapitre dans sa partie
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+      
+      if (!currentChapterData) return;
+      
+      // Calculer la progression basée sur la section actuelle
+      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      const totalSections = sections.length;
+      const currentProgress = Math.round(((currentSectionIndex + 1) / totalSections) * 100);
+      
+      // Créer la clé de progression
+      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+      
+      const previous = saved[progressKey]?.percent ?? 0;
+      const updated: ChapterState = {
+        ...saved,
+        [progressKey]: {
+          percent: currentProgress > previous ? currentProgress : previous,
+          lastSection: currentSectionIndex,
+          updatedAt: Date.now(),
+        },
+      };
+      await writeUserStorage(user.uid, 'chapterProgress', updated);
+      console.log(`Progression mise à jour: ${progressKey} = ${updated[progressKey].percent}% (section ${currentSectionIndex})`);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la progression:', error);
+    }
+  }, [user?.uid, chapter, chapterContent, currentSectionIndex]);
+  
+  const markChapterAsComplete = useCallback(async () => {
+    if (!user?.uid || !chapter || !chapterContent) return;
+    try {
+      // Charger la progression existante
+      const saved = (await readUserStorage<ChapterState>(user.uid, 'chapterProgress')) || {};
+      
+      // Trouver l'index du chapitre dans sa partie
+      const allChapters = getAllChapters();
+      const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+      
+      if (!currentChapterData) return;
+      
+      // Créer la clé de progression
+      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
+      
+      // Marquer comme 100% lu et dernière section
+      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+      const updated: ChapterState = {
+        ...saved,
+        [progressKey]: {
+          percent: 100,
+          lastSection: Math.max(0, sections.length - 1),
+          updatedAt: Date.now(),
+        },
+      };
+      await writeUserStorage(user.uid, 'chapterProgress', updated);
+      console.log(`Chapitre marqué comme complètement lu: ${progressKey}`);
+    } catch (error) {
+      console.error('Erreur lors du marquage du chapitre comme lu:', error);
+    }
+  }, [user?.uid, chapter, chapterContent]);
+  
+  const loadQuizScores = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const scores = await readUserStorage<Record<string, number>>(user.uid, 'quizScores');
+      if (scores) {
+        setQuizScores(scores);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des scores de quiz:', error);
+    }
+  }, [user?.uid]);
+  
+  // Tous les useEffect doivent être avant le return null
+  // Vérifier l'accès de façon fiable (refresh + relecture serveur) avant d'afficher quoi que ce soit
+  useEffect(() => {
+    if (!user || !chapter) return;
+    let cancelled = false;
+    const verify = async () => {
+      setAccessStatus('pending');
+    const allChapters = getAllChapters();
+      const currentChapter = allChapters.find((ch) => ch.image === chapter?.image);
+      if (!currentChapter) {
+        if (!cancelled) setAccessStatus('granted');
+        return;
+      }
+    if (currentChapter.partieKey === 'premiere_partie') {
+        if (!cancelled) setAccessStatus('granted');
+        return;
+      }
+      
+      // ✅ OPTIMISATION : Utiliser directement les entitlements du contexte (déjà chargés depuis le cache)
+      // Récupérer les entitlements depuis le contexte (chargés immédiatement depuis le cache)
+      let latest = entitlements;
+      
+      const isPremiumPart = currentChapter.partieKey === 'deuxieme_partie' || currentChapter.partieKey === 'troisieme_partie';
+      const needsPart2 = currentChapter.partieKey === 'deuxieme_partie';
+      const needsPart3 = currentChapter.partieKey === 'troisieme_partie';
+      
+      // ✅ OPTIMISATION : Seulement si vraiment nécessaire, forcer un refresh (sans timeout)
+      // Si on a besoin d'un accès premium et que les entitlements sont à false, vérifier le serveur
+      if (isPremiumPart && !latest.part2 && !latest.part3) {
+        try { 
+          await refreshEntitlements(true); // force=true pour bypasser le cooldown
+          latest = entitlements; // Récupérer les entitlements mis à jour
+          console.log('📡 Entitlements mis à jour après refresh:', latest);
+        } catch (e: any) {
+          // Ne pas logger en boucle si erreur réseau
+          if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+            console.error('Erreur refreshEntitlements:', e);
+          }
+          // En cas d'erreur, on garde les entitlements du contexte (cache)
+        }
+      }
+      
+      const allowed = needsPart2 
+        ? latest.part2 
+        : needsPart3 
+          ? latest.part3 
+          : true;
+      
+      console.log('🔐 Vérification accès premium:', {
+        chapter: currentChapter.partieKey,
+        needsPart2,
+        needsPart3,
+        entitlements: latest,
+        allowed
+      });
+      
+      if (!cancelled) setAccessStatus(allowed ? 'granted' : 'denied');
+    };
+    verify();
+    return () => { cancelled = true; };
+  }, [chapter?.image, user?.uid, entitlements, refreshEntitlements, fetchEntitlements]);
 
   // useEffect pour charger le contenu du chapitre
   useEffect(() => {
+    if (!user || !chapter) return;
     if (chapter && chapter.image && chapterFiles[chapter.image]) {
       const content = chapterFiles[chapter.image];
       setChapterContent(content);
@@ -128,50 +352,41 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       
       // Migration désactivée pour éviter de copier les anciennes données globales d'un autre compte
 
-      // Démarrer à la section spécifiée si on vient des favoris, sinon reprendre dernière section lue
+      // Démarrer à la section spécifiée si on vient des favoris, sinon toujours commencer par la page 1
       const loadInitialSection = async () => {
         const initialFromParams = route.params.initialSection;
         if (typeof initialFromParams === 'number') {
+          // Si on vient des favoris avec une section spécifique, utiliser cette section
           setCurrentSectionIndex(initialFromParams);
         } else {
-          // Reprise précise
-          const allChapters = getAllChapters();
-          const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
-          if (currentChapterData) {
-            const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
-            const saved = await readUserStorage<ChapterState>(user?.uid, 'chapterProgress');
-            const last = saved && saved[progressKey]?.lastSection;
-            if (typeof last === 'number') {
-              setCurrentSectionIndex(last);
-            } else {
+          // Sinon, toujours commencer par la page 1
               setCurrentSectionIndex(0);
-            }
-          } else {
-            setCurrentSectionIndex(0);
-          }
         }
         // Initialiser la progression si c'est la première fois qu'on lit ce chapitre
         initializeChapterProgress();
       };
       loadInitialSection();
     }
-  }, [chapter, route.params.initialSection, user?.uid]);
+  }, [chapter, route.params.initialSection, user?.uid, initializeChapterProgress]);
 
   // useEffect pour charger les favoris
   useEffect(() => {
+    if (!user) return;
     loadFavorites();
-  }, []);
+  }, [user?.uid, loadFavorites]);
 
   // useEffect pour vérifier si cette page/section est en favoris
   useEffect(() => {
+    if (!user || !chapter) return;
     if (chapter && favorites.length >= 0) {
       const pageId = `${chapter.image}_${chapter.title}_section_${currentSectionIndex}`;
       setIsFavorite(favorites.some(fav => fav.id === pageId));
     }
-  }, [chapter, favorites, currentSectionIndex]);
+  }, [chapter, favorites, currentSectionIndex, user]);
 
   // useEffect pour l'animation de fondu
   useEffect(() => {
+    if (!user) return;
     fadeAnim.setValue(0);
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -179,21 +394,26 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       useNativeDriver: true,
     }).start();
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-  }, [currentSectionIndex]);
+  }, [currentSectionIndex, user]);
 
   // useEffect pour mettre à jour la progression
   useEffect(() => {
-    if (chapter && chapterContent) {
-      updateChapterProgress();
-      
-      // Marquer comme complètement lu si on est à la dernière section
-      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-      const totalSections = sections.length;
-      if (currentSectionIndex === totalSections - 1) {
-        markChapterAsComplete();
-      }
+    if (!user || !chapter || !chapterContent) return;
+    updateChapterProgress();
+    
+    // Marquer comme complètement lu si on est à la dernière section
+    const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
+    const totalSections = sections.length;
+    if (currentSectionIndex === totalSections - 1) {
+      markChapterAsComplete();
     }
-  }, [currentSectionIndex, chapter, chapterContent]);
+  }, [currentSectionIndex, chapter, chapterContent, user, updateChapterProgress, markChapterAsComplete]);
+  
+  // Garde: attendre l'utilisateur avant toute logique premium
+  // MAINTENANT après tous les hooks
+  if (!user) {
+    return null;
+  }
 
   // Tailles de texte disponibles
   const textSizes = [16, 19, 22];
@@ -202,15 +422,6 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   };
 
   // Fonctions de gestion des favoris
-  const loadFavorites = async () => {
-    try {
-      const storedFavorites = await readUserStorage<any[]>(user?.uid, 'favorites');
-      if (storedFavorites) setFavorites(storedFavorites);
-    } catch (error) {
-      console.error('Erreur lors du chargement des favoris:', error);
-    }
-  };
-
   const saveFavorites = async (newFavorites: any[]) => {
     try {
       console.log('Sauvegarde des favoris:', newFavorites);
@@ -230,7 +441,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     console.log('Toggle favori pour la page:', pageId);
     
     const allChapters = getAllChapters();
-    const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
+    const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
     
     // Récupérer le titre de la section actuelle
           const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
@@ -267,118 +478,152 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
     setIsFavorite(!isFavorite);
   };
 
-  // Fonction pour mettre à jour la progression du chapitre
-  const updateChapterProgress = async () => {
-    if (!chapter || !chapterContent) return;
-    
-    try {
-      // Charger la progression existante (scopée utilisateur)
-      const saved = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
-      
-      // Trouver l'index du chapitre dans sa partie
-      const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
-      
-      if (!currentChapterData) return;
-      
-      // Calculer la progression basée sur la section actuelle
-      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-      const totalSections = sections.length;
-      const currentProgress = Math.round(((currentSectionIndex + 1) / totalSections) * 100);
-      
-      // Créer la clé de progression
-      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
-      
-      const previous = saved[progressKey]?.percent ?? 0;
-      const updated: ChapterState = {
-        ...saved,
-        [progressKey]: {
-          percent: currentProgress > previous ? currentProgress : previous,
-          lastSection: currentSectionIndex,
-          updatedAt: Date.now(),
-        },
-      };
-      await writeUserStorage(user?.uid, 'chapterProgress', updated);
-      console.log(`Progression mise à jour: ${progressKey} = ${updated[progressKey].percent}% (section ${currentSectionIndex})`);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de la progression:', error);
+  // updateChapterProgress et markChapterAsComplete sont déjà définis en useCallback ci-dessus
+
+  // Fonction pour gérer le retour vers la bonne page selon l'origine
+  const handleBackPress = () => {
+    // Si on vient de l'aperçu du livre sur la page d'accueil, retour direct à l'accueil
+    if (fromHomePreview) {
+      navigation.navigate('HomeMain');
+      return;
+    }
+
+    // Sinon, comportement existant : retourner vers la page des chapitres de cette partie
+    const allChapters = getAllChapters();
+    const currentChapterData = allChapters.find(ch => ch.image === chapter.image);
+    if (currentChapterData) {
+      navigation.navigate('Books', { selectedPart: currentChapterData.partieKey });
+    } else {
+      // Fallback si on ne trouve pas la partie
+      navigation.goBack();
     }
   };
 
-  // Fonction pour marquer un chapitre comme complètement lu
-  const markChapterAsComplete = async () => {
-    if (!chapter) return;
-    
-    try {
-      // Charger la progression existante
-      const saved = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
-      
-      // Trouver l'index du chapitre dans sa partie
-      const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
-      
-      if (!currentChapterData) return;
-      
-      // Créer la clé de progression
-      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
-      
-      // Marquer comme 100% lu et dernière section
-      const { sections } = splitIntroAndSections(chapterContent.contenu as any[]);
-      const updated: ChapterState = {
-        ...saved,
-        [progressKey]: {
-          percent: 100,
-          lastSection: Math.max(0, sections.length - 1),
-          updatedAt: Date.now(),
-        },
-      };
-      await writeUserStorage(user?.uid, 'chapterProgress', updated);
-      console.log(`Chapitre marqué comme complètement lu: ${progressKey}`);
-    } catch (error) {
-      console.error('Erreur lors du marquage du chapitre comme lu:', error);
-    }
-  };
-
-  // Fonction pour initialiser la progression d'un chapitre
   // Gestionnaire de geste de swipe
   const onGestureEvent = (event: any) => {
     if (event.nativeEvent.state === State.END) {
       const { translationX, velocityX } = event.nativeEvent;
       if ((translationX > 50 && velocityX > 500) || translationX > 150) {
-        navigation.goBack();
+        handleBackPress();
       }
     }
   };
 
-  const initializeChapterProgress = async () => {
-    if (!chapter) return;
+  // initializeChapterProgress est déjà défini en useCallback ci-dessus
+  // Code orphelin supprimé
+
+  // Fonction pour obtenir la clé du quiz du chapitre actuel
+  const getCurrentChapterQuizKey = () => {
+    if (!chapter) return null;
     
-    try {
-      // Charger la progression existante
-      const saved = (await readUserStorage<ChapterState>(user?.uid, 'chapterProgress')) || {};
-      
-      // Trouver l'index du chapitre dans sa partie
-      const allChapters = getAllChapters();
-      const currentChapterData = allChapters.find(ch => ch.image === chapter.image && ch.title === chapter.title);
-      
-      if (!currentChapterData) return;
-      
-      // Créer la clé de progression
-      const progressKey = `chapter${currentChapterData.partieKey}_${currentChapterData.chapitreIndex + 1}`;
-      
-      // Initialiser si pas encore de progression
-      if (!saved[progressKey]) {
-        const updated: ChapterState = {
-          ...saved,
-          [progressKey]: { percent: 0, lastSection: 0, updatedAt: Date.now() },
-        };
-        await writeUserStorage(user?.uid, 'chapterProgress', updated);
-        console.log(`Progression initialisée: ${progressKey} = 0%`);
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'initialisation de la progression:', error);
-    }
+    // Utiliser directement l'image du chapitre comme clé de quiz
+    // L'image correspond au numéro global du chapitre (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
+    return chapter.image;
   };
+
+  // Fonction pour gérer le clic sur "Faire le quiz"
+  const handleQuizPress = () => {
+    const quizKey = getCurrentChapterQuizKey();
+    if (!quizKey) return;
+
+    // Ouvrir directement le quiz sans vérification de déblocage
+    navigation.navigate('OriginalQuiz', { 
+      exercicesKey: quizKey.toString(), 
+      chapterTitle: chapter.title, 
+      chapterPart: chapter.partie,
+      returnToChapter: {
+        image: chapter.image,
+        title: chapter.title,
+        section: currentSectionIndex,
+        // Propager l'info si on vient de l'aperçu du livre (Accueil)
+        fromHomePreview: !!fromHomePreview,
+      }
+    });
+  };
+
+  // useEffect pour charger les scores des quiz
+  useEffect(() => {
+    if (!user) return;
+    loadQuizScores();
+  }, [user?.uid, loadQuizScores]);
+
+  // Masquer la TabBar quand on entre dans ChapterScreen et la réafficher quand on quitte
+  useLayoutEffect(() => {
+    const parent = navigation.getParent();
+    if (parent) {
+      // Masquer la TabBar
+      parent.setOptions({
+        tabBarStyle: { display: 'none' }
+      });
+    }
+
+    return () => {
+      // Réafficher la TabBar quand on quitte
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: {
+            backgroundColor: colors.white,
+            height: 80,
+            paddingBottom: 20,
+            paddingTop: 12,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            shadowColor: '#000',
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            elevation: 12,
+            borderTopWidth: 0,
+          }
+        });
+      }
+    };
+  }, [navigation]);
+
+  // Gestionnaire pour le bouton retour Android
+  useEffect(() => {
+    const onBackPress = () => {
+      handleBackPress();
+      return true; // Empêcher le comportement par défaut
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+    return () => subscription.remove();
+  }, []);
+
+  // Attente / refus d'accès
+  if (accessStatus === 'pending') {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F5F7' }}>
+        <ActivityIndicator size="large" color="#174C3C" />
+        <Text style={{ marginTop: 20, color: '#666' }}>Vérification de l'accès…</Text>
+      </View>
+    );
+  }
+  if (accessStatus === 'denied') {
+    // Rediriger vers l'écran des livres avec un message
+    useEffect(() => {
+      const allChapters = getAllChapters();
+      const currentChapter = allChapters.find((ch) => ch.image === chapter.image);
+      const partieNumero = currentChapter?.partieKey === 'deuxieme_partie' ? '2' : '3';
+      Alert.alert(
+        'Contenu Premium',
+        `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Vous allez être redirigé vers l'écran des livres.`,
+        [
+          { 
+            text: 'OK', 
+            onPress: () => navigation.navigate('Books' as never)
+          }
+        ]
+      );
+    }, []);
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F5F7' }}>
+        <ActivityIndicator size="large" color="#174C3C" />
+        <Text style={{ marginTop: 20, color: '#666' }}>Redirection en cours...</Text>
+      </View>
+    );
+  }
 
   // On ne retourne rien avant d'avoir appelé tous les hooks !
   if (!chapterContent) {
@@ -436,6 +681,30 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   // Rendu du contenu d'une section
   const renderContent = (items: any[]) => (
     items.map((item, idx) => {
+      // 0. Gestion des images
+      if (item.type === "image" && item.contenu) {
+        const imageName = item.contenu.toString();
+        const imageSource = imageMap[imageName] || imageMap['1'];
+        const isLargeImage = imageName === '3' || imageName === '4';
+        return (
+          <View key={idx} style={{ 
+            marginVertical: 18, 
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Image
+              source={imageSource}
+              style={{
+                width: isLargeImage ? '90%' : '100%', // ✅ Réduire les images 3 et 4
+                height: isLargeImage ? 200 : 250, // ✅ Hauteur réduite pour images 3 et 4
+                resizeMode: 'contain',
+                borderRadius: 8,
+              }}
+            />
+          </View>
+        );
+      }
+
       // 1. Gestion des tableaux
       if (item.type === "tableau" && Array.isArray(item.contenu)) {
         return (
@@ -495,8 +764,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       // 4. Gestion des textes arabes (JAUNE)
       if (item.type === "arabe") {
         return (
-          <View key={idx} style={styles.arabicContainer}>
-            <Text style={[styles.arabicText, { fontSize: textSize + 4 }]}> 
+          <View key={idx} style={dynamicStyles.arabicContainer}>
+            <Text style={[dynamicStyles.arabicText, { fontSize: textSize + 4 }]}> 
               {(() => {
                 const parts = item.contenu.split(/(\bAllah\b|\bProphète\b)/gi);
                 return parts.map((part: string, index: number) => {
@@ -518,8 +787,8 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       // 5. Gestion des explications (type "explication") - VERT
       if (item.type === "explication") {
         return (
-          <View key={idx} style={styles.explanationContainer}>
-            <Text style={[styles.explanationText, { fontSize: textSize }]}> 
+          <View key={idx} style={dynamicStyles.explanationContainer}>
+            <Text style={[dynamicStyles.explanationText, { fontSize: textSize }]}> 
               {(() => {
                 const parts = item.contenu.split(/(\bAllah\b|\bProphète\b)/gi);
                 return parts.map((part: string, index: number) => {
@@ -569,7 +838,7 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         <Text 
           key={idx} 
           style={[
-            styles.paragraph, 
+            dynamicStyles.paragraph, 
             { 
               fontSize: textSize,
               lineHeight: textSize * 1.6,
@@ -628,9 +897,25 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
       <PanGestureHandler enabled={Platform.OS === 'ios'} onHandlerStateChange={onGestureEvent}>
-        <View style={{ flex: 1, backgroundColor: '#F4F7F6' }}>
+        <View style={{ 
+          flex: 1, 
+          backgroundColor: '#F4F7F6', 
+          paddingTop: insets.top,
+          ...(Platform.OS === 'web' && { 
+            minHeight: 0, // ✅ Web: nécessaire pour le scroll
+            height: '100vh' as any, // ✅ Web: hauteur fixe
+            overflow: 'hidden' as any, // ✅ Web: empêcher le scroll du parent
+          })
+        }}>
       {/* Header avec image et titre */}
-      <View style={{ position: 'relative', overflow: 'visible' }}>
+      <View style={{ 
+        position: Platform.OS === 'web' ? 'absolute' as any : 'relative', 
+        top: Platform.OS === 'web' ? insets.top : 0,
+        left: 0,
+        right: 0,
+        zIndex: Platform.OS === 'web' ? 1 : undefined,
+        overflow: 'visible' 
+      }}>
         <Image
           source={imageMap[chapter.image] || imageMap['1']}
           style={{
@@ -701,48 +986,82 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       {/* Boutons en premier plan */}
       {/* Bouton retour */}
       <TouchableOpacity 
-        onPress={() => navigation.goBack()}
+        onPress={handleBackPress}
         style={{
           position: 'absolute',
-          top: 45,
-          left: 16,
+          top: Platform.OS === 'web' 
+            ? insets.top + (responsive.breakpoint === 'xxl' ? 50 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 45)
+            : responsive.breakpoint === 'xxl' ? 50 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 45,
+          left: responsive.breakpoint === 'xxl' ? 24 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 12 : 16,
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderRadius: 22,
-          padding: 10,
+          borderRadius: responsive.breakpoint === 'xxl' ? 28 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 20 : 22,
+          padding: responsive.breakpoint === 'xxl' ? 14 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 8 : 10,
           elevation: 10,
           shadowColor: '#000',
           shadowOpacity: 0.25,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 3 },
+          shadowRadius: responsive.breakpoint === 'xxl' ? 8 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 4 : 6,
+          shadowOffset: { width: 0, height: responsive.breakpoint === 'xxl' ? 4 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 2 : 3 },
           zIndex: 1000,
+          minWidth: responsive.breakpoint === 'xxl' ? 56 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 44,
+          minHeight: responsive.breakpoint === 'xxl' ? 56 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 44,
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
+        activeOpacity={0.7}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="#174C3C" />
+        <MaterialCommunityIcons 
+          name="arrow-left" 
+          size={responsive.breakpoint === 'xxl' ? 28 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 20 : 24} 
+          color="#174C3C" 
+        />
       </TouchableOpacity>
       {/* Bouton zoom */}
       <TouchableOpacity 
         onPress={nextTextSize}
         style={{
           position: 'absolute',
-          top: 45,
-          right: 16,
+          top: Platform.OS === 'web' 
+            ? insets.top + (responsive.breakpoint === 'xxl' ? 50 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 45)
+            : responsive.breakpoint === 'xxl' ? 50 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 45,
+          right: responsive.breakpoint === 'xxl' ? 24 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 12 : 16,
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderRadius: 22,
-          padding: 10,
+          borderRadius: responsive.breakpoint === 'xxl' ? 28 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 20 : 22,
+          padding: responsive.breakpoint === 'xxl' ? 14 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 8 : 10,
           elevation: 10,
           shadowColor: '#000',
           shadowOpacity: 0.25,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 3 },
+          shadowRadius: responsive.breakpoint === 'xxl' ? 8 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 4 : 6,
+          shadowOffset: { width: 0, height: responsive.breakpoint === 'xxl' ? 4 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 2 : 3 },
           zIndex: 1000,
+          minWidth: responsive.breakpoint === 'xxl' ? 56 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 44,
+          minHeight: responsive.breakpoint === 'xxl' ? 56 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 40 : 44,
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
+        activeOpacity={0.7}
       >
-        <MaterialCommunityIcons name="magnify-plus" size={24} color="#174C3C" />
+        <MaterialCommunityIcons 
+          name="magnify-plus" 
+          size={responsive.breakpoint === 'xxl' ? 28 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 20 : 24} 
+          color="#174C3C" 
+        />
       </TouchableOpacity>
 
       {/* Indicateur de section - seulement si il y a un titre */}
       {sectionIndicator && (
-        <View style={{ alignItems: 'center', paddingHorizontal: 24, marginTop: 60, marginBottom: (sectionIndicator === "Introduction" || sectionIndicator.match(/^[IVXLCDM]+\./)) ? 0 : 16 }}>
+        <View style={{ 
+          alignItems: 'center', 
+          paddingHorizontal: 24, 
+          ...(Platform.OS === 'web' && {
+            position: 'absolute' as any, // ✅ Web: position absolute
+            top: insets.top + 200 + 20, // ✅ Web: après le header
+            left: 0,
+            right: 0,
+            zIndex: 2,
+          }),
+          marginTop: Platform.OS === 'web' ? 0 : 60, // ✅ Mobile: marge normale
+          marginBottom: Platform.OS === 'web' ? 0 : ((sectionIndicator === "Introduction" || sectionIndicator.match(/^[IVXLCDM]+\./)) ? 0 : 16) // ✅ Mobile: marge conditionnelle
+        }}>
           <View style={{
             backgroundColor: '#E8F5E8',
             paddingHorizontal: 16,
@@ -756,111 +1075,158 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
         </View>
       )}
 
-      {/* Contenu animé */}
-      <View style={{ flex: 1 }}>
-      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <ScrollView
-          ref={scrollViewRef}
-          style={{ flex: 1, width: '100%' }}
-          contentContainerStyle={{ 
-            paddingHorizontal: 16, 
-            paddingTop: currentSectionIndex === 0 ? 20 : 16, 
-            paddingBottom: 120, 
-            maxWidth: 420, 
-            alignSelf: 'center',
-            flexGrow: 1,
-          }}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-            onScroll={e => {
-              const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-              const totalScrollable = contentSize.height - layoutMeasurement.height;
-              if (totalScrollable > 0) {
-                setIsScrollable(true);
-                setScrollProgress(Math.min(1, Math.max(0, contentOffset.y / totalScrollable)));
-              } else {
-                setIsScrollable(false);
-                setScrollProgress(0);
-              }
-            }}
-            scrollEventThrottle={16}
-        >
+      {/* Contenu scrollable */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={{ 
+          flex: 1,
+          ...(Platform.OS === 'web' && { 
+            position: 'absolute' as any, // ✅ Web: position absolute pour contrôle total
+            top: insets.top + 200 + 60, // ✅ Web: après le header (200px image + 60px marge)
+            left: 0,
+            right: 0,
+            bottom: navigationBarHeight, // ✅ Web: laisser place à la navigation
+            minHeight: 0, // ✅ Web: nécessaire pour le scroll
+            overflowY: 'auto' as any, // ✅ Web: activer le scroll vertical
+            overflowX: 'hidden' as any, // ✅ Web: désactiver le scroll horizontal
+            WebkitOverflowScrolling: 'touch' as any, // ✅ Web: smooth scroll iOS Safari
+            height: `calc(100vh - ${insets.top}px - 200px - 60px - ${navigationBarHeight}px)` as any, // ✅ Web: hauteur calculée explicite
+          })
+        }}
+        contentContainerStyle={{ 
+          paddingHorizontal: 16, 
+          paddingTop: Platform.OS === 'web' ? 20 : (currentSectionIndex === 0 ? 20 : 16), // ✅ Web: padding simple car position absolute
+          paddingBottom: Platform.OS === 'web' ? 80 : navigationBarHeight + 80, // ✅ Espace avant le bouton Favoris
+          maxWidth: 420, 
+          alignSelf: 'center',
+          width: '100%',
+          // ❌ RETIRÉ flexGrow: 1 - bloquait le scroll sur web
+        }}
+        showsVerticalScrollIndicator={Platform.OS !== 'web'} // ✅ Web: désactiver l'indicateur natif
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        scrollEnabled={true} // ✅ Explicitement activé
+        onScroll={e => {
+          const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+          const totalScrollable = contentSize.height - layoutMeasurement.height;
+          if (totalScrollable > 0) {
+            setIsScrollable(true);
+            setScrollProgress(Math.min(1, Math.max(0, contentOffset.y / totalScrollable)));
+          } else {
+            setIsScrollable(false);
+            setScrollProgress(0);
+          }
+        }}
+        scrollEventThrottle={16}
+      >
+        <Animated.View style={{ opacity: fadeAnim }}>
           {renderContent(sections[currentSectionIndex]?.items || [])}
-    </ScrollView>
-          {/* Barre de progression verticale */}
-          {isScrollable && (
-            <View style={{ position: 'absolute', right: 6, top: 0, bottom: 0, width: 8, justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
-              <View style={{ width: 4, height: '80%', backgroundColor: '#E8F5E8', borderRadius: 2, overflow: 'hidden', justifyContent: 'flex-start' }}>
-                <Animated.View style={{
-                  width: 4,
-                  backgroundColor: '#174C3C',
-                  borderRadius: 2,
-                  height: `${Math.round(scrollProgress * 100)}%`,
-                  position: 'absolute',
-                  top: 0,
-                }} />
-              </View>
-              {/* Affichage du pourcentage */}
-              <Text style={{ fontSize: 11, color: '#174C3C', marginTop: 4, fontWeight: 'bold' }}>{Math.round(scrollProgress * 100)}%</Text>
-            </View>
-          )}
-      </Animated.View>
-      </View>
+        </Animated.View>
+      </ScrollView>
+      {/* Barre de progression verticale - EXTRÊMEMENT PETITE */}
+      {isScrollable && (
+        <View style={{ position: 'absolute', right: 2, top: 0, bottom: 0, width: 3, justifyContent: 'center', alignItems: 'center', pointerEvents: 'none' }}>
+          <View style={{ width: 2, height: '100%', backgroundColor: '#E8F5E8', borderRadius: 1, overflow: 'hidden', justifyContent: 'flex-start' }}>
+            <Animated.View style={{
+              width: 2,
+              backgroundColor: '#174C3C',
+              borderRadius: 1,
+              height: `${Math.round(scrollProgress * 100)}%`,
+              position: 'absolute',
+              top: 0,
+            }} />
+          </View>
+        </View>
+      )}
 
-      {/* Navigation bas */}
-      <View style={{ flexDirection: 'column', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee', position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+      {/* Navigation bas - Gestion web/mobile */}
+      <View style={{ 
+        flexDirection: 'column', 
+        backgroundColor: '#fff', 
+        borderTopWidth: 1, 
+        borderTopColor: '#eee', 
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        // ✅ Web: position absolute pour rester visible
+        ...(Platform.OS === 'web' && {
+          position: 'absolute' as any,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+        }),
+        paddingBottom: Platform.OS === 'android' 
+          ? Math.max(insets.bottom, 8) 
+          : Platform.OS === 'web'
+          ? 20 // ✅ Web: padding fixe
+          : Math.max(insets.bottom - 6, 0),
+      }}>
         {/* Bouton Favoris */}
         <TouchableOpacity
           onPress={toggleFavorite}
-          style={styles.favoriteButton}
+          style={dynamicStyles.favoriteButton}
         >
           <MaterialCommunityIcons 
             name={isFavorite ? "heart" : "heart-outline"} 
-            size={18} 
+            size={responsive.breakpoint === 'xxl' && responsive.width >= 1024
+              ? 22  // Plus grand pour très grands écrans
+              : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+                ? 16  // Réduit pour petits écrans
+                : 18} 
             color="#174C3C"
           />
-          <Text style={[styles.favoriteButtonText, { color: "#174C3C" }]}>
+          <Text style={[dynamicStyles.favoriteButtonText, { color: "#174C3C" }]}>
             {isFavorite ? "Retirer" : "Favoris"}
           </Text>
         </TouchableOpacity>
         
         {/* Navigation sections */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12 }}>
+        <View style={{ 
+          flexDirection: 'row', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+            ? responsiveStyle.spacing['2xl']
+            : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+              ? Math.max(8, responsiveStyle.spacing.sm)
+              : responsiveStyle.spacing.lg,
+          paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+            ? responsiveStyle.spacing.lg
+            : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+              ? Math.max(8, responsiveStyle.spacing.sm)
+              : responsiveStyle.spacing.base,
+          gap: responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 4 : 8,
+        }}>
         {totalSections === 1 ? (
           // Navigation compacte pour les chapitres d'une seule page
           <>
             {previousChapter ? (
               <TouchableOpacity
                 onPress={() => navigation.navigate('Chapter', { chapter: previousChapter })}
-                style={{ backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+                style={[dynamicStyles.navButtonCompact, dynamicStyles.navButtonGold]}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre précédent</Text>
+                <Text style={dynamicStyles.navButtonTextCompact}>Chapitre précédent</Text>
               </TouchableOpacity>
             ) : (
-              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre précédent</Text>
+              <View style={[dynamicStyles.navButtonCompact, dynamicStyles.navButtonDisabled]}>
+                <Text style={dynamicStyles.navButtonTextCompact}>Chapitre précédent</Text>
               </View>
             )}
             
             {/* Pagination centrée */}
             <View style={{ minWidth: 40, alignItems: 'center' }}>
-              <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>1/1</Text>
+              <Text style={dynamicStyles.paginationText}>1/1</Text>
             </View>
             
-            {nextChapter ? (
               <TouchableOpacity
-                onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
-                style={{ backgroundColor: '#D4AF37', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}
+              onPress={handleQuizPress}
+              style={[dynamicStyles.navButtonCompact, dynamicStyles.navButtonQuiz]}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre suivant</Text>
+              <Text style={dynamicStyles.navButtonTextCompact}>Faire le quiz</Text>
               </TouchableOpacity>
-            ) : (
-              <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 12 }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Chapitre suivant</Text>
-              </View>
-            )}
           </>
         ) : (
           // Navigation normale pour les chapitres multi-pages
@@ -869,48 +1235,42 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
               previousChapter ? (
                 <TouchableOpacity
                   onPress={() => navigation.navigate('Chapter', { chapter: previousChapter })}
-                  style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                  style={[dynamicStyles.navButton, dynamicStyles.navButtonGold]}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre précédent</Text>
+                  <Text style={dynamicStyles.navButtonText}>Chapitre précédent</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
+                <View style={[dynamicStyles.navButton, dynamicStyles.navButtonDisabled]}>
+                  <Text style={dynamicStyles.navButtonText}>Précédent</Text>
                 </View>
               )
             ) : (
               <TouchableOpacity
                 onPress={() => setCurrentSectionIndex(i => Math.max(0, i - 1))}
-                style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                style={[dynamicStyles.navButton, dynamicStyles.navButtonPrimary]}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Précédent</Text>
+                <Text style={dynamicStyles.navButtonText}>Précédent</Text>
               </TouchableOpacity>
             )}
             
             {/* Pagination */}
             <View style={{ minWidth: 60, alignItems: 'center' }}>
-              <Text style={{ color: '#174C3C', fontWeight: 'bold', fontSize: 16 }}>{currentSectionIndex + 1}/{totalSections}</Text>
+              <Text style={dynamicStyles.paginationText}>{currentSectionIndex + 1}/{totalSections}</Text>
             </View>
             
             {currentSectionIndex === totalSections - 1 ? (
-              nextChapter ? (
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('Chapter', { chapter: nextChapter })}
-                  style={{ backgroundColor: '#D4AF37', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                onPress={handleQuizPress}
+                style={[dynamicStyles.navButton, dynamicStyles.navButtonQuiz]}
                 >
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Chapitre suivant</Text>
+                <Text style={dynamicStyles.navButtonText}>Faire le quiz</Text>
                 </TouchableOpacity>
-              ) : (
-                <View style={{ opacity: 0.4, backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
-                </View>
-              )
             ) : (
               <TouchableOpacity
                 onPress={() => setCurrentSectionIndex(i => Math.min(totalSections - 1, i + 1))}
-                style={{ backgroundColor: '#174C3C', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 18 }}
+                style={[dynamicStyles.navButton, dynamicStyles.navButtonPrimary]}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Suivant</Text>
+                <Text style={dynamicStyles.navButtonText}>Suivant</Text>
               </TouchableOpacity>
             )}
           </>
@@ -919,11 +1279,84 @@ const ChapterScreen = ({ route, navigation }: { route: any, navigation: any }) =
       </View>
         </View>
       </PanGestureHandler>
+      
+      {/* Modal pour les quiz verrouillés */}
+      <Modal
+        visible={showLockModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLockModal(false)}
+      >
+        <View style={dynamicStyles.modalOverlay}>
+          <View style={dynamicStyles.modalContent}>
+            <View style={dynamicStyles.modalHeader}>
+              <Image
+                source={require('../../assets/lock-closed.png')}
+                style={dynamicStyles.modalLockIcon}
+                resizeMode="contain"
+              />
+              <Text style={dynamicStyles.modalTitle}>Quiz verrouillé</Text>
+            </View>
+            
+            <Text style={dynamicStyles.modalMessage}>
+              Pour débloquer ce quiz, vous devez obtenir au moins 80% au quiz précédent.
+            </Text>
+            
+            {previousScore !== undefined && (
+              <View style={dynamicStyles.modalScoreContainer}>
+                <Text style={dynamicStyles.modalScoreLabel}>Votre score actuel :</Text>
+                <Text style={dynamicStyles.modalScoreValue}>{previousScore}%</Text>
+                <Text style={dynamicStyles.modalScoreRequired}>
+                  Score requis : 80%
+                </Text>
+              </View>
+            )}
+            
+            <View style={dynamicStyles.modalButtons}>
+              <TouchableOpacity 
+                style={dynamicStyles.modalButtonSecondary}
+                onPress={() => setShowLockModal(false)}
+              >
+                <Text style={dynamicStyles.modalButtonTextSecondary}>Fermer</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={dynamicStyles.modalButtonPrimary}
+                onPress={() => {
+                  setShowLockModal(false);
+                  // Naviguer vers le quiz précédent
+                  // Calculer le quiz précédent basé sur le numéro global du chapitre
+                  const currentChapterNumber = parseInt(chapter.image);
+                  if (currentChapterNumber > 1) {
+                    const previousQuizKey = (currentChapterNumber - 1).toString();
+                    const allChapters = getAllChapters();
+                    const previousChapter = allChapters.find(ch => ch.image === previousQuizKey);
+                    if (previousChapter) {
+                      navigation.navigate('OriginalQuiz', { 
+                        exercicesKey: previousQuizKey, 
+                        chapterTitle: previousChapter.title, 
+                        chapterPart: previousChapter.partieTitre,
+                        returnToChapter: {
+                          image: chapter.image,
+                          title: chapter.title,
+                          section: currentSectionIndex
+                        }
+                      });
+                    }
+                  }
+                }}
+              >
+                <Text style={dynamicStyles.modalButtonTextPrimary}>Faire le quiz précédent</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </GestureHandlerRootView>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
   sectionTitle: {
     fontWeight: 'bold',
     color: '#174C3C',
@@ -1009,15 +1442,229 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F8FAF9',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(8, responsiveStyle.spacing.sm)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.base,
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus large pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(12, responsiveStyle.spacing.sm)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.base,
     borderBottomWidth: 1,
     borderBottomColor: '#E8F5E8',
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight  // Hauteur minimale pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(36, responsiveStyle.component.buttonHeight * 0.85)  // Réduit pour petits écrans
+        : undefined,
   },
   favoriteButtonText: {
-    fontSize: 14,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.base  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(11, responsiveStyle.fontSize.xs)  // Plus petit pour petits écrans
+        : responsiveStyle.fontSize.sm,
     fontWeight: '600',
-    marginLeft: 6,
+    marginLeft: responsive.breakpoint === 'xxl' ? 8 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 4 : 6,
+    textAlign: 'center',
+    alignSelf: 'center',
+  },
+  // Styles pour les boutons de navigation
+  navButton: {
+    borderRadius: responsive.breakpoint === 'xxl' ? 20 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 14 : 18,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(8, responsiveStyle.spacing.sm)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.base, // Standard pour autres écrans
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing['2xl']  // Plus large pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(12, responsiveStyle.spacing.base)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.lg,
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight  // Hauteur minimale pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(40, responsiveStyle.component.buttonHeight * 0.9)  // Réduit pour petits écrans
+        : undefined,
+    minWidth: responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? Math.max(80, responsive.width * 0.25) : undefined,
+  },
+  navButtonCompact: {
+    borderRadius: responsive.breakpoint === 'xxl' ? 14 : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? 10 : 12,
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.base  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(6, responsiveStyle.spacing.xs)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.sm,   // Standard
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus large pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(10, responsiveStyle.spacing.sm)  // Réduit pour petits écrans
+        : responsiveStyle.spacing.base,
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight * 0.9  // Hauteur minimale pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(36, responsiveStyle.component.buttonHeight * 0.8)  // Réduit pour petits écrans
+        : undefined,
+    minWidth: responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm' ? Math.max(70, responsive.width * 0.22) : undefined,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navButtonPrimary: {
+    backgroundColor: '#174C3C',
+  },
+  navButtonGold: {
+    backgroundColor: '#D4AF37',
+  },
+  navButtonQuiz: {
+    backgroundColor: '#BB9B4E',
+  },
+  navButtonDisabled: {
+    opacity: 0.4,
+    backgroundColor: '#174C3C',
+  },
+  navButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(12, responsiveStyle.fontSize.sm)  // Réduit pour petits écrans
+        : responsiveStyle.fontSize.base,
+    textAlign: 'center',
+    alignSelf: 'center',
+  },
+  navButtonTextCompact: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.base  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(11, responsiveStyle.fontSize.xs)  // Réduit pour petits écrans
+        : responsiveStyle.fontSize.sm,
+    textAlign: 'center',
+    alignSelf: 'center',
+  },
+  paginationText: {
+    color: '#174C3C',
+    fontWeight: 'bold',
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg  // Plus grand pour très grands écrans
+      : responsive.breakpoint === 'xs' || responsive.breakpoint === 'sm'
+        ? Math.max(12, responsiveStyle.fontSize.sm)  // Réduit pour petits écrans
+        : responsiveStyle.fontSize.base,
+  },
+  // Styles pour le modal de quiz verrouillé
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    margin: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalLockIcon: {
+    width: 48,
+    height: 48,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#174C3C',
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  modalScoreContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalScoreLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  modalScoreValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#174C3C',
+    marginBottom: 4,
+  },
+  modalScoreRequired: {
+    fontSize: 14,
+    color: '#666',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButtonSecondary: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus grand pour très grands écrans
+      : 12,
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing['2xl']  // Plus large pour très grands écrans
+      : 20,
+    borderRadius: 10,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight  // Hauteur minimale pour très grands écrans
+      : undefined,
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#174C3C',
+    paddingVertical: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing.lg  // Plus grand pour très grands écrans
+      : 12,
+    paddingHorizontal: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.spacing['2xl']  // Plus large pour très grands écrans
+      : 20,
+    borderRadius: 10,
+    flex: 1,
+    marginLeft: 8,
+    alignItems: 'center',
+    minHeight: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.component.buttonHeight  // Hauteur minimale pour très grands écrans
+      : undefined,
+  },
+  modalButtonTextSecondary: {
+    color: '#666',
+    fontWeight: 'bold',
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg  // Plus grand pour très grands écrans
+      : 16,
+  },
+  modalButtonTextPrimary: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024
+      ? responsiveStyle.fontSize.lg  // Plus grand pour très grands écrans
+      : 16,
   },
 });
 

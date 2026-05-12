@@ -1,42 +1,60 @@
 {
-      "expo": {
-      "name": "At-Taqwa",
-    "owner": "brahim98",
+  "expo": {
+    "name": "At-Taqwa",
+    "owner": "ibrahimaly8991",
     "slug": "at-taqwa-app",
-    "version": "1.0.0",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/LOGO_AT_TAQWA.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/LOGO_AT_TAQWA.png",
-      "backgroundColor": "#2E8B57",
-      "resizeMode": "contain"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.attaqwa.app",
-      "buildNumber": "1.4.7",
+      "buildNumber": "2.3.5",
       "icon": "./assets/LOGO_AT_TAQWA.png",
+      "associatedDomains": [
+        "applinks:attaqwa-confidentialite.vercel.app"
+      ],
       "infoPlist": {
         "CFBundleDisplayName": "At-Taqwa",
         "CFBundleName": "At-Taqwa",
-        "NSCameraUsageDescription": "Cette application nécessite l'accès à la caméra pour certaines fonctionnalités.",
-        "NSPhotoLibraryUsageDescription": "Cette application nécessite l'accès à la galerie pour certaines fonctionnalités.",
+        "NSCameraUsageDescription": "At‑Taqwa utilise l’appareil photo uniquement pour vous permettre de prendre une photo de profil. Exemple : prendre votre portrait pour l’afficher dans Paramètres et sur l’écran d’accueil.",
+        "NSPhotoLibraryUsageDescription": "At‑Taqwa accède à votre photothèque uniquement pour que vous puissiez choisir une photo de profil. Exemple : sélectionner une image existante à afficher comme avatar dans Paramètres et sur l’écran d’accueil.",
+        "NSPhotoLibraryAddUsageDescription": "At‑Taqwa peut enregistrer l’image de profil compressée dans votre photothèque si vous le demandez.",
         "NSLocationWhenInUseUsageDescription": "Cette application nécessite l'accès à votre localisation pour calculer les heures de prière précises selon votre position géographique.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Cette application nécessite l'accès à votre localisation pour calculer les heures de prière et vous envoyer des notifications de rappel.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "icon": "./assets/1024.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo_fond_transparent.png",
+        "foregroundImage": "./assets/1024.png",
         "backgroundColor": "#2E8B57"
       },
-      "edgeToEdgeEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "attaqwa-confidentialite.vercel.app",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "edgeToEdgeEnabled": true,
       "enableHermes": true,
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.attaqwa.app",
+      "package": "com.attaqwaAly.app",
+      "versionCode": 11,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -49,12 +67,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-notifications"
     ],
     "scheme": "attaqwa",
     "extra": {
       "eas": {
-        "projectId": "c0367c88-9331-4f3c-b747-fa3750f9072e"
+        "projectId": "05af331a-9245-4df9-bada-ac87f1d4d0fe"
       }
     }
   }

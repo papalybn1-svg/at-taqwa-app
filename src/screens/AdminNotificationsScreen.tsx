@@ -13,7 +13,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import colors from '../theme/colors';
 
 interface Notification {
@@ -44,7 +44,7 @@ export default function AdminNotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const db = getFirestore();
-  const { user } = useAuth();
+  const { user } = useAuthContext();
 
   const loadNotifications = async () => {
     try {

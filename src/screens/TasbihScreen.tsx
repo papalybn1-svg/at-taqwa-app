@@ -5,7 +5,8 @@ import { Audio } from 'expo-av';
 import { collection, getDocs, getFirestore, orderBy, query } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Dimensions, Image, Keyboard, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Vibration, View } from "react-native";
-import { useAuth } from '../hooks/useAuth';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthContext } from '../contexts/AuthContext';
 import colors from "../theme/colors";
 import { read as readUserStorage, write as writeUserStorage } from '../utils/userStorage';
 
@@ -24,7 +25,8 @@ export type Zikr = {
 type ActiveZikr = Zikr & { count: number };
 
 export default function TasbihScreen() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
+  const insets = useSafeAreaInsets();
   const [systemZikrs, setSystemZikrs] = useState<Zikr[]>([]);
   const [customZikrs, setCustomZikrs] = useState<Zikr[]>([]);
   const [zikrProgress, setZikrProgress] = useState<{ [key: string]: number }>({});
@@ -32,6 +34,7 @@ export default function TasbihScreen() {
   const [activeZikr, setActiveZikr] = useState<ActiveZikr | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingZikrId, setEditingZikrId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'custom' | 'system'>('system');
   const [newZikr, setNewZikr] = useState({
     text: '',
@@ -137,22 +140,30 @@ export default function TasbihScreen() {
       return;
     }
 
-    const customZikr: Zikr = {
-      id: `custom_${Date.now()}`,
+    const isEdit = !!editingZikrId;
+    const zikrId = editingZikrId || `custom_${Date.now()}`;
+
+    const baseZikr: Zikr = {
+      id: zikrId,
       category: 'Mes Zikrs',
       text: newZikr.text.trim(),
       description: newZikr.description.trim(),
       max: newZikr.max
     };
 
-    const updatedCustomZikrs = [...customZikrs, customZikr];
+    const updatedCustomZikrs = isEdit
+      ? customZikrs.map(z => (z.id === editingZikrId ? baseZikr : z))
+      : [...customZikrs, baseZikr];
     await saveCustomZikrs(updatedCustomZikrs);
     
-    // Initialiser le progrès pour le nouveau zikr
-    setZikrProgress(prev => ({ ...prev, [customZikr.id]: 0 }));
+    // Initialiser le progrès seulement pour un nouveau zikr
+    if (!isEdit) {
+      setZikrProgress(prev => ({ ...prev, [zikrId]: 0 }));
+    }
     
     // Réinitialiser le formulaire
     setNewZikr({ text: '', description: '', max: 33 });
+    setEditingZikrId(null);
     setShowCreateModal(false);
     
     Alert.alert('Succès', 'Zikr créé avec succès !');
@@ -319,7 +330,7 @@ export default function TasbihScreen() {
   }
 
   return (
-    <View style={styles.safeArea}>
+    <View style={[styles.safeArea, { paddingTop: insets.top }]}>
       {/* Header moderne cohérent */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -398,21 +409,39 @@ export default function TasbihScreen() {
                         <View style={styles.categoryBadge}>
                           <Text style={styles.categoryText}>{item.category}</Text>
                         </View>
-                        <View style={styles.cardHeaderActions}>
+                        <View style={styles.cardHeaderActionsRow}>
                           {isCompleted && (
                             <View style={styles.completedBadge}>
                               <MaterialCommunityIcons name="check-circle" size={16} color="#fff" />
                             </View>
                           )}
-                          <TouchableOpacity 
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              deleteCustomZikr(item.id);
-                            }}
-                            style={styles.deleteButton}
-                          >
-                            <MaterialCommunityIcons name="delete" size={16} color="#FF6B6B" />
-                          </TouchableOpacity>
+                          {/* Boutons Modifier / Supprimer */}
+                          <View style={styles.cardHeaderActionsRow}>
+                            <TouchableOpacity
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                setEditingZikrId(item.id);
+                                setNewZikr({
+                                  text: item.text,
+                                  description: item.description,
+                                  max: item.max,
+                                });
+                                setShowCreateModal(true);
+                              }}
+                              style={styles.editButton}
+                            >
+                              <MaterialCommunityIcons name="pencil" size={16} color={colors.primary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                deleteCustomZikr(item.id);
+                              }}
+                              style={styles.deleteButton}
+                            >
+                              <MaterialCommunityIcons name="delete" size={16} color="#FF6B6B" />
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       </View>
 
@@ -631,10 +660,11 @@ export default function TasbihScreen() {
                   onPress={() => activeZikr && increment(activeZikr.id)}
                   activeOpacity={0.8}
                 >
-                  <Image 
-                    source={require('../../assets/Chapelet_electronique.png')} 
-                    style={styles.tasbihImage}
-                    resizeMode="contain"
+                                      <Image 
+                      source={require('../../assets/Chapelet_electronique_optimized.png')} 
+                      style={styles.tasbihImage}
+                      resizeMode="contain"
+                      fadeDuration={0}
                   />
                   {/* Écran du compteur superposé sur l'image */}
                   <View style={styles.counterScreen}>
@@ -699,11 +729,30 @@ export default function TasbihScreen() {
 
         {/* Modal de création de zikr - Style Admin Amélioré */}
         <Modal visible={showCreateModal} transparent animationType="slide">
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          {/* Taper en dehors du contenu: fermer le clavier seulement (pas le modal)
+              Pour annuler, utiliser le bouton Annuler ou la croix en haut. */}
+          <TouchableWithoutFeedback
+            onPress={Keyboard.dismiss}
+          >
             <View style={styles.adminModalContainer}>
+              {/* Empêcher la fermeture quand on touche à l'intérieur du contenu */}
               <TouchableWithoutFeedback onPress={() => {}}>
                 <View style={styles.adminModalContent}>
-              <Text style={styles.adminModalTitle}>Nouveau Zikr</Text>
+              <View style={styles.adminModalHeaderRow}>
+                <Text style={styles.adminModalTitle}>
+                  {editingZikrId ? 'Modifier le Zikr' : 'Nouveau Zikr'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.adminModalCloseIcon}
+                  onPress={() => {
+                    setNewZikr({ text: '', description: '', max: 0 });
+                    setEditingZikrId(null);
+                    setShowCreateModal(false);
+                  }}
+                >
+                  <MaterialCommunityIcons name="close" size={22} color={colors.text} />
+                </TouchableOpacity>
+              </View>
               
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Texte du zikr</Text>
@@ -749,6 +798,7 @@ export default function TasbihScreen() {
                   style={[styles.adminModalButton, styles.cancelAdminButton]}
                   onPress={() => {
                     setNewZikr({ text: '', description: '', max: 0 });
+                    setEditingZikrId(null);
                     setShowCreateModal(false);
                   }}
                 >
@@ -779,7 +829,7 @@ export default function TasbihScreen() {
 const styles = StyleSheet.create({
   safeArea: { 
     flex: 1, 
-    backgroundColor: '#F8FAF9' 
+    backgroundColor: '#F8FAF9',
   },
   header: {
     flexDirection: 'row',
@@ -801,12 +851,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   headerTitle: {
-     flex: 1,
-     fontSize: 20,
+    flex: 1,
+    fontSize: 20,
     fontWeight: 'bold',
-     color: colors.text,
-     textAlign: 'center',
-     marginHorizontal: 16
+    color: colors.text,
+    textAlign: 'center',
+    marginHorizontal: 16,
   },
   placeholder: {
      width: 40, // Même largeur que le bouton back pour équilibrer
@@ -830,8 +880,8 @@ const styles = StyleSheet.create({
 
       // Sections
    section: {
-     marginBottom: 24,
-     paddingTop: 16,
+    marginBottom: 24,
+    paddingTop: 16,
    },
   sectionHeader: {
     paddingHorizontal: 20,
@@ -865,10 +915,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1, 
     shadowRadius: 8,
     borderWidth: 1,
-    borderColor: '#F1F3F4',
+    borderColor: '#BB9B4E', // fine bordure jaune pour toutes les cartes
   },
   zikrCardCompleted: {
-    borderColor: '#D4AF37',
+    borderColor: '#D4AF37', // jaune un peu plus marqué pour les cartes complétées
     borderWidth: 2,
   },
   zikrCardHeader: {
@@ -876,6 +926,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  cardHeaderActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   categoryBadge: {
     backgroundColor: '#E8F4F8',
@@ -894,6 +948,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
     borderRadius: 12,
     padding: 4,
+  },
+  editButton: {
+    padding: 6,
+    borderRadius: 16,
+    backgroundColor: 'transparent', // suppression du fond, on garde seulement l'icône
+    marginRight: 4,
   },
   zikrCardContent: {
     marginBottom: 16,
@@ -998,6 +1058,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#BB9B4E', // bordure jaune pour les cartes de statistiques
   },
   statNumber: {
     fontSize: 24,
@@ -1084,19 +1146,20 @@ const styles = StyleSheet.create({
   tasbihImage: {
     width: 350,
     height: 350,
+    marginLeft: -10,
   },
   counterScreen: {
     position: 'absolute',
-    top: '15%',
+    top: '17%',
     left: '25%',
     right: '25%',
-    bottom: '55%',
+    bottom: '53%',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
   },
   digitalCounter: {
-    fontSize: 40,
+    fontSize: 48,
     fontWeight: '900',
     color: '#000000',
     fontFamily: Platform.OS === 'ios' ? 'Menlo-Bold' : 'monospace',
@@ -1176,10 +1239,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 10,
   },
-  cardHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   deleteButton: {
     padding: 4,
     marginLeft: 8,
@@ -1188,29 +1247,31 @@ const styles = StyleSheet.create({
   // Styles pour les onglets horizontaux
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 20,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
+    borderRadius: 999,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#BB9B4E', // bordure jaune légère sur les deux onglets
   },
   activeTab: {
-    borderBottomColor: colors.primary,
+    backgroundColor: '#E3F2EF',
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     color: colors.gray,
   },
   activeTabText: {
     color: colors.primary,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   floatingAddButton: {
     position: 'absolute',
@@ -1371,9 +1432,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   cancelCreateButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: colors.secondary,
     borderWidth: 1,
-    borderColor: '#BB9B4E',
+    borderColor: colors.secondary,
   },
   createButton: {
     backgroundColor: colors.primary,
@@ -1405,8 +1466,18 @@ const styles = StyleSheet.create({
   adminModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
     color: colors.primary
+  },
+  adminModalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 20,
+  },
+  adminModalCloseIcon: {
+    padding: 4,
+    marginLeft: 12,
   },
   adminInput: {
     borderWidth: 1,
@@ -1443,7 +1514,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cancelAdminButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: colors.secondary,
   },
   cancelAdminButtonText: {
     color: 'white',

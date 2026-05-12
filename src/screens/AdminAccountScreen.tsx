@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../theme/colors';
-import { AuthContext } from './LoginScreen';
+import { AuthContext } from '../contexts/AuthContext';
 import { auth } from './firebaseConfig';
 
 const { width, height } = Dimensions.get('window');

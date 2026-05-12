@@ -2,11 +2,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, getDoc, doc } from 'firebase/firestore';
 import React from 'react';
 import {
+    Alert,
     Animated,
-    Dimensions,
     Image,
     Modal,
     ScrollView,
@@ -15,11 +15,25 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import imageMap from '../../assets/chapterImages';
 import chaptersData from '../../data/chapitres.json';
+import { getResponsiveStyle, useResponsive } from '../hooks/useResponsive';
 import colors from '../theme/colors';
-import { AuthContext } from './LoginScreen';
-import { db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
+import { useEntitlements } from '../contexts/EntitlementsContext';
+import { useAuthContext } from '../contexts/AuthContext';
+import { auth, db, reconnectFirestore, testFirestoreConnection } from './firebaseConfig';
+import { usePaymentService } from '../lib/paymentService';
+import { Image as ExpoImage } from 'expo-image';
+
+// Fonction utilitaire pour obtenir l'image d'un chapitre avec fallback
+const getChapterImage = (imageKey: string) => {
+  if (imageMap[imageKey]) {
+    return imageMap[imageKey];
+  }
+  // Fallback vers l'image par défaut
+  return imageMap['1'] || require('../../assets/1.png');
+};
 
 type RootStackParamList = {
   Main: undefined;
@@ -55,6 +69,7 @@ type Chapter = {
   author: string;
   image: string;
   partie: string;
+  partieTitre?: string;
   content?: string;
 };
 
@@ -109,36 +124,49 @@ Le vendredi est un jour béni dans l'Islam, un moment de rassemblement et de ren
 Le raccourcissement et la combinaison des prières sont permis au voyageur pour faciliter son adoration. Ces facilités témoignent de la sagesse divine qui tient compte des circonstances de la vie humaine.`
 };
 
-const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; onPress: () => void }) => (
-  <TouchableOpacity style={styles.categoryButton} onPress={onPress}>
-    <View style={styles.categoryIconCircle}>
-      <MaterialCommunityIcons 
-        name={icon} 
-        size={icon === 'hands-pray' ? 28 : 24} 
-        color={colors.primary} 
-      />
-    </View>
-    <Text 
-      style={styles.categoryButtonText}
-      numberOfLines={2}
-      ellipsizeMode="tail"
-      adjustsFontSizeToFit
-      minimumFontScale={0.9}
-    >
-      {title}
-    </Text>
-  </TouchableOpacity>
-);
-
 export default function HomeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const { user } = React.useContext(AuthContext);
+  const { entitlements } = useEntitlements();
+  // On récupère aussi setUser pour pouvoir synchroniser la photo comme dans Parametres
+  const { user, setUser } = useAuthContext();
+  const { checkEntitlements: fetchEntitlements } = usePaymentService();
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(responsive, responsiveStyle, insets);
+  const [freshEntitlements, setFreshEntitlements] = React.useState<{ part2: boolean; part3: boolean } | null>(null);
+  
+  const CategoryButton = ({ icon, title, onPress }: { icon: any; title: string; onPress: () => void }) => (
+    <TouchableOpacity style={styles.categoryButton} onPress={onPress}>
+      <View style={styles.categoryIconCircle}>
+        <MaterialCommunityIcons 
+          name={icon} 
+          size={responsive.isLandscape ? (icon === 'hands-pray' ? 24 : 20) : (icon === 'hands-pray' ? 28 : 24)} 
+          color={colors.primary} 
+        />
+      </View>
+      <Text 
+        style={styles.categoryButtonText}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+        adjustsFontSizeToFit
+        minimumFontScale={0.9}
+      >
+        {title}
+      </Text>
+    </TouchableOpacity>
+  );
+  
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [newNotificationsCount, setNewNotificationsCount] = React.useState(0);
+  // Même logique que Parametres : initialiser avec la photo de l'utilisateur Firebase si disponible
+  const initialAvatar = auth.currentUser?.photoURL || undefined;
+  const [avatarUri, setAvatarUri] = React.useState<string | undefined>(initialAvatar);
 
   const [previewModalVisible, setPreviewModalVisible] = React.useState(false);
   const [selectedChapter, setSelectedChapter] = React.useState<Chapter | null>(null);
   const [firestoreStatus, setFirestoreStatus] = React.useState<'connecting' | 'connected' | 'error'>('connecting');
+
   const scrollX = React.useRef(new Animated.Value(0)).current;
 
   // Test de connexion Firestore au démarrage
@@ -178,6 +206,72 @@ export default function HomeScreen() {
     testConnection();
   }, []);
 
+  // Charger l'avatar depuis Firestore si absent dans le contexte (même logique que Paramètres)
+  React.useEffect(() => {
+    const loadAvatar = async () => {
+      try {
+        if (!user?.uid) return;
+        // D'abord, utiliser la photo du contexte utilisateur si disponible
+        if (user.photoURL) {
+          setAvatarUri(user.photoURL);
+        }
+        
+        // Toujours charger depuis Firestore pour avoir la dernière version (même si on a déjà une valeur)
+        try {
+          const snap = await getDoc(doc(db, 'users', user.uid));
+          const url = (snap.data() as any)?.photoURL as string | undefined;
+          if (url) {
+            setAvatarUri(url);
+            // Mettre à jour le contexte utilisateur aussi
+            if (!user.photoURL || user.photoURL !== url) {
+              setUser({ ...(user as any), photoURL: url });
+            }
+          }
+        } catch (error) {
+          console.error('❌ Erreur chargement photo Firestore:', error);
+        }
+      } catch {
+        // silencieux
+      }
+    };
+    loadAvatar();
+  }, [user?.uid]);
+
+  // S'assurer que l'avatar est bien synchronisé à chaque retour sur l'écran d'accueil,
+  // sans dépendre de l'état "Firestore connecté" (même logique que Paramètres).
+  useFocusEffect(
+    React.useCallback(() => {
+      const syncAvatarOnFocus = async () => {
+        try {
+          if (!user?.uid) return;
+          // Si le contexte a déjà la photo, l'utiliser directement
+          if (user.photoURL) {
+            setAvatarUri(user.photoURL);
+          }
+          
+          // Toujours tenter de recharger depuis Firestore pour avoir la dernière version
+          try {
+            const snap = await getDoc(doc(db, 'users', user.uid));
+            const url = (snap.data() as any)?.photoURL as string | undefined;
+            if (url) {
+              setAvatarUri(url);
+              // Mettre à jour le contexte si la photo a changé
+              if (!user.photoURL || user.photoURL !== url) {
+                setUser({ ...(user as any), photoURL: url });
+              }
+            }
+          } catch (error) {
+            console.error('❌ Erreur chargement photo Firestore:', error);
+          }
+        } catch {
+          // silencieux (si Firestore ne répond pas, on garde ce qu'on a)
+        }
+      };
+
+      syncAvatarOnFocus();
+    }, [user?.uid])
+  );
+
   // Données de fallback pour le mode hors ligne
   const fallbackNotifications: Notification[] = [
     {
@@ -202,7 +296,87 @@ export default function HomeScreen() {
 
 
 
-  const handleChapterPress = (chapter: Chapter) => {
+  // Rafraîchir les droits quand l'écran (Home) reprend le focus pour éviter un état obsolète après paiement
+  const { refreshEntitlements } = useEntitlements();
+  useFocusEffect(
+    React.useCallback(() => {
+      // ✅ OPTIMISATION : Le contexte charge déjà le cache immédiatement
+      // On fait juste un refresh en arrière-plan si nécessaire (respecte le cooldown)
+      refreshEntitlements(false).catch(()=>{});
+      // Plus besoin de fetchEntitlements séparé, le contexte gère déjà le cache
+    }, [refreshEntitlements])
+  );
+
+  // Fonction pour vérifier si un chapitre est premium et non débloqué
+  const isPremiumChapter = (chapter: Chapter) => {
+    // Les chapitres de la première partie ne sont jamais premium
+    if (chapter.partie === 'premiere_partie') {
+      return false;
+    }
+    
+    // Seules les parties 2 et 3 peuvent être premium
+    const premiumParts = ['deuxieme_partie', 'troisieme_partie'];
+    if (!premiumParts.includes(chapter.partie)) {
+      return false; // Pas une partie premium
+    }
+    
+    // Vérifier si l'utilisateur a accès à cette partie premium
+    const source = freshEntitlements ?? entitlements;
+    if (chapter.partie === 'deuxieme_partie' && source.part2) {
+      return false; // Partie 2 débloquée
+    }
+    if (chapter.partie === 'troisieme_partie' && source.part3) {
+      return false; // Partie 3 débloquée
+    }
+    
+    return true; // Partie premium non débloquée
+  };
+
+  const handleChapterPress = async (chapter: Chapter) => {
+    // ✅ OPTIMISATION : Utiliser directement les entitlements du contexte (déjà chargés depuis le cache)
+    const isPremium = chapter.partie === 'deuxieme_partie' || chapter.partie === 'troisieme_partie';
+    
+    // Lire les entitlements depuis le contexte (chargés immédiatement depuis le cache)
+    let latest = entitlements;
+    
+    // ✅ OPTIMISATION : Seulement si premium et verrouillé, forcer un refresh (sans timeout)
+    if (isPremium && !latest.part2 && !latest.part3) {
+      try { 
+        await refreshEntitlements(true); // force=true pour bypasser le cooldown
+        latest = entitlements; // Récupérer les entitlements mis à jour
+      } catch (e: any) {
+        // Ne pas logger en boucle si erreur réseau
+        if (!e?.message?.includes('Network request failed') && !e?.message?.includes('Failed to fetch')) {
+          console.error('Erreur refreshEntitlements:', e);
+        }
+        // En cas d'erreur, on garde les entitlements du contexte (cache)
+      }
+    }
+    
+    // Les entitlements sont maintenant à jour (soit depuis le cache, soit après refresh)
+
+    const hasAccess = !isPremium
+      ? true
+      : chapter.partie === 'deuxieme_partie'
+        ? latest.part2
+        : latest.part3;
+
+    if (isPremium && !hasAccess) {
+      const partieNumero = chapter.partie === 'deuxieme_partie' ? '2' : '3';
+      Alert.alert(
+        'Contenu Premium',
+        `Ce chapitre fait partie de la Partie ${partieNumero} qui nécessite un paiement pour être accessible.${'\n\n'}Débloquez l'accès complet à cette partie premium.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Voir les parties', 
+            onPress: () => navigation.navigate('Books' as never)
+          }
+        ]
+      );
+      return;
+    }
+    
     setSelectedChapter(chapter);
     setPreviewModalVisible(true);
   };
@@ -212,11 +386,44 @@ export default function HomeScreen() {
     setSelectedChapter(null);
   };
 
-  const openFullChapter = () => {
-    if (selectedChapter) {
-      closePreviewModal();
-      navigation.navigate('Chapter', { chapter: selectedChapter });
+  const openFullChapter = async () => {
+    console.log('🔵 openFullChapter appelé');
+    if (!selectedChapter) {
+      console.log('❌ selectedChapter est null');
+      return;
     }
+    console.log('📖 Chapitre sélectionné:', selectedChapter.title, 'Partie:', selectedChapter.partie);
+    
+    // ✅ OPTIMISATION : Utiliser directement les entitlements du contexte (déjà chargés depuis le cache)
+    let latest = entitlements;
+    console.log('🔐 Entitlements:', latest);
+    
+    const isPremium = selectedChapter.partie === 'deuxieme_partie' || selectedChapter.partie === 'troisieme_partie';
+    const hasAccess = !isPremium
+      ? true
+      : selectedChapter.partie === 'deuxieme_partie'
+        ? latest.part2
+        : latest.part3;
+    
+    console.log('💎 isPremium:', isPremium, 'hasAccess:', hasAccess);
+    
+    if (isPremium && !hasAccess) {
+        // ✅ AMÉLIORATION : Rediriger directement vers BooksScreen avec la partie sélectionnée
+        const partieKey = selectedChapter.partie; // 'deuxieme_partie' ou 'troisieme_partie'
+        console.log('🚀 Navigation vers Books avec partie:', partieKey);
+        closePreviewModal();
+        // Naviguer vers BooksScreen avec la partie présélectionnée
+        setTimeout(() => {
+          (navigation as any).navigate('Books', { selectedPart: partieKey });
+        }, 100); // Petit délai pour s'assurer que la modal est fermée
+        return;
+      }
+      console.log('📚 Ouverture du chapitre complet');
+      closePreviewModal();
+      // Indiquer que l'utilisateur vient de l'aperçu du livre sur l'écran d'accueil
+      setTimeout(() => {
+        (navigation as any).navigate('Chapter', { chapter: selectedChapter, fromHomePreview: true });
+      }, 100);
   };
 
   const loadNotifications = React.useCallback(async () => {
@@ -427,7 +634,8 @@ export default function HomeScreen() {
       return {
         ...ch,
         id: `${partieIndex}-${chapitreIndex}`,
-        partie: partie.titre,
+        partie: partieKey, // Utiliser la clé de la partie au lieu du titre
+        partieTitre: partie.titre, // Garder le titre pour l'affichage
         title: `Chapitre ${currentChapitreNumber}.`,
         pageCount: pageCount
       };
@@ -435,28 +643,31 @@ export default function HomeScreen() {
   );
 
   return (
-    <View style={styles.safeArea}>
+    <View style={[styles.safeArea, { paddingTop: insets.top }]}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-          <View>
-            <Text style={styles.bismillah}>بسم الله الرحمن الرحيم</Text>
-            <Text style={styles.welcomeMessage}>
+          <View style={{ flex: 1, marginRight: responsive.breakpoint === 'xs' ? 8 : responsive.breakpoint === 'sm' ? 10 : 12 }}>
+            <Text style={styles.bismillah} numberOfLines={1} adjustsFontSizeToFit={responsive.breakpoint === 'xs'}>
+              بسم الله الرحمن الرحيم
+            </Text>
+            <Text style={styles.welcomeMessage} numberOfLines={1}>
               Bienvenue {user?.displayName || user?.email?.split('@')[0] || ''}
             </Text>
           </View>
           <TouchableOpacity 
-            onPress={handleNotificationPress} 
-            style={styles.notificationButton}
-            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Paramètres' as never)}
+            style={styles.avatarButton}
+            activeOpacity={0.8}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialCommunityIcons name="bell-outline" size={24} color="#174C3C" />
-            {newNotificationsCount > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>
-                  {newNotificationsCount > 99 ? '99+' : newNotificationsCount.toString()}
-                </Text>
-              </View>
+            {avatarUri ? (
+              <ExpoImage source={{ uri: avatarUri }} style={styles.avatarSmall} contentFit="cover" />
+            ) : (
+              <MaterialCommunityIcons 
+                name="account-circle" 
+                size={responsive.breakpoint === 'xs' ? 32 : responsive.breakpoint === 'sm' ? 36 : 40} 
+                color="#174C3C" 
+              />
             )}
           </TouchableOpacity>
       </View>
@@ -485,27 +696,28 @@ export default function HomeScreen() {
           </View>
         </View>
 
-
-
-        {/* Section Auteur du livre */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Auteur du livre</Text>
           <View style={styles.authorCard}>
+
             <View style={styles.authorHeader}>
-              <View style={styles.authorAvatar}>
-                <MaterialCommunityIcons name="account-circle" size={40} color={colors.primary} />
-              </View>
-              <TouchableOpacity style={styles.authorButton} onPress={() => navigation.navigate('AuthorProfile')}>
-                <MaterialCommunityIcons name="account-details" size={16} color={colors.white} />
-                <Text style={styles.authorButtonText}>En savoir plus</Text>
+              <Text style={styles.authorName}>Aly Anta Sow</Text>
+              <TouchableOpacity style={styles.authorButtonSmall} onPress={() => navigation.navigate('AuthorProfile')}>
+                <MaterialCommunityIcons name="account-details" size={14} color={colors.white} />
+                <Text 
+                  style={styles.authorButtonTextSmall}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit={true}
+                  minimumFontScale={0.85}
+                >
+                  Voir plus
+                </Text>
               </TouchableOpacity>
             </View>
             <View style={styles.authorDetails}>
-              <Text style={styles.authorName}>Aly Sow</Text>
-              <Text style={styles.authorTitle}>Imam et Érudit Islamique</Text>
               <Text style={styles.authorBio}>
-                Plus de 20 ans d'expérience dans l'enseignement de la prière. 
-                Auteur de plusieurs ouvrages sur la spiritualité musulmane.
+                Passionné de recherches sur l'islam, il rend les textes islamiques accessibles aux non arabophones.
+                Auteur d'essais sur le Hajj, la Oumra, le Jeûne de Ramadan et la vie du Prophète.
               </Text>
             </View>
           </View>
@@ -519,13 +731,13 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => item.id || index.toString()}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
-            contentContainerStyle={{paddingHorizontal: 8, paddingVertical: 8}}
+            contentContainerStyle={{paddingHorizontal: 12, paddingVertical: 8}}
             removeClippedSubviews={true}
             maxToRenderPerBatch={5}
             windowSize={5}
             initialNumToRender={5}
             renderItem={({ item, index }) => {
-              const inputRange = [(index - 1) * 200, index * 200, (index + 1) * 200];
+              const inputRange = [(index - 1) * 176, index * 176, (index + 1) * 176];
               const scale = scrollX.interpolate({
                 inputRange,
                 outputRange: [0.96, 1, 0.96],
@@ -537,21 +749,47 @@ export default function HomeScreen() {
                 extrapolate: 'clamp',
               });
               return (
-                <Animated.View style={{ transform: [{ scale }], opacity, marginHorizontal: 8 }}>
-                  <TouchableOpacity style={styles.bookCardModern} onPress={() => handleChapterPress(item)}>
+                <Animated.View style={{ transform: [{ scale }], opacity, marginHorizontal: 6 }}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.bookCardModern,
+                      styles.premiumCard
+                    ]} 
+                    onPress={() => handleChapterPress(item)}
+                  >
                     <View style={styles.bookImageContainer}>
                       <Image 
-                        source={imageMap[item.image] || imageMap['1']} 
+                        source={getChapterImage(item.image)} 
                         style={styles.bookImageModern}
                         resizeMode="cover"
-                        defaultSource={require('../../assets/1.png')}
-                        onError={() => console.log('Erreur de chargement image:', item.image)}
+                        fadeDuration={0}
+                        onError={() => {
+                          console.log('Erreur de chargement image:', item.image);
+                        }}
                       />
+                      {/* Indicateur premium pour les chapitres premium */}
+                      {(() => {
+                        const isPremium = item.partie === 'deuxieme_partie' || item.partie === 'troisieme_partie';
+                        const source = freshEntitlements ?? entitlements;
+                        if (!isPremium) return null;
+                        const unlocked = item.partie === 'deuxieme_partie' ? source.part2 : source.part3;
+                        return (
+                          <View style={[
+                            styles.premiumBadge,
+                            unlocked ? { backgroundColor: colors.primary } : {}
+                          ]}>
+                            <MaterialCommunityIcons name="crown" size={16} color={unlocked ? '#fff' : colors.secondary} />
+                            <Text style={[styles.premiumText, unlocked ? { color: '#fff' } : {}]}>
+                              {unlocked ? 'DÉBLOQUÉ' : 'PREMIUM'}
+                            </Text>
+                        </View>
+                        );
+                      })()}
                     </View>
                     <View style={styles.bookCardContentModern}>
                       <Text style={styles.bookCardTitleModern} numberOfLines={1}>{item.title.replace(/\.\s*$/, ':')}</Text>
-                      <Text style={styles.bookCardTitleModern} numberOfLines={3}>{item.desc || 'Titre du chapitre'}</Text>
-                      <Text style={styles.bookCardSubtitleModern} numberOfLines={2}>{item.partie || 'Partie'}</Text>
+                      <Text style={styles.bookCardDescModern} numberOfLines={3}>{item.desc || 'Titre du chapitre'}</Text>
+                      <Text style={styles.bookCardSubtitleModern} numberOfLines={2}>{item.partieTitre || 'Partie'}</Text>
                       <View style={styles.bookCardFooterModern}>
                         <View style={styles.pagesCountModern}>
                           <MaterialCommunityIcons name="book-open-page-variant" size={12} color={colors.gray} />
@@ -577,17 +815,25 @@ export default function HomeScreen() {
             <View style={styles.previewModalContentModern}>
               <View style={styles.previewModalHeaderModern}>
                   <Image 
-                    source={imageMap[selectedChapter.image] || imageMap['1']} 
+                    source={getChapterImage(selectedChapter.image)} 
                   style={styles.previewModalImageModern}
+                    resizeMode="cover"
+                    fadeDuration={0}
+                    onError={() => console.log('Erreur de chargement image modal:', selectedChapter.image)}
                   />
                 <TouchableOpacity style={styles.closeButton} onPress={closePreviewModal}>
                   <MaterialCommunityIcons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
               <Text style={styles.previewModalTitleModern}>{selectedChapter.title}</Text>
-              <Text style={styles.previewModalSubtitleModern}>{selectedChapter.partie}</Text>
+              <Text style={styles.previewModalSubtitleModern}>{selectedChapter.partieTitre}</Text>
               <Text style={styles.previewModalAuthorModern}>par {selectedChapter.author || 'Auteur inconnu'}</Text>
-              <ScrollView style={styles.previewModalScrollModern} showsVerticalScrollIndicator={false}>
+              <ScrollView 
+                style={styles.previewModalScrollModern} 
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+              >
                 <Text style={styles.previewModalDescriptionModern}>
                   {chapterPreviews[selectedChapter.id] ? 
                     chapterPreviews[selectedChapter.id].substring(0, 350) + '...'
@@ -596,9 +842,23 @@ export default function HomeScreen() {
                   }
                   </Text>
     </ScrollView>
-              <TouchableOpacity style={styles.previewModalButtonModern} onPress={openFullChapter}>
-                  <MaterialCommunityIcons name="book-open-variant" size={20} color={colors.white} />
-                <Text style={styles.previewModalButtonTextModern}>Lire le chapitre complet</Text>
+              <TouchableOpacity 
+                style={[
+                  styles.previewModalButtonModern,
+                  isPremiumChapter(selectedChapter) && styles.previewModalButtonPremium
+                ]} 
+                onPress={openFullChapter}
+                activeOpacity={0.7}
+                disabled={false}
+              >
+                  <MaterialCommunityIcons 
+                    name={isPremiumChapter(selectedChapter) ? "crown" : "book-open-variant"} 
+                    size={20} 
+                    color={colors.white} 
+                  />
+                <Text style={styles.previewModalButtonTextModern}>
+                  {isPremiumChapter(selectedChapter) ? 'Chapitre Premium' : 'Lire le chapitre complet'}
+                </Text>
                 </TouchableOpacity>
             </View>
           </View>
@@ -608,30 +868,63 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (responsive: any, responsiveStyle: any, insets: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F4F7F6' },
   container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    marginTop: 15,
-    marginBottom: 20,
+    paddingHorizontal: responsive.horizontalPadding,
+    paddingTop: responsive.breakpoint === 'xs' ? 12 : responsive.breakpoint === 'sm' ? 15 : 20,
+    paddingBottom: responsive.breakpoint === 'xs' ? 6 : responsive.breakpoint === 'sm' ? 8 : 10,
+    marginTop: responsive.breakpoint === 'xs' ? 8 : responsive.breakpoint === 'sm' ? 10 : 15,
+    marginBottom: responsive.breakpoint === 'xs' ? 12 : responsive.breakpoint === 'sm' ? 15 : 20,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: responsive.maxContentWidth,
   },
   bismillah: {
-    fontSize: 24,
+    fontSize: responsive.breakpoint === 'xxl' && responsive.width >= 1024 
+      ? responsiveStyle.fontSize['4xl'] 
+      : responsive.breakpoint === 'xs' 
+        ? responsiveStyle.fontSize.xl 
+        : responsive.breakpoint === 'sm' 
+          ? responsiveStyle.fontSize['2xl'] 
+          : responsive.breakpoint === 'md'
+            ? responsiveStyle.fontSize['3xl']
+            : responsiveStyle.fontSize['3xl'],
     fontWeight: '800',
     color: colors.primary,
     textAlign: 'left',
-    letterSpacing: 0.5,
+    letterSpacing: responsive.breakpoint === 'xs' ? 0.3 : 0.5,
+    flexShrink: 1, // Permet au texte de se réduire si nécessaire
   },
   welcomeMessage: {
-    fontSize: 14,
+    fontSize: responsive.breakpoint === 'xs' 
+      ? Math.max(12, responsiveStyle.fontSize.sm) 
+      : responsive.breakpoint === 'sm' 
+        ? responsiveStyle.fontSize.sm 
+        : responsiveStyle.fontSize.base,
     color: colors.gray,
-    marginTop: 4,
+    marginTop: responsive.breakpoint === 'xs' ? 2 : responsiveStyle.spacing.xs,
+  },
+  avatarButton: {
+    padding: responsive.breakpoint === 'xs' ? 2 : responsive.breakpoint === 'sm' ? 2.5 : 3,
+    borderRadius: responsive.breakpoint === 'xs' ? 18 : responsive.breakpoint === 'sm' ? 20 : 25,
+    backgroundColor: '#FFF',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    flexShrink: 0, // Empêche le bouton de se réduire
+  },
+  avatarSmall: {
+    width: responsive.breakpoint === 'xs' ? 32 : responsive.breakpoint === 'sm' ? 36 : 40,
+    height: responsive.breakpoint === 'xs' ? 32 : responsive.breakpoint === 'sm' ? 36 : 40,
+    borderRadius: responsive.breakpoint === 'xs' ? 16 : responsive.breakpoint === 'sm' ? 18 : 20,
+    backgroundColor: '#EEE',
   },
   notificationButton: {
     padding: 8,
@@ -664,9 +957,9 @@ const styles = StyleSheet.create({
   bannerContainer: {
     backgroundColor: colors.primary,
     borderRadius: 24,
-    marginHorizontal: 20,
+    marginHorizontal: responsive.horizontalPadding,
     marginTop: -5,
-    padding: 20,
+    padding: responsive.isTablet ? 28 : 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -676,6 +969,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     marginBottom: 20,
     position: 'relative',
+    overflow: 'visible', // Permettre à l'image de sortir du cadre
   },
   bannerTextContainer: {
     flex: 1,
@@ -690,7 +984,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   bannerButton: {
-    backgroundColor: '#BB9B4E',
+    backgroundColor: colors.secondary,
     borderRadius: 18,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -702,12 +996,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   bannerImage: {
-    width: 140,
-    height: 180,
+    // Illustration ajustée pour mieux s'intégrer dans le cadre
+    width: Math.min(responsive.isTablet ? 280 : 180, responsive.width * (responsive.isTablet ? 0.25 : 0.38)),
+    height: Math.min(responsive.isTablet ? 300 : 200, responsive.width * (responsive.isTablet ? 0.27 : 0.42)),
     resizeMode: 'contain',
     position: 'absolute',
-    right: -30,
-    bottom: -30,
+    right: responsive.isTablet ? -20 : -24,
+    bottom: responsive.isTablet ? -20 : -28,
   },
   section: {
     marginBottom: 20,
@@ -717,28 +1012,36 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.primary,
     marginBottom: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: responsive.horizontalPadding,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: responsive.maxContentWidth,
   },
   categoriesGrid: {
-    flexDirection: 'row',
+    flexDirection: responsive.isLandscape ? 'row' : 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    minHeight: 100,
+    paddingHorizontal: responsive.horizontalPadding,
+    minHeight: responsive.isLandscape ? 80 : 100,
+    flexWrap: responsive.isLandscape ? 'wrap' : 'nowrap',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: responsive.maxContentWidth,
   },
   categoryButton: {
     alignItems: 'center',
-    width: '25%',
-    minHeight: 80,
+    width: responsive.isLandscape ? '22%' : '25%',
+    minHeight: responsive.isLandscape ? 70 : 80,
+    marginBottom: responsive.isLandscape ? responsiveStyle.spacing.sm : 0,
   },
   categoryIconCircle: {
-    width: Math.min(60, Dimensions.get('window').width * 0.15),
-    height: Math.min(60, Dimensions.get('window').width * 0.15),
-    borderRadius: Math.min(30, Dimensions.get('window').width * 0.075),
+    width: responsive.isLandscape ? Math.min(50, responsive.width * 0.12) : Math.min(60, responsive.width * 0.15),
+    height: responsive.isLandscape ? Math.min(50, responsive.width * 0.12) : Math.min(60, responsive.width * 0.15),
+    borderRadius: responsive.isLandscape ? Math.min(25, responsive.width * 0.06) : Math.min(30, responsive.width * 0.075),
     backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: responsiveStyle.spacing.sm,
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.15,
@@ -746,73 +1049,83 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   categoryButtonText: {
-    fontSize: Math.max(10, Dimensions.get('window').width * 0.03),
+    fontSize: responsive.isLandscape ? responsiveStyle.fontSize.sm : responsiveStyle.fontSize.base,
     color: colors.text,
     textAlign: 'center',
-    lineHeight: Math.max(14, Dimensions.get('window').width * 0.035),
+    lineHeight: responsive.isLandscape ? responsiveStyle.fontSize.sm * 1.2 : responsiveStyle.fontSize.base * 1.4,
   },
   bookCardModern: {
-    width: Dimensions.get('window').width * 0.45,
-    height: Dimensions.get('window').height * 0.35,
+    width: 160,
+    height: 280,
     backgroundColor: colors.white,
-    borderRadius: 18,
-    elevation: 6,
+    borderRadius: 16,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     overflow: 'hidden',
     marginBottom: 8,
   },
   bookImageContainer: {
     width: '100%',
-    height: Dimensions.get('window').height * 0.15,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    height: 140,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
   },
   bookImageModern: {
-    width: '110%',
-    height: '110%',
+    width: '100%',
+    height: '100%',
     resizeMode: 'cover',
-    minWidth: '110%',
-    minHeight: '110%',
-    transform: [{ scale: 1.1 }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   bookCardContentModern: {
     flex: 1,
-    padding: 8,
+    padding: 12,
     justifyContent: 'space-between',
-    minHeight: 125,
+    minHeight: 140,
   },
   bookCardTitleModern: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: -6,
+    marginBottom: 2,
+    textAlign: 'center',
+    lineHeight: 14,
+    paddingHorizontal: 4,
+    height: 16,
+  },
+  bookCardDescModern: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 4,
     textAlign: 'center',
     lineHeight: 13,
     paddingHorizontal: 4,
     height: 39,
   },
   bookCardSubtitleModern: {
-    fontSize: 9,
-    color: '#174C3C',
+    fontSize: 10,
+    color: colors.primary,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 2,
-    lineHeight: 10,
+    marginBottom: 4,
+    lineHeight: 12,
     paddingHorizontal: 4,
-    height: 20,
+    height: 24,
   },
   bookCardFooterModern: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -2,
+    marginTop: 2,
   },
   readTimeModern: {
     flexDirection: 'row',
@@ -829,9 +1142,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pagesCountTextModern: {
-    color: colors.gray,
-    fontSize: 10,
-    fontWeight: '500',
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '600',
     marginLeft: 4,
   },
   hadithCard: {
@@ -888,11 +1201,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   previewModalImageModern: {
-    width: 60,
-    height: 60,
+    width: 80,
+    height: 80,
     borderRadius: 12,
     backgroundColor: '#f8f9fa',
     marginRight: 10,
+    resizeMode: 'cover',
   },
   previewModalTitleModern: {
     fontSize: 20,
@@ -932,10 +1246,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
+    zIndex: 10, // ✅ Ajouté pour s'assurer que le bouton est au-dessus
+    minHeight: 48, // ✅ Ajouté pour garantir une zone de touch suffisante
     shadowRadius: 4,
     marginTop: 10,
   },
@@ -992,63 +1309,103 @@ const styles = StyleSheet.create({
   },
   authorCard: {
     backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 24,
+    borderRadius: responsive.isLandscape ? 16 : 18,
+    padding: responsive.isLandscape ? 16 : 20,
+    marginHorizontal: responsive.isLandscape ? 16 : 24,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    borderWidth: 2,
+    borderColor: colors.secondary,
+  },
+  authorHeader: {
+    flexDirection: responsive.isLandscape ? 'column' : 'row',
+    alignItems: responsive.isLandscape ? 'flex-start' : 'center',
+    justifyContent: 'space-between',
+    marginBottom: responsive.isLandscape ? 12 : 15,
+    gap: responsive.isLandscape ? 8 : 0,
+  },
+  authorAvatar: {
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    backgroundColor: '#f0f4ff',
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  authorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  authorAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f8f9fa',
-    justifyContent: 'center',
-    alignItems: 'center',
+    shadowRadius: 8,
   },
   authorDetails: {
     flex: 1,
   },
+  authorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   authorName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 4,
+    fontSize: responsive.isLandscape ? 14 : 16,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: responsive.isLandscape ? 6 : 8,
+    flex: responsive.isLandscape ? 0 : 1, // Ne pas prendre tout l'espace en mode paysage
   },
   authorTitle: {
-    fontSize: 13,
-    color: colors.primary,
+    fontSize: 14,
+    color: 'colors.secondary',
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 0,
+    marginLeft: 8,
   },
   authorBio: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.gray,
-    lineHeight: 16,
+    lineHeight: 18,
+    fontWeight: '400',
   },
   authorButton: {
-    backgroundColor: '#BB9B4E',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    backgroundColor: colors.secondary,
+    borderRadius: 22,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   authorButtonText: {
     color: colors.white,
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontSize: 13,
-    marginLeft: 6,
+    marginLeft: 8,
+  },
+  authorButtonSmall: {
+    backgroundColor: colors.secondary,
+    borderRadius: responsive.isLandscape ? 16 : 18,
+    paddingVertical: responsive.isLandscape ? 6 : (responsive.isSmallScreen ? 6 : 8),
+    paddingHorizontal: responsive.isLandscape ? 12 : (responsive.isSmallScreen ? 10 : 16),
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    maxWidth: responsive.isSmallScreen ? responsive.width * 0.35 : responsive.width * 0.4, // Plus restrictif sur petits écrans
+  },
+  authorButtonTextSmall: {
+    color: colors.white,
+    fontWeight: '600',
+    fontSize: responsive.isLandscape ? 10 : (responsive.isSmallScreen ? 10 : 11),
+    marginLeft: responsive.isLandscape ? 4 : (responsive.isSmallScreen ? 4 : 6),
+    flexShrink: 1, // Permettre au texte de se réduire si nécessaire
   },
   authorBadge: {
     backgroundColor: colors.primary,
@@ -1115,5 +1472,39 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#f8f9fa',
+  },
+  premiumBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  premiumText: {
+    color: colors.secondary,
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  premiumCard: {
+    borderWidth: 2,
+    borderColor: colors.secondary,
+    shadowColor: colors.secondary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  previewModalButtonPremium: {
+    backgroundColor: colors.secondary,
   },
 }); 

@@ -1,0 +1,42 @@
+[
+  {
+    "numero": 1,
+    "question": "Quels sont les noms des 5 prières quotidiennes ?",
+    "reponse": "Subh, Zohr, Asr, Maghreb, Ichâ.",
+    "fausses_reponses": [
+      "Fajr, Dhuha, Maghreb, Witr, Tahajjud.",
+      "Subh, Dhuha, Zohr, Tarawih, Tahajjud.",
+      "Asr, Zohr, Fajr, Tarawih, Witr."
+    ]
+  },
+  {
+    "numero": 2,
+    "question": "Que fait celui qui doit la prière de l’Asr alors qu’il est l’heure d’accomplir celle de Maghreb ?",
+    "reponse": "Il fait la prière de l’Asr avant de faire celle de Maghreb. \nS’il prie derrière l’imam et qu’il ne se soit rendu de sa dette qu’après le début de la prière, il doit alors terminer sa prière derrière l’imam. Après le salut final, il fait la prière de l’Asr puis recommence celle de Maghreb.",
+    "fausses_reponses": [
+      "Il commence par Maghreb puis fait Asr après.",
+      "Il fait les deux prières ensemble dans n’importe quel ordre.",
+      "Il peut laisser tomber Asr et faire uniquement Maghreb."
+    ]
+  },
+  {
+    "numero": 3,
+    "question": "Comment doit procéder celui qui doit jusqu’à 4 prières d'obligation divine ?",
+    "reponse": "Celui qui doit jusqu’à 4 prières d’obligation divine doit s’en acquitter avant de procéder à toute autre prière.",
+    "fausses_reponses": [
+      "Il ne fait que la prière de l’imam et oublie celles qu’il doit.",
+      "Il doit interrompre la prière de l’imam et refaire toutes ses dettes immédiatement.",
+      "Il commence directement par ses prières manquées sans suivre l’imam."
+    ]
+  },
+  {
+    "numero": 4,
+    "question": "Celui qui doit des prières d'obligation divine, peut-il faire des prières surérogatoires ?",
+    "reponse": "Non.",
+    "fausses_reponses": [
+      "Oui, il peut faire autant de surérogatoires qu’il veut avant les obligatoires.",
+      "Oui, mais uniquement si c’est pendant la nuit.",
+      "Non, il ne doit jamais rattraper les prières obligatoires manquées."
+    ]
+  }
+]

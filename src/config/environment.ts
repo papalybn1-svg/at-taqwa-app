@@ -4,7 +4,7 @@
 
 export const ENV = {
   // URL du backend
-  BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL || 'https://attaqwa-paiement-lcg23gf1q-bathilycoumba254-6208s-projects.vercel.app',
+  BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL || 'https://attaqwa-paiement.vercel.app',
   
   // Configuration PayDunya
   PAYDUNYA_RETURN_URL: 'attaqwa://paydunya/success',

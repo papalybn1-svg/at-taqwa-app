@@ -1,0 +1,85 @@
+{
+    "quiz": [
+      {
+        "numero": 1,
+        "question": "Quelle est la différence principale entre l’adhan et l’iqama ?",
+        "reponse": "L’adhan est l’appel avant l’heure de la prière avec toutes les phrases répétées, tandis que l’iqama se dit une seule fois juste avant la prière et seule la phrase « qad qâmatissalât » est doublée.",
+        "fausses_reponses": [
+          "L’adhan est dit par l’imam et l’iqama par le muezzin.",
+          "L’adhan se dit avant chaque raka et l’iqama à la fin de la prière.",
+          "L’adhan est obligatoire alors que l’iqama est facultatif."
+        ]
+      },
+      {
+        "numero": 2,
+        "question": "Comment apelle t-on le premier takbir qui marque l’entrée en prière et la sacralisation ?",
+        "reponse": "Le takbiratul ihram. Il consiste à dire « Allahu akbar » en levant les mains à hauteur des épaules.",
+        "fausses_reponses": [
+          "Le takbir du rukû.",
+          "Le takbir de la sujûd.",
+          "Le takbir final avant le salut."
+        ]
+      },
+      {
+        "numero": 3,
+        "question": "Quelle sourate doit obligatoirement être récitée dans chaque raka ?",
+        "reponse": "La Fatiha.",
+        "fausses_reponses": [
+          "La sourate Ihlas.",
+          "La sourate Kawthar.",
+          "N’importe quelle sourate, il n’y a pas d’obligation."
+        ]
+      },
+      {
+        "numero": 4,
+        "question": "Qu'est-ce qui est conseillé de dire en position de rukû ?",
+        "reponse": "« Subhâna rabbil azîm » (Gloire à mon Seigneur le Très Grand).",
+        "fausses_reponses": [
+          "« Sami allahu liman hamida »",
+          "« Subhâna rabbil a‘la »",
+          "« Allahumma ighfirli warhamni »"
+        ]
+      },
+      {
+        "numero": 5,
+        "question": "Quels membres doivent obligatoirement toucher le sol pendant la sujûd (prosternation) ?",
+        "reponse": "Le front, le nez, les paumes des mains, les genoux et les orteils.",
+        "fausses_reponses": [
+          "Uniquement le front et les paumes des mains.",
+          "Uniquement le front, le nez et les pieds.",
+          "Uniquement le front et les genoux."
+        ]
+      },
+      {
+        "numero": 6,
+        "question": "Quelle formule prononce-t-on pour saluer et terminer la prière ?",
+        "reponse": "« Assalamu alaykum » en tournant légèrement la tête à droite (puis à gauche si on est seul).",
+        "fausses_reponses": [
+          "« Allahu akbar » trois fois.",
+          "« Subhâna rabbil a‘la ».",
+          "« La ilaha illallah »."
+        ]
+      },
+      {
+        "numero": 7,
+        "question": "Après le salut final dans la prière d'obligation divine, quelles sont les invocations conseillées ?",
+        "reponse": "« Subhanallah, Alhamdulillah, Allahu akbar » (33 fois) puis compléter par « La ilaha illallah wahdahu la sharika lahu, lahul mulku wa lahul hamdu, wa huwa ‘ala kulli shay’in qadir ».",
+        "fausses_reponses": [
+          "« Subhanallah, Alhamdulillah, Allahu akbar » (10 fois).",
+          "« Subhanallah, Alhamdulillah, Allahu akbar » (100 fois).",
+          "« La ilaha illallah wahdahu la sharika lahu, lahul mulku wa lahul hamdu, wa huwa ‘ala kulli shay’in qadir »."
+        ]
+      },
+      {
+        "numero": 8,
+        "question": "Par quelles invocations est-il conseillé de clôturer ces invocations ?",
+        "reponse": "« La ilaha illallah, wahdahu la sharika lahu, lahul mulku wa lahul hamdu, wa huwa ‘ala kulli shay’in qadir ».",
+        "fausses_reponses": [
+          "« La hawla wa la quwwata illa billahi al-‘aliyyi al-‘azim ».",
+          "« Subhâna rabbil azîm ».",
+          "« Bismillahi rahmani rahim »."
+        ]
+      }
+    ]
+  }
+  

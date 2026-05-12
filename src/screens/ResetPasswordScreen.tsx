@@ -1,9 +1,13 @@
 import { confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useResponsive, getResponsiveStyle } from '../hooks/useResponsive';
 import { auth } from './firebaseConfig';
 
 export default function ResetPasswordScreen({ route, navigation }: any) {
+  const responsive = useResponsive();
+  const responsiveStyle = getResponsiveStyle(responsive);
+  const dynamicStyles = createStyles(responsive, responsiveStyle);
   const code: string | undefined = route?.params?.oobCode;
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -55,20 +59,20 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-        <View style={styles.container}>
-          <Text style={styles.title}>Réinitialiser le mot de passe</Text>
-          {!!email && <Text style={styles.subtitle}>Compte: {email}</Text>}
+        <View style={dynamicStyles.container}>
+          <Text style={dynamicStyles.title}>Réinitialiser le mot de passe</Text>
+          {!!email && <Text style={dynamicStyles.subtitle}>Compte: {email}</Text>}
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nouveau mot de passe</Text>
-            <TextInput style={styles.input} value={newPassword} onChangeText={setNewPassword} placeholder="********" secureTextEntry />
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>Nouveau mot de passe</Text>
+            <TextInput style={dynamicStyles.input} value={newPassword} onChangeText={setNewPassword} placeholder="********" secureTextEntry />
           </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirmer le mot de passe</Text>
-            <TextInput style={styles.input} value={confirmPassword} onChangeText={setConfirmPassword} placeholder="********" secureTextEntry />
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>Confirmer le mot de passe</Text>
+            <TextInput style={dynamicStyles.input} value={confirmPassword} onChangeText={setConfirmPassword} placeholder="********" secureTextEntry />
           </View>
-          <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={loading}>
-            {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={styles.buttonText}>Valider</Text>}
+          <TouchableOpacity style={dynamicStyles.button} onPress={onSubmit} disabled={loading}>
+            {loading ? <ActivityIndicator color="#174C3C" /> : <Text style={dynamicStyles.buttonText}>Valider</Text>}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -76,14 +80,14 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F5F7', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#174C3C', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#174C3C', marginBottom: 16 },
-  inputGroup: { width: '100%', maxWidth: 340, marginBottom: 12 },
+const createStyles = (responsive: any, responsiveStyle: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F3F5F7', alignItems: 'center', justifyContent: 'center', padding: responsiveStyle.spacing['2xl'] },
+  title: { fontSize: responsiveStyle.fontSize['2xl'], fontWeight: 'bold', color: '#174C3C', marginBottom: responsiveStyle.spacing.sm },
+  subtitle: { fontSize: responsiveStyle.fontSize.sm, color: '#174C3C', marginBottom: responsiveStyle.spacing.base },
+  inputGroup: { width: '100%', maxWidth: 340, marginBottom: responsiveStyle.spacing.base },
   label: { color: '#174C3C', marginBottom: 6, fontWeight: '600' },
-  input: { backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1, borderColor: '#E0E0E0' },
-  button: { backgroundColor: '#D4AF37', borderRadius: 20, paddingVertical: 12, paddingHorizontal: 32, marginTop: 8, width: '100%', maxWidth: 340, alignItems: 'center' },
-  buttonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 },
+  input: { backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: responsiveStyle.spacing.base, paddingHorizontal: responsiveStyle.spacing.base, borderWidth: 1, borderColor: '#E0E0E0' },
+  button: { backgroundColor: '#D4AF37', borderRadius: 20, paddingVertical: responsiveStyle.spacing.base, paddingHorizontal: responsiveStyle.spacing['2xl'], marginTop: responsiveStyle.spacing.sm, width: '100%', maxWidth: 340, alignItems: 'center' },
+  buttonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: responsiveStyle.fontSize.sm },
 });
 

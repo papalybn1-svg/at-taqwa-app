@@ -1,0 +1,112 @@
+[
+  {
+    "numero": 1,
+    "question": "Comment réparer l’omission d’une obligation divine ?",
+    "reponse": "La réparation par habla salam et bahda salam n’est pas valable pour les obligations divines ; ce n’est valable que pour les sunnas. Si on oublie une obligation divine, il faudrait considérer la raka comme annulée et la remplacer par une autre. Si on est toujours dans la raka, il faudrait revenir en arrière et accomplir l’obligation divine (farata) qu’on avait oubliée.",
+    "fausses_reponses": [
+      "On peut utiliser habla salam et bahda salam pour réparer toutes les omissions, y compris les obligations divines.",
+      "Ignorer l’oubli et continuer la prière normalement.",
+      "Recommencer toute la prière uniquement si on a oublié plusieurs obligations."
+    ]
+  },
+  {
+    "numero": 2,
+    "question": "Un fidèle oublie de faire le takbiratul ihrâm et commence à réciter la Fatiha avant de se rendre compte de son erreur ; que doit-il faire ?",
+    "reponse": "Il doit recommencer sa prière.",
+    "fausses_reponses": [
+      "Continuer la prière et corriger l’oubli après le salut final.",
+      "Faire le takbiratul ihrâm dès qu’il s’en souvient sans recommencer.",
+      "Ignorer l’oubli car la prière reste valable."
+    ]
+  },
+  {
+    "numero": 3,
+    "question": "Un fidèle a oublié de réciter la Fatiha et s’en souvient pendant le rukû. Que doit-il faire ?",
+    "reponse": "La Fatiha étant une obligation divine, le fidèle se redresse, la récite puis continue sa prière. Ensuite il fait bahda salam pour réparer ce qu’il a ajouté à tort.",
+    "fausses_reponses": [
+      "Ignorer l’oubli et continuer la prière normalement.",
+      "Recommencer toute la raka depuis le début.",
+      "Faire la Fatiha après le salut final seulement."
+    ]
+  },
+  {
+    "numero": 4,
+    "question": "Peu avant le salut final, un fidèle s’aperçoit avoir oublié la Fatiha à la 2ème raka. Comment corrige-t-il sa faute ?",
+    "reponse": "Il considère que la 2ème raka est nulle, accomplit la suivante correctement et fait habla salam pour réparer l’ajout.",
+    "fausses_reponses": [
+      "Ignorer l’oubli et terminer la prière normalement.",
+      "Recommencer toute la prière depuis le début.",
+      "Faire la Fatiha oubliée après le salut final uniquement."
+    ]
+  },
+  {
+    "numero": 5,
+    "question": "Un fidèle oublie de faire le salut final et commence son zikr ; que doit-il faire ?",
+    "reponse": "Prière nulle, à recommencer.",
+    "fausses_reponses": [
+      "Continuer le zikr puis faire le salut final après.",
+      "Ignorer le salut final, la prière reste valable.",
+      "Ajouter une prosternation supplémentaire pour compenser."
+    ]
+  },
+  {
+    "numero": 6,
+    "question": "Après le salut final, vous avez des doutes sur une partie de votre prière. Avez-vous une réparation à faire ?",
+    "reponse": "Prière nulle, à recommencer.",
+    "fausses_reponses": [
+      "Continuer normalement, aucun problème.",
+      "Refaire uniquement la partie douteuse.",
+      "Ajouter un sujud supplémentaire pour corriger le doute."
+    ]
+  },
+  {
+    "numero": 7,
+    "question": "Après deux rakas, un fidèle fait le salut final par erreur ; doit-il recommencer sa prière ?",
+    "reponse": "Non ! Il dit « Allahu akbar », se lève, dit à nouveau « Allahu akbar » et continue sa prière. Il fera bahda salam après le salut final.",
+    "fausses_reponses": [
+      "Oui, il doit recommencer toute la prière.",
+      "Ignorer l’erreur, la prière est toujours valable.",
+      "Faire seulement une prosternation supplémentaire sans se relever."
+    ]
+  },
+  {
+    "numero": 8,
+    "question": "En voulant sauver un enfant qui était derrière lui et qui allait vers un danger, un fidèle se retourne complètement. Peut-il continuer sa prière ou doit-il la recommencer ?",
+    "reponse": "Si dans son mouvement, le fidèle a tourné le dos à la Kaaba, la prière est nulle. Sinon, il peut continuer à condition de n’avoir pas mis beaucoup de temps.",
+    "fausses_reponses": [
+      "Toujours recommencer la prière peu importe la situation.",
+      "Ignorer le mouvement, la prière reste valable.",
+      "Faire une prosternation supplémentaire pour compenser."
+    ]
+  },
+  {
+    "numero": 9,
+    "question": "Vous avez répété la Fatiha par erreur au cours d’une rakka. Avez-vous une réparation à faire ?",
+    "reponse": "Oui, car vous avez ajouté quelque chose à la prière : Sujûd bahda salam.",
+    "fausses_reponses": [
+      "Non, ce n’est pas important, la prière reste valide.",
+      "Recommencer toute la raka depuis le début.",
+      "Faire la correction après la prochaine prière obligatoire."
+    ]
+  },
+  {
+    "numero": 10,
+    "question": "Un fidèle oublie le rukû et s’en souvient pendant la sujûd, comment répare-t-il sa prière ?",
+    "reponse": "Il se relève, se tient debout, récite un ou deux versets, fait le rukû et continue sa prière : sujûd après salut final.",
+    "fausses_reponses": [
+      "Ignorer l’oubli, la prière reste valable.",
+      "Recommencer toute la raka depuis le début.",
+      "Faire le rukû après le salut final uniquement."
+    ]
+  },
+  {
+    "numero": 11,
+    "question": "Un fidèle a oublié une sujûd et s’en souvient après s’être relevé pour la raka suivante ; que doit-il faire ?",
+    "reponse": "Il doit s’asseoir immédiatement et faire la sujûd oubliée. Après salut final, il fait sujûd bahda salam.",
+    "fausses_reponses": [
+      "Ignorer l’oubli et continuer la prière normalement.",
+      "Recommencer toute la raka depuis le début.",
+      "Faire la sujûd oubliée après la prochaine prière obligatoire."
+    ]
+  }
+]

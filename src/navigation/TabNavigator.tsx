@@ -2,8 +2,12 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import React from "react";
+import { Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AuthorProfileScreen from '../screens/AuthorProfileScreen';
 import BooksScreen from '../screens/BooksScreen';
+import CertificateScreen from '../screens/CertificateScreen';
+import ChapterScreen from '../screens/ChapterScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import HomeScreen from "../screens/HomeScreen";
 import HorairesScreen from '../screens/HorairesScreen';
@@ -11,7 +15,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import OriginalQuizScreen from '../screens/OriginalQuizScreen';
 import ParametresScreen from '../screens/ParametresScreen';
 import QuizChapterSelectScreen from '../screens/QuizChapterSelectScreen';
-import QuizGameScreen from '../screens/QuizGameScreen';
+
 import QuizScreen from '../screens/QuizScreen';
 import QuizStartScreen from '../screens/QuizStartScreen';
 import TasbihScreen from '../screens/TasbihScreen';
@@ -52,10 +56,10 @@ function HomeStack() {
         }}
       />
       <Stack.Screen 
-        name="QuizGame" 
-        component={QuizGameScreen}
+        name="QuizChapterSelect" 
+        component={QuizChapterSelectScreen}
         options={{
-          gestureEnabled: true, // Permet le swipe pour revenir
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen 
@@ -80,6 +84,13 @@ function HomeStack() {
         }}
       />
       <Stack.Screen 
+        name="Chapter" 
+        component={ChapterScreen}
+        options={{
+          gestureEnabled: true, // Permet le swipe pour revenir
+        }}
+      />
+      <Stack.Screen 
         name="Notifications" 
         component={NotificationsScreen}
         options={{
@@ -94,10 +105,10 @@ function HomeStack() {
         }}
       />
       <Stack.Screen 
-        name="QuizChapterSelect" 
-        component={QuizChapterSelectScreen}
+        name="Certificate" 
+        component={CertificateScreen}
         options={{
-          gestureEnabled: false,
+          gestureEnabled: true,
         }}
       />
     </Stack.Navigator>
@@ -105,6 +116,18 @@ function HomeStack() {
 }
 
 export default function TabNavigator() {
+  const insets = useSafeAreaInsets();
+  
+  // Calculer le paddingBottom en tenant compte de la barre de navigation système Android
+  // Sur Android, on utilise insets.bottom pour éviter le chevauchement avec la barre système
+  // Sur iOS, on utilise insets.bottom également pour gérer les safe areas
+  const bottomPadding = Platform.OS === 'android' 
+    ? Math.max(insets.bottom, 8) // Minimum 8px, ou plus si la barre système est présente
+    : Math.max(insets.bottom, 8);
+
+  // Hauteur de base de la TabBar (contenu + paddingTop, sans paddingBottom)
+  const baseTabBarHeight = 80; // 68px de contenu + 12px de paddingTop
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -113,8 +136,10 @@ export default function TabNavigator() {
         tabBarInactiveTintColor: "#9CA3AF",
         tabBarStyle: { 
           backgroundColor: colors.white,
-          height: 80,
-          paddingBottom: 20,
+          // Hauteur totale = hauteur de base + paddingBottom
+          // Le paddingBottom est ajouté séparément pour éviter le double calcul
+          height: baseTabBarHeight + bottomPadding,
+          paddingBottom: bottomPadding,
           paddingTop: 12,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,

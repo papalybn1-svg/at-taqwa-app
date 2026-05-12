@@ -1,4 +1,7 @@
+import { useMemo } from 'react';
+import { ENV } from '../config/environment';
 import { auth } from '../screens/firebaseConfig';
+import { write as writeUserStorage } from '../utils/userStorage';
 
 export interface PaymentServiceConfig {
   backendUrl: string;
@@ -12,19 +15,67 @@ export class PaymentService {
   }
 
   /**
+   * Requête HTTP typée vers le backend
+   * - Construit l’URL `${backendUrl}/api/...`
+   * - Ajoute l’Authorization Bearer si withAuth = true
+   * - Parse le JSON en T et remonte les erreurs HTTP
+   */
+  private async request<T>(
+    path: string,
+    options: {
+      method?: 'GET'|'POST'|'PUT'|'DELETE';
+      body?: any;
+      withAuth?: boolean;
+      forceRefreshToken?: boolean;
+      headers?: Record<string, string>;
+    } = {}
+  ): Promise<T> {
+    const {
+      method = 'GET',
+      body,
+      withAuth = false,
+      forceRefreshToken = false,
+      headers = {}
+    } = options;
+
+    const url = `${this.config.backendUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+    const finalHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...headers,
+    };
+
+    if (withAuth) {
+      const idToken = await this.getFirebaseToken(forceRefreshToken);
+      finalHeaders['Authorization'] = `Bearer ${idToken}`;
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers: finalHeaders,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+    }
+    return (await res.json()) as T;
+  }
+
+  /**
    * Obtenir le token Firebase actuel
    */
-  private async getFirebaseToken(): Promise<string> {
+  private async getFirebaseToken(force = false): Promise<string> {
     const user = auth.currentUser;
     if (!user) {
       throw new Error('Utilisateur non connecté');
     }
     
     try {
-      const token = await user.getIdToken();
-      console.log('🔑 Token Firebase obtenu:', token.substring(0, 20) + '...');
-      console.log('👤 User UID:', user.uid);
-      console.log('📧 User email:', user.email);
+      // Force refresh uniquement si explicitement demandé
+      const token = await user.getIdToken(force);
+      // Ne logger le token que si nécessaire (désactivé pour éviter le spam)
+      // console.log('🔑 Token Firebase obtenu');
       return token;
     } catch (error) {
       console.error('❌ Erreur génération token Firebase:', error);
@@ -37,37 +88,35 @@ export class PaymentService {
    */
   async checkEntitlements(): Promise<{ part2: boolean; part3: boolean }> {
     try {
-      const token = await this.getFirebaseToken();
-      console.log('🌐 Appel API entitlements:', `${this.config.backendUrl}/api/entitlements`);
-      
-      const response = await fetch(`${this.config.backendUrl}/api/entitlements`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      console.log('📡 Réponse entitlements - Status:', response.status);
-      console.log('📡 Réponse entitlements - Headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Erreur entitlements - Body:', errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      // Requête authentifiée (pas de force refresh)
+      const data = await this.request<{
+        resources?: Array<{ id: string; granted: boolean }>;
+      }>(`/api/entitlements`, { withAuth: true, forceRefreshToken: false });
       console.log('✅ Données entitlements reçues:', data);
       
       // Convertir la nouvelle structure vers l'ancienne pour compatibilité
       const resources = data.resources || [];
       const part2 = resources.find((r: any) => r.id === 'BOOK_PART_2')?.granted || false;
       const part3 = resources.find((r: any) => r.id === 'BOOK_PART_3')?.granted || false;
+      // Stocker aussi une version simplifiée dans le storage utilisateur
+      try {
+        const uid = auth.currentUser?.uid || null;
+        const grantedIds = resources.filter(r => r.granted).map(r => r.id);
+        await writeUserStorage(uid, 'entitlements', grantedIds);
+      } catch (e) {
+        console.warn('⚠️ Impossible d\'écrire entitlements en local:', e);
+      }
       
       console.log('🎯 Entitlements calculés:', { part2, part3 });
       return { part2, part3 };
-    } catch (error) {
-      console.error('Erreur vérification entitlements:', error);
+    } catch (error: any) {
+      // Ne pas logger en boucle si c'est une erreur réseau
+      if (error?.message?.includes('Network request failed') || error?.message?.includes('Failed to fetch')) {
+        console.warn('⚠️ Erreur réseau lors de la vérification des entitlements (backend inaccessible)');
+      } else {
+        console.error('❌ Erreur vérification entitlements:', error);
+      }
+      // Retourner les valeurs par défaut sans relancer d'appels
       return { part2: false, part3: false };
     }
   }
@@ -75,38 +124,37 @@ export class PaymentService {
   /**
    * Créer un paiement pour débloquer une partie du livre
    */
-  async createPayment(planId: 'BOOK_PART_2' | 'BOOK_PART_3'): Promise<{ success: boolean; checkoutUrl?: string; error?: string }> {
+  async createPayment(planId: 'BOOK_PART_2' | 'BOOK_PART_3'): Promise<{ success: boolean; checkoutUrl?: string; token?: string; error?: string }> {
     try {
-      const token = await this.getFirebaseToken();
-      console.log('🌐 Appel API createPayment:', `${this.config.backendUrl}/api/paydunya/checkout`);
-      
-      // Appeler le backend pour créer la facture
-      const response = await fetch(`${this.config.backendUrl}/api/paydunya/checkout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          planId: planId
-        })
-      });
-
-      console.log('📡 Réponse createPayment - Status:', response.status);
-      console.log('📡 Réponse createPayment - Headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Erreur createPayment - Body:', errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
+      // Pour créer un paiement, on force un token frais + auth requise
+      const data = await this.request<{ checkout_url?: string; token?: string }>(
+        `/api/paydunya/checkout`,
+        {
+          method: 'POST',
+          withAuth: true,
+          forceRefreshToken: true,
+          body: { planId }
+        }
+      );
       console.log('✅ Données createPayment reçues:', data);
+      
+      // Récupérer et persister le token complet pour éviter toute troncature côté app/tests
+      const paymentToken: string | undefined = data?.token;
+      if (paymentToken && paymentToken.length > 0) {
+        const uid = auth.currentUser?.uid || null;
+        console.log('🔎 payment_token (complet):', paymentToken);
+        try {
+          await writeUserStorage(uid, 'payment_token', paymentToken);
+          console.log('💾 payment_token stocké localement pour', uid || 'anon');
+        } catch (e) {
+          console.warn('⚠️ Impossible de stocker payment_token:', e);
+        }
+      }
 
       return {
         success: true,
-        checkoutUrl: data.checkout_url
+        checkoutUrl: data.checkout_url,
+        token: paymentToken
       };
     } catch (error) {
       console.error('Erreur création paiement:', error);
@@ -122,13 +170,15 @@ export class PaymentService {
    */
   async checkPaymentStatus(token: string): Promise<{ status: string; error?: string }> {
     try {
-      const response = await fetch(`${this.config.backendUrl}/api/paydunya/status?token=${token}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await this.request<{ status: string }>(
+        `/api/paydunya/status?token=${encodeURIComponent(token)}`
+      );
+      // Si confirmé, synchroniser les entitlements
+      // Note: Cette fonction est appelée depuis le polling dans BooksScreen
+      // Le refresh des entitlements est géré là-bas avec force=true
+      const status = (data.status || '').toString().toUpperCase();
+      // Ne pas appeler checkEntitlements ici pour éviter les appels en double
+      // Le refresh sera fait dans BooksScreen après détection du COMPLETED
       return { status: data.status };
     } catch (error) {
       console.error('Erreur vérification statut paiement:', error);
@@ -150,20 +200,31 @@ export class PaymentService {
   }
 }
 
-import { ENV } from '../config/environment';
+// Instance singleton du service de paiement pour éviter les re-créations
+let paymentServiceInstance: PaymentService | null = null;
+
+function getPaymentService(): PaymentService {
+  if (!paymentServiceInstance) {
+    paymentServiceInstance = new PaymentService({
+      backendUrl: ENV.BACKEND_URL
+    });
+  }
+  return paymentServiceInstance;
+}
 
 /**
  * Hook React pour utiliser le service de paiement
+ * Utilise une instance singleton pour éviter les re-créations infinies
  */
 export function usePaymentService() {
-  const paymentService = new PaymentService({
-    backendUrl: ENV.BACKEND_URL
-  });
-
-  return {
-    checkEntitlements: () => paymentService.checkEntitlements(),
-    createPayment: (planId: 'BOOK_PART_2' | 'BOOK_PART_3') => paymentService.createPayment(planId),
-    checkPaymentStatus: (token: string) => paymentService.checkPaymentStatus(token),
-    openPayDunyaCheckout: (checkoutUrl: string) => paymentService.openPayDunyaCheckout(checkoutUrl)
-  };
-} 
+  // Utiliser useMemo pour garantir que les fonctions retournées sont stables
+  return useMemo(() => {
+    const service = getPaymentService();
+    return {
+      checkEntitlements: () => service.checkEntitlements(),
+      createPayment: (planId: 'BOOK_PART_2' | 'BOOK_PART_3') => service.createPayment(planId),
+      checkPaymentStatus: (token: string) => service.checkPaymentStatus(token),
+      openPayDunyaCheckout: (checkoutUrl: string) => service.openPayDunyaCheckout(checkoutUrl)
+    };
+  }, []); // Dépendances vides = stable pour toujours
+}
